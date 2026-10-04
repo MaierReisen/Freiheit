@@ -1,0 +1,181 @@
+import { geoArea, geoBounds, geoCentroid, geoDistance } from 'd3-geo';
+import { feature, mesh } from 'topojson-client';
+import WORLD_JSON from '../data/world-50m.topo.json';
+import ISO_NUMERIC from '../data/iso-numeric.json';
+import { nameOf } from '../countries';
+
+/* Geodaten der Weltkarte: Länderflächen, Lage/Größe je Land und Detailstufen (LOD). */
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Topology = any;
+type Ring = [number, number][];
+export type CountryGeometry = GeoJSON.Polygon | GeoJSON.MultiPolygon;
+export interface CountryFeature extends GeoJSON.Feature<CountryGeometry> {
+	id: string;
+}
+export interface Poly {
+	id: string;
+	g: GeoJSON.Polygon;
+	size: number;
+}
+export interface Lod {
+	feats: CountryFeature[];
+	polys: Poly[];
+	borders: GeoJSON.MultiLineString;
+}
+
+export const WORLD: Topology = WORLD_JSON;
+const NUM2A2 = ISO_NUMERIC as Record<string, string>;
+
+export const wrapLon = (l: number) => ((l + 540) % 360) - 180;
+
+const toFeatures = (topo: Topology): CountryFeature[] =>
+	(feature(topo, topo.objects.countries) as unknown as GeoJSON.FeatureCollection<CountryGeometry>).features as CountryFeature[];
+
+export const features = toFeatures(WORLD).filter((f) => f.id && f.id !== 'AQ');
+
+// Lage und Größe jedes Landes (größtes Teilgebiet, damit z. B. Frankreich nicht in Südamerika zentriert wird)
+function mainPoly(f: CountryFeature): GeoJSON.Feature | CountryFeature {
+	const g = f.geometry;
+	if (!g || g.type !== 'MultiPolygon') return f;
+	let best: GeoJSON.Polygon | null = null,
+		ba = -1;
+	for (const c of g.coordinates) {
+		const p: GeoJSON.Polygon = { type: 'Polygon', coordinates: c };
+		const a = geoArea(p);
+		if (a > ba) {
+			ba = a;
+			best = p;
+		}
+	}
+	return { type: 'Feature', properties: {}, geometry: best! };
+}
+
+/** INFO: Mittelpunkt/Größe für Tippen und Hinfliegen, FC: Begrenzungskreis zum Weglassen unsichtbarer Länder */
+export const INFO: Record<string, { c: [number, number]; size: number; area: number }> = {};
+export const FC: Record<string, { c: [number, number]; r: number; wLon: number; wLat: number; cLat: number }> = {};
+features.forEach((f) => {
+	const m = mainPoly(f),
+		b = geoBounds(m);
+	let dl = b[1][0] - b[0][0];
+	if (dl < 0) dl += 360;
+	INFO[f.id] = { c: geoCentroid(m), size: Math.max(dl, b[1][1] - b[0][1]), area: geoArea(f) };
+	const B = geoBounds(f);
+	let w = B[1][0] - B[0][0];
+	if (w < 0) w += 360;
+	const c: [number, number] = [wrapLon(B[0][0] + w / 2), (B[0][1] + B[1][1]) / 2];
+	let r = 0;
+	for (const q of [
+		[B[0][0], B[0][1]],
+		[B[1][0], B[0][1]],
+		[B[0][0], B[1][1]],
+		[B[1][0], B[1][1]]
+	] as [number, number][])
+		r = Math.max(r, geoDistance(c, q));
+	FC[f.id] = { c, r, wLon: w / 2, wLat: (B[1][1] - B[0][1]) / 2, cLat: c[1] };
+});
+export const small = features.filter((f) => INFO[f.id].area < 0.0004);
+export const smallIds = new Set(small.map((f) => f.id));
+
+/* --- Detailstufen: grob (nur beim Bewegen) -> mittel -> voll (50m, in Ruhe) -> fein (10m, nur bei starkem Zoom) --- */
+function decimateTopology(topo: Topology, step: number): Topology {
+	const tr = topo.transform;
+	const arcs = topo.arcs.map((arc: [number, number][]) => {
+		let x = 0,
+			y = 0;
+		const pts = arc.map((p) => {
+			x += p[0];
+			y += p[1];
+			return tr ? [x * tr.scale[0] + tr.translate[0], y * tr.scale[1] + tr.translate[1]] : [p[0], p[1]];
+		});
+		if (pts.length <= 6) return pts;
+		const o = [pts[0]];
+		for (let i = step; i < pts.length - 1; i += step) o.push(pts[i]);
+		o.push(pts[pts.length - 1]);
+		return o;
+	});
+	return { type: 'Topology', objects: topo.objects, arcs };
+}
+function polysOf(feats: CountryFeature[]): Poly[] {
+	const out: Poly[] = [];
+	for (const f of feats) {
+		const g = f.geometry,
+			list = g.type === 'MultiPolygon' ? g.coordinates : [g.coordinates];
+		for (const rings of list) {
+			let mnx = 181,
+				mxx = -181,
+				mny = 91,
+				mxy = -91;
+			for (const p of rings[0]) {
+				if (p[0] < mnx) mnx = p[0];
+				if (p[0] > mxx) mxx = p[0];
+				if (p[1] < mny) mny = p[1];
+				if (p[1] > mxy) mxy = p[1];
+			}
+			out.push({ id: f.id, g: { type: 'Polygon', coordinates: rings }, size: Math.max(mxx - mnx, mxy - mny) });
+		}
+	}
+	return out;
+}
+const bordersOf = (topo: Topology) => mesh(topo, topo.objects.countries, (a, b) => a !== b) as GeoJSON.MultiLineString;
+function makeLod(topo: Topology): Lod {
+	const feats = toFeatures(topo).filter((f) => f.id && f.id !== 'AQ' && FC[f.id]);
+	return { feats, polys: polysOf(feats), borders: bordersOf(topo) };
+}
+// Flächen füllen: jeden Ring einzeln ausdünnen und prüfen. Kippt die Umlaufrichtung oder schrumpft die Form stark,
+// bleibt der Originalring erhalten (sonst würde die Karte die Insel als "alles außer der Insel" füllen).
+const ringArea = (r: Ring) => {
+	let a = 0;
+	for (let i = 0, n = r.length - 1; i < n; i++) a += r[i][0] * r[i + 1][1] - r[i + 1][0] * r[i][1];
+	return a / 2;
+};
+function decimateRing(ring: Ring, step: number): Ring {
+	if (ring.length <= 24) return ring;
+	const o = [ring[0]];
+	for (let i = step; i < ring.length - 1; i += step) o.push(ring[i]);
+	o.push(ring[ring.length - 1]);
+	if (o.length < 6) return ring;
+	const a0 = ringArea(ring),
+		a1 = ringArea(o);
+	return a0 * a1 > 0 && Math.abs(a1) > 0.6 * Math.abs(a0) ? o : ring;
+}
+function decimateFeatures(feats: CountryFeature[], step: number): CountryFeature[] {
+	return feats.map((f) => {
+		const g = f.geometry,
+			polys = (g.type === 'MultiPolygon' ? g.coordinates : [g.coordinates]) as Ring[][];
+		return {
+			type: 'Feature',
+			id: f.id,
+			properties: f.properties,
+			geometry: { type: 'MultiPolygon', coordinates: polys.map((poly) => poly.map((r) => decimateRing(r, step))) }
+		};
+	});
+}
+
+const LODS: Record<string, Lod> = {};
+export function getLod(name: string): Lod | null {
+	if (LODS[name]) return LODS[name];
+	if (name === 'full') return (LODS.full = makeLod(WORLD));
+	if (name[0] === 's') {
+		const step = Number(name.slice(1));
+		const feats = decimateFeatures(getLod('full')!.feats, step);
+		return (LODS[name] = { feats, polys: polysOf(feats), borders: bordersOf(decimateTopology(WORLD, step)) });
+	}
+	return null;
+}
+
+const FINE_URL = 'https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/countries-10m.json';
+/** Feine Grenzen (10m) für starken Zoom nachladen; numerische IDs auf Alpha-2 abbilden */
+export async function fetchFineLod(): Promise<Lod> {
+	const r = await fetch(FINE_URL);
+	if (!r.ok) throw new Error('http');
+	const t = await r.json();
+	t.objects.countries.geometries.forEach((g: { id?: string; properties?: { name?: string } }) => {
+		g.id = NUM2A2[g.id!] || (g.properties && g.properties.name === 'Kosovo' ? 'XK' : undefined);
+	});
+	return (LODS.fine = makeLod(t));
+}
+export const fineLod = () => LODS.fine as Lod | undefined;
+
+/** Alle Länder der Karte, alphabetisch nach deutschem Namen (für die Länderauswahl) */
+export const ALL = [...new Set(features.map((f) => f.id))].sort((a, b) => nameOf(a).localeCompare(nameOf(b), 'de'));

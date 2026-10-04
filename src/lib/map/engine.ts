@@ -1,0 +1,661 @@
+import { geoContains, geoDistance, geoGraticule10, geoNaturalEarth1, geoOrthographic, geoPath, type GeoProjection } from 'd3-geo';
+import { CONT_VIEW, nameOf, type ContinentCode } from '../countries';
+import { FC, INFO, features, fetchFineLod, fineLod, getLod, small, smallIds, wrapLon, type Lod } from './geo';
+
+/* Weltkarte auf zwei Canvas-Ebenen: Globus (orthografisch) und flache Karte (Natural Earth).
+   cvB: Karte (ändert sich selten), cvT: Punkte kleiner Länder und Beschriftung. */
+
+export type MapMode = 'globe' | 'flat';
+export type FineState = 'idle' | 'loading' | 'ready' | 'failed';
+
+export interface MapSync {
+	mode: MapMode;
+	spin: boolean;
+	fineState: FineState;
+}
+
+export interface MapOptions {
+	cvB: HTMLCanvasElement;
+	cvT: HTMLCanvasElement;
+	reduce: boolean;
+	getVisited(): Set<string>;
+	getWish(): Set<string>;
+	getSelected(): string | null;
+	/** Karte sichtbar (Startseite oder Vollbild) */
+	isVisible(): boolean;
+	isFull(): boolean;
+	onTapCountry(code: string): void;
+	onTapEmpty(): void;
+	/** Modus, Drehen oder Ladezustand haben sich geändert */
+	onSync(s: MapSync): void;
+}
+
+const TAU = Math.PI * 2;
+const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
+const GRAT = geoGraticule10();
+const MAP_PREFS_KEY = 'freiheit-map';
+
+// Farben der Karte (bewusst unabhängig vom Hell/Dunkel-Modus: die Karte ist eine dunkle Bühne)
+const PAL = {
+	oceanA: '#1D5A7A',
+	oceanB: '#0C2E45',
+	oceanFlat: '#10364F',
+	halo: 'rgba(96,200,225,.28)',
+	land: '#4B6F82',
+	border: '#0D2A3D',
+	grat: 'rgba(255,255,255,.07)',
+	visited: '#34D1BF',
+	wish: '#F6C445',
+	sel: '#FFFFFF',
+	label: 'rgba(7,20,31,.92)'
+};
+
+const MOVE_STEPS = [3, 6, 10]; // von fein nach grob; wird je nach Gerätegeschwindigkeit angepasst
+
+export function createWorldMap(o: MapOptions) {
+	const { cvB, cvT, reduce: REDUCE } = o;
+	const cv = cvT;
+	const ctxB = cvB.getContext ? cvB.getContext('2d') : null,
+		ctxT = cvT.getContext ? cvT.getContext('2d') : null;
+
+	const view = { mode: 'globe' as MapMode, lon: 10, lat: 30, k: 1, spin: false };
+	try {
+		const p = JSON.parse(localStorage.getItem(MAP_PREFS_KEY) || '{}');
+		if (p.mode === 'flat' || p.mode === 'globe') view.mode = p.mode;
+		if (typeof p.spin === 'boolean') view.spin = p.spin;
+	} catch {}
+	const saveMapPrefs = () => {
+		try {
+			localStorage.setItem(MAP_PREFS_KEY, JSON.stringify({ mode: view.mode, spin: view.spin }));
+		} catch {}
+	};
+
+	let stepIdx = 1,
+		emaMove = 8,
+		calmFrames = 0;
+	let fineState: FineState = 'idle',
+		fineTry = 0;
+	let cw = 0,
+		ch = 0,
+		dpr = 1,
+		flatBase = 1;
+	let interacting = false,
+		lastTs = 0,
+		drawQueued = false,
+		introDone = false,
+		destroyed = false;
+	let fly: { from: { lon: number; lat: number; k: number }; to: { lon: number; lat: number; k: number }; dl: number; t0: number; ms: number } | null = null;
+	let inertia: { vx: number; vy: number; freeLat: boolean } | null = null;
+	let baseDirty = true,
+		topDirty = true,
+		refineT: ReturnType<typeof setTimeout> | undefined;
+
+	const sync = () => o.onSync({ mode: view.mode, spin: view.spin, fineState });
+
+	function fineK() {
+		return view.mode === 'globe' ? 6 : 4;
+	}
+	async function loadFine() {
+		if (fineState === 'loading' || fineState === 'ready') return;
+		if (fineState === 'failed' && Date.now() - fineTry < 30000) return;
+		fineState = 'loading';
+		sync();
+		try {
+			await fetchFineLod();
+			fineState = 'ready';
+		} catch {
+			fineState = 'failed';
+			fineTry = Date.now();
+		}
+		sync();
+		markDirty(true);
+	}
+
+	const clampFlatLat = (l: number, k = view.k) => {
+		const m = Math.max(0, 72 - 62 / k);
+		return clamp(l, -m, m);
+	};
+	const kRange = () => (view.mode === 'globe' ? [0.8, 16] : [1, 16]);
+
+	function baseScale() {
+		return view.mode === 'globe' ? (Math.min(cw, ch) / 2) * 0.86 : flatBase;
+	}
+	function makeProj(prec = 0.6): GeoProjection {
+		if (view.mode === 'globe')
+			return geoOrthographic()
+				.rotate([-view.lon, -view.lat])
+				.scale(baseScale() * view.k)
+				.translate([cw / 2, ch / 2])
+				.clipAngle(90)
+				.precision(prec);
+		return geoNaturalEarth1()
+			.rotate([-view.lon, 0])
+			.center([0, view.lat])
+			.scale(baseScale() * view.k)
+			.translate([cw / 2, ch / 2])
+			.precision(prec);
+	}
+	let projKey = '',
+		projCache: GeoProjection | null = null;
+	function curProj(prec = 0.6) {
+		const key = view.mode + '|' + view.lon + '|' + view.lat + '|' + view.k + '|' + cw + '|' + ch + '|' + prec;
+		if (key !== projKey) {
+			projKey = key;
+			projCache = makeProj(prec);
+		}
+		return projCache!;
+	}
+	function onFront(p: [number, number]) {
+		return view.mode !== 'globe' || geoDistance(p, [view.lon, view.lat]) < Math.PI / 2 - 0.03;
+	}
+
+	// Ist ein Land im sichtbaren Ausschnitt? Unsichtbare Länder werden gar nicht erst berechnet.
+	type Cull = { globe: true; va: number; vc: [number, number] } | { globe: false; hLon: number; hLat: number };
+	function cullInfo(): Cull {
+		if (view.mode === 'globe') {
+			const S = baseScale() * view.k,
+				d = Math.hypot(cw, ch) / 2;
+			return { globe: true, va: (d >= S ? Math.PI / 2 : Math.asin(d / S)) + 0.05, vc: [view.lon, view.lat] };
+		}
+		const S = baseScale() * view.k;
+		return { globe: false, hLon: (cw / 2 / (S * 0.87)) * 57.2958 * 1.4 + 4, hLat: (ch / 2 / S) * 57.2958 * 1.15 + 4 };
+	}
+	function inView(id: string, ci: Cull) {
+		const f = FC[id];
+		if (!f) return false;
+		if (ci.globe) return geoDistance(f.c, ci.vc) - f.r < ci.va;
+		const dl = Math.abs(wrapLon(f.c[0] - view.lon));
+		return dl - f.wLon < ci.hLon && Math.abs(f.cLat - view.lat) - f.wLat < ci.hLat;
+	}
+
+	function resize() {
+		dpr = Math.min(2, window.devicePixelRatio || 1);
+		cw = cvB.clientWidth;
+		ch = cvB.clientHeight;
+		if (!cw || !ch) return;
+		for (const c of [cvB, cvT]) {
+			c.width = Math.round(cw * dpr);
+			c.height = Math.round(ch * dpr);
+		}
+		flatBase = geoNaturalEarth1().fitWidth(cw * 0.98, { type: 'Sphere' }).scale();
+		if (!introDone) intro();
+		markDirty(true);
+	}
+	function intro() {
+		introDone = true;
+		const h = [10, 45];
+		const target = { lon: h[0], lat: clamp(h[1] - 4, 12, 48), k: 1 };
+		if (view.mode === 'flat') target.lat = clampFlatLat(target.lat, 1);
+		if (REDUCE) {
+			Object.assign(view, target);
+			return;
+		}
+		view.lon = wrapLon(target.lon + 80);
+		view.lat = target.lat;
+		view.k = 0.82;
+		flyTo(target, 1500);
+	}
+
+	/* --- Zeichenschleife: Karte nur bei Änderungen neu --- */
+	function markDirty(base: boolean) {
+		if (base) baseDirty = true;
+		topDirty = true;
+		requestDraw();
+	}
+	function requestDraw() {
+		if (drawQueued || !ctxB || destroyed) return;
+		drawQueued = true;
+		requestAnimationFrame(frame);
+	}
+	function pickLodName(moving: boolean) {
+		if (moving) return 's' + MOVE_STEPS[stepIdx];
+		return fineState === 'ready' && fineLod() && view.k >= fineK() ? 'fine' : 'full';
+	}
+	function scheduleRefine() {
+		clearTimeout(refineT);
+		refineT = setTimeout(() => {
+			if (interacting || fly || inertia) return;
+			baseDirty = true;
+			requestDraw();
+			if (view.k >= fineK() && fineState !== 'ready') loadFine();
+		}, 150);
+	}
+	function frame(ts: number) {
+		drawQueued = false;
+		if (destroyed) return;
+		const dt = lastTs ? Math.min(64, ts - lastTs) : 16;
+		lastTs = ts;
+		let moving = false;
+		if (fly) {
+			const p = Math.min(1, (ts - fly.t0) / fly.ms),
+				e = p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
+			view.lon = wrapLon(fly.from.lon + fly.dl * e);
+			view.lat = fly.from.lat + (fly.to.lat - fly.from.lat) * e;
+			view.k = fly.from.k * Math.pow(fly.to.k / fly.from.k, e);
+			if (p >= 1) fly = null;
+			moving = true;
+			baseDirty = true;
+		} else if (inertia) {
+			dragBy(inertia.vx * dt, inertia.vy * dt, inertia.freeLat);
+			const f = Math.pow(0.94, dt / 16);
+			inertia.vx *= f;
+			inertia.vy *= f;
+			if (Math.hypot(inertia.vx, inertia.vy) < 0.01) inertia = null;
+			moving = true;
+			baseDirty = true;
+		} else if (view.spin && view.mode === 'globe' && !interacting && o.isVisible() && !document.hidden) {
+			view.lon = wrapLon(view.lon + dt * 0.006);
+			moving = true;
+			baseDirty = true;
+		}
+		if (interacting) moving = true;
+
+		if (baseDirty) {
+			const t0 = performance.now();
+			drawBase(moving);
+			const ms = performance.now() - t0;
+			if (moving) {
+				emaMove = 0.8 * emaMove + 0.2 * ms; // Qualität an die Geschwindigkeit des Geräts anpassen
+				calmFrames++;
+				if (emaMove > 22 && stepIdx < MOVE_STEPS.length - 1) {
+					stepIdx++;
+					calmFrames = 0;
+					emaMove = 14;
+				} else if (emaMove < 7 && stepIdx > 0 && calmFrames > 45) {
+					stepIdx--;
+					calmFrames = 0;
+					emaMove = 12;
+				}
+				scheduleRefine();
+			}
+			baseDirty = false;
+			topDirty = true;
+		}
+		if (topDirty) {
+			drawTop();
+			topDirty = false;
+		}
+		if (moving) requestDraw();
+	}
+
+	function pill(c: CanvasRenderingContext2D, text: string, x: number, y: number, color?: string) {
+		c.font = '600 13px Figtree, system-ui, sans-serif';
+		const w = c.measureText(text).width + 18,
+			h = 26,
+			rx = x - w / 2,
+			ry = y - h;
+		c.fillStyle = PAL.label;
+		c.beginPath();
+		if (c.roundRect) c.roundRect(rx, ry, w, h, 13);
+		else c.rect(rx, ry, w, h);
+		c.fill();
+		c.fillStyle = color || '#fff';
+		c.textAlign = 'center';
+		c.textBaseline = 'middle';
+		c.fillText(text, x, ry + h / 2 + 0.5);
+	}
+
+	function drawBase(moving: boolean) {
+		const c = ctxB;
+		if (!c || !cw || !ch) return;
+		const globe = view.mode === 'globe';
+		c.setTransform(dpr, 0, 0, dpr, 0, 0);
+		c.clearRect(0, 0, cw, ch);
+		const P = curProj(moving ? 0 : 0.6),
+			path = geoPath(P, c);
+		const lod: Lod = getLod(pickLodName(moving)) || getLod('full')!;
+		const ci = cullInfo();
+		const visited = o.getVisited(),
+			wish = o.getWish(),
+			selected = o.getSelected();
+		const cx = cw / 2,
+			cy = ch / 2,
+			R = P.scale();
+
+		if (globe) {
+			let g = c.createRadialGradient(cx, cy, R * 0.98, cx, cy, R * 1.28);
+			g.addColorStop(0, PAL.halo);
+			g.addColorStop(1, 'rgba(0,0,0,0)');
+			c.fillStyle = g;
+			c.beginPath();
+			c.arc(cx, cy, R * 1.28, 0, TAU);
+			c.fill();
+			g = c.createRadialGradient(cx - R * 0.35, cy - R * 0.4, R * 0.05, cx, cy, R);
+			g.addColorStop(0, PAL.oceanA);
+			g.addColorStop(1, PAL.oceanB);
+			c.fillStyle = g;
+			c.beginPath();
+			c.arc(cx, cy, R, 0, TAU);
+			c.fill();
+		} else {
+			c.fillStyle = PAL.oceanFlat;
+			c.beginPath();
+			path({ type: 'Sphere' });
+			c.fill();
+		}
+		c.strokeStyle = PAL.grat;
+		c.lineWidth = 0.6;
+		c.beginPath();
+		path(GRAT);
+		c.stroke();
+
+		// Beim Bewegen: Inseln unter ~2 Pixel weglassen (unsichtbar), Grenzen immer in der groben Stufe
+		const pxPerDeg = ((baseScale() * view.k) / 57.2958) * (globe ? 1 : 0.87),
+			minDeg = moving ? 2 / pxPerDeg : 0;
+		const seenIds: Record<string, boolean> = {},
+			base: GeoJSON.Polygon[] = [],
+			vis: GeoJSON.Polygon[] = [],
+			wsh: GeoJSON.Polygon[] = [];
+		for (const pg of lod.polys) {
+			let ok = seenIds[pg.id];
+			if (ok === undefined) ok = seenIds[pg.id] = inView(pg.id, ci);
+			if (!ok || pg.size < minDeg) continue;
+			(visited.has(pg.id) ? vis : wish.has(pg.id) ? wsh : base).push(pg.g);
+		}
+		const fillGroup = (arr: GeoJSON.Polygon[], color: string) => {
+			c.beginPath();
+			for (const g of arr) path(g);
+			c.fillStyle = color;
+			c.fill();
+		};
+		fillGroup(base, PAL.land);
+		fillGroup(wsh, PAL.wish);
+		fillGroup(vis, PAL.visited);
+		c.beginPath();
+		path(moving ? getLod('s10')!.borders : lod.borders);
+		c.strokeStyle = PAL.border;
+		c.lineWidth = 0.7;
+		c.stroke();
+
+		if (globe) {
+			c.save();
+			c.beginPath();
+			c.arc(cx, cy, R, 0, TAU);
+			c.clip();
+			const g = c.createRadialGradient(cx - R * 0.25, cy - R * 0.3, R * 0.35, cx, cy, R * 1.02);
+			g.addColorStop(0, 'rgba(0,0,0,0)');
+			g.addColorStop(1, 'rgba(2,10,18,.5)');
+			c.fillStyle = g;
+			c.fillRect(cx - R, cy - R, R * 2, R * 2);
+			c.restore();
+			c.strokeStyle = 'rgba(170,230,245,.35)';
+			c.lineWidth = 1;
+			c.beginPath();
+			c.arc(cx, cy, R, 0, TAU);
+			c.stroke();
+		}
+		if (selected) {
+			c.beginPath();
+			for (const pg of lod.polys) if (pg.id === selected) path(pg.g);
+			c.lineWidth = 2.4;
+			c.strokeStyle = PAL.sel;
+			c.lineJoin = 'round';
+			c.stroke();
+		}
+	}
+
+	function drawTop() {
+		const c = ctxT;
+		if (!c || !cw || !ch) return;
+		c.setTransform(dpr, 0, 0, dpr, 0, 0);
+		c.clearRect(0, 0, cw, ch);
+		const P = curProj();
+		const visited = o.getVisited(),
+			wish = o.getWish(),
+			selected = o.getSelected();
+
+		for (const f of small) {
+			// kleine Länder als Punkte
+			const isSel = f.id === selected,
+				st = visited.has(f.id) ? PAL.visited : wish.has(f.id) ? PAL.wish : null;
+			if (!st && !isSel) continue;
+			const ctr = INFO[f.id].c;
+			if (!onFront(ctr)) continue;
+			const p = P(ctr);
+			if (!p) continue;
+			c.beginPath();
+			c.arc(p[0], p[1], isSel ? 6 : 4.5, 0, TAU);
+			c.fillStyle = st || PAL.sel;
+			c.fill();
+			c.lineWidth = isSel ? 2.2 : 1.4;
+			c.strokeStyle = isSel ? PAL.sel : PAL.border;
+			c.stroke();
+		}
+		if (selected && INFO[selected]) {
+			const ctr = INFO[selected].c;
+			if (onFront(ctr)) {
+				const p = P(ctr);
+				if (p) pill(c, nameOf(selected), p[0], p[1] - (smallIds.has(selected) ? 12 : 8));
+			}
+		}
+	}
+
+	/* --- Steuerung --- */
+	function dragBy(dx: number, dy: number, freeLat: boolean) {
+		const S = baseScale() * view.k;
+		if (view.mode === 'globe') {
+			const f = 57.2958 / S;
+			view.lon -= dx * f;
+			if (freeLat) view.lat = clamp(view.lat + dy * f, -85, 85);
+		} else {
+			const f = 57.2958 / (S * 0.87);
+			view.lon -= dx * f;
+			view.lat = clampFlatLat(view.lat + dy * f);
+		}
+		view.lon = wrapLon(view.lon);
+	}
+	function setK(k: number) {
+		const [a, b] = kRange();
+		view.k = clamp(k, a, b);
+		if (view.mode === 'flat') view.lat = clampFlatLat(view.lat);
+	}
+	function cancelMotion() {
+		fly = null;
+		inertia = null;
+	}
+	function flyTo(t: { lon?: number; lat?: number; k?: number }, ms = 900) {
+		const to = { lon: t.lon !== undefined ? t.lon : view.lon, lat: t.lat !== undefined ? t.lat : view.lat, k: t.k !== undefined ? t.k : view.k };
+		const [a, b] = kRange();
+		to.k = clamp(to.k, a, b);
+		to.lat = view.mode === 'flat' ? clampFlatLat(to.lat, to.k) : clamp(to.lat, -85, 85);
+		if (REDUCE || ms <= 0) {
+			Object.assign(view, to);
+			view.lon = wrapLon(view.lon);
+			markDirty(true);
+			scheduleRefine();
+			return;
+		}
+		const from = { lon: view.lon, lat: view.lat, k: view.k };
+		inertia = null;
+		fly = { from, to, dl: ((to.lon - from.lon + 540) % 360) - 180, t0: performance.now(), ms };
+		markDirty(true);
+	}
+	function flyToCountry(code: string, opts: { keepK?: boolean; ms?: number } = {}) {
+		const i = INFO[code];
+		if (!i) return;
+		const target = view.mode === 'globe' ? clamp(90 / Math.max(i.size, 6), 1.3, 10) : clamp(150 / Math.max(i.size, 6), 1.5, 12);
+		flyTo({ lon: i.c[0], lat: i.c[1], k: opts.keepK ? Math.max(view.k, 1) : Math.max(target, view.k) }, opts.ms || 1000);
+	}
+	function flyToContinent(code: string) {
+		const v = CONT_VIEW[code as ContinentCode];
+		if (!v) return;
+		flyTo({ lon: v.c[0], lat: v.c[1], k: view.mode === 'flat' ? v.k * 1.4 : v.k }, 1000);
+	}
+
+	function pick(x: number, y: number): string | null {
+		const P = curProj();
+		const visited = o.getVisited(),
+			wish = o.getWish(),
+			selected = o.getSelected();
+		for (const f of small) {
+			// nur Länder, für die auch ein Punkt gezeichnet wird
+			if (!visited.has(f.id) && !wish.has(f.id) && f.id !== selected) continue;
+			const c = INFO[f.id].c;
+			if (!onFront(c)) continue;
+			const p = P(c);
+			if (p && Math.hypot(p[0] - x, p[1] - y) < 11) return f.id;
+		}
+		const g = P.invert!([x, y]);
+		if (!g || isNaN(g[0]) || isNaN(g[1])) return null;
+		if (view.mode === 'globe' && geoDistance(g, [view.lon, view.lat]) > Math.PI / 2) return null;
+		for (const f of features) if (geoContains(f, g)) return f.id;
+		return null;
+	}
+	function tap(cx: number, cy: number) {
+		const r = cv.getBoundingClientRect(),
+			hit = pick(cx - r.left, cy - r.top);
+		if (!hit) {
+			o.onTapEmpty();
+			markDirty(false);
+			return;
+		}
+		flyToCountry(hit, { keepK: true, ms: 650 });
+		o.onTapCountry(hit);
+	}
+
+	/* --- Zeiger: Ziehen, Pinch, Tippen, Schwung --- */
+	const ptrs = new Map<number, { x: number; y: number }>();
+	let gest: { t0: number; moved: number; lt: number; vx: number; vy: number; pinch: boolean; freeLat: boolean; d0?: number; k0?: number } | null = null;
+	const onDown = (e: PointerEvent) => {
+		try {
+			cv.setPointerCapture(e.pointerId);
+		} catch {}
+		cancelMotion();
+		ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+		const now = performance.now();
+		if (ptrs.size === 1) gest = { t0: now, moved: 0, lt: now, vx: 0, vy: 0, pinch: false, freeLat: o.isFull() || e.pointerType !== 'touch' };
+		else if (ptrs.size === 2 && gest) {
+			const [a, b] = [...ptrs.values()];
+			gest.pinch = true;
+			gest.d0 = Math.hypot(a.x - b.x, a.y - b.y) || 1;
+			gest.k0 = view.k;
+			gest.moved = 99;
+		}
+		interacting = true;
+		markDirty(false);
+	};
+	const onMove = (e: PointerEvent) => {
+		const p = ptrs.get(e.pointerId);
+		if (!p || !gest) return;
+		if (gest.pinch && ptrs.size >= 2) {
+			p.x = e.clientX;
+			p.y = e.clientY;
+			const [a, b] = [...ptrs.values()];
+			setK((gest.k0! * (Math.hypot(a.x - b.x, a.y - b.y) || 1)) / gest.d0!);
+			markDirty(true);
+			return;
+		}
+		const dx = e.clientX - p.x,
+			dy = e.clientY - p.y;
+		p.x = e.clientX;
+		p.y = e.clientY;
+		gest.moved += Math.abs(dx) + Math.abs(dy);
+		if (gest.moved < 4) return;
+		dragBy(dx, dy, gest.freeLat);
+		const now = performance.now(),
+			dt = Math.max(1, now - gest.lt);
+		gest.vx = 0.75 * gest.vx + (0.25 * dx) / dt;
+		gest.vy = 0.75 * gest.vy + (0.25 * dy) / dt;
+		gest.lt = now;
+		markDirty(true);
+	};
+	function endPtr(e: PointerEvent, cancelled: boolean) {
+		if (!ptrs.has(e.pointerId)) return;
+		const g = gest;
+		ptrs.delete(e.pointerId);
+		if (ptrs.size === 0) {
+			interacting = false;
+			if (g && !cancelled && !g.pinch && g.moved < 8 && performance.now() - g.t0 < 450) tap(e.clientX, e.clientY);
+			else if (g && !cancelled && !REDUCE && !g.pinch && Math.hypot(g.vx, g.vy) > 0.05 && performance.now() - g.lt < 80)
+				inertia = { vx: g.vx, vy: g.vy, freeLat: g.freeLat };
+			const changed = g && g.moved >= 4;
+			gest = null;
+			if (changed) scheduleRefine(); // scharf zeichnen erst kurz nach dem Loslassen
+			markDirty(false);
+		}
+	}
+	const onUp = (e: PointerEvent) => endPtr(e, false);
+	const onCancel = (e: PointerEvent) => endPtr(e, true);
+	const onWheel = (e: WheelEvent) => {
+		if (!o.isFull() && !e.ctrlKey) return;
+		e.preventDefault();
+		cancelMotion();
+		setK(view.k * Math.exp(-e.deltaY * 0.0015));
+		markDirty(true);
+		scheduleRefine();
+	};
+	cv.addEventListener('pointerdown', onDown);
+	cv.addEventListener('pointermove', onMove);
+	cv.addEventListener('pointerup', onUp);
+	cv.addEventListener('pointercancel', onCancel);
+	cv.addEventListener('wheel', onWheel, { passive: false });
+
+	const ro = window.ResizeObserver ? new ResizeObserver(() => resize()) : null;
+	ro?.observe(cvB);
+	const onVis = () => {
+		if (!document.hidden) markDirty(true);
+	};
+	window.addEventListener('resize', resize);
+	document.addEventListener('visibilitychange', onVis);
+	sync();
+	resize();
+
+	// Detailstufen im Leerlauf vorbereiten, damit das erste Ziehen nicht ruckelt
+	let prewarmT: ReturnType<typeof setTimeout> | undefined;
+	(function prewarm() {
+		const names = ['full', 's6', 's10', 's3'];
+		let i = 0;
+		const later = (f: () => void) => (window.requestIdleCallback ? window.requestIdleCallback(f, { timeout: 1500 }) : setTimeout(f, 80));
+		const next = () => {
+			if (i >= names.length || destroyed) return;
+			try {
+				getLod(names[i++]);
+			} catch {}
+			later(next);
+		};
+		prewarmT = setTimeout(() => later(next), 500);
+	})();
+
+	return {
+		markDirty,
+		resize,
+		flyToCountry,
+		flyToContinent,
+		zoomBy(m: number) {
+			cancelMotion();
+			flyTo({ k: view.k * m }, 350);
+		},
+		setMode(m: MapMode) {
+			if (m === view.mode) return;
+			cancelMotion();
+			view.mode = m;
+			view.k = 1;
+			if (m === 'flat') view.lat = clampFlatLat(view.lat, 1);
+			saveMapPrefs();
+			sync();
+			markDirty(true);
+			scheduleRefine();
+		},
+		toggleSpin() {
+			view.spin = !view.spin;
+			saveMapPrefs();
+			sync();
+			markDirty(false);
+		},
+		destroy() {
+			destroyed = true;
+			clearTimeout(refineT);
+			clearTimeout(prewarmT);
+			ro?.disconnect();
+			window.removeEventListener('resize', resize);
+			document.removeEventListener('visibilitychange', onVis);
+			cv.removeEventListener('pointerdown', onDown);
+			cv.removeEventListener('pointermove', onMove);
+			cv.removeEventListener('pointerup', onUp);
+			cv.removeEventListener('pointercancel', onCancel);
+			cv.removeEventListener('wheel', onWheel);
+		}
+	};
+}
+
+export type WorldMap = ReturnType<typeof createWorldMap>;
