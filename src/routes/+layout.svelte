@@ -5,18 +5,12 @@
 
 	let { children } = $props();
 
-	const webManifestLink = pwaInfo ? pwaInfo.webManifest.linkTag : '';
-
+	// Service Worker registrieren (nur im Build; das Manifest ist in app.html verlinkt)
 	onMount(async () => {
 		if (!pwaInfo) return;
 		const { registerSW } = await import('virtual:pwa-register');
 		registerSW({ immediate: true });
 	});
 </script>
-
-<svelte:head>
-	<!-- eslint-disable-next-line svelte/no-at-html-tags -->
-	{@html webManifestLink}
-</svelte:head>
 
 {@render children()}
