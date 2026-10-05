@@ -276,4 +276,16 @@ body.noscroll{overflow:hidden}
 .map-panel .cont{background:rgba(255,255,255,.14);color:#fff}
 button.cont{border:0;font:inherit;font-size:14px;color:inherit}
 #continents .cont{cursor:pointer}
+
+/* Einstellungen: Button oben rechts und Vollbild-Seite */
+.menu-btn{flex:none;display:grid;place-items:center;width:44px;height:44px;border:0;border-radius:50%;background:var(--chip);color:var(--ink);-webkit-tap-highlight-color:transparent;transition:transform .15s}
+.menu-btn:active{transform:scale(.92)}
+.menu-btn svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.set-view{z-index:42}
+.set-view:not([hidden]){animation:tabInR .3s cubic-bezier(.2,.8,.2,1)}
+.set-title{flex:1;margin:0;font-family:var(--display);font-weight:800;font-size:24px;letter-spacing:-.01em;line-height:1.2}
+.set-view .ov-body{max-width:760px;width:100%;margin:0 auto}
+.wrap.solo{padding-bottom:calc(40px + env(safe-area-inset-bottom,0px))}
+.wrap.solo ~ .toast{bottom:calc(24px + env(safe-area-inset-bottom,0px))}
+@media (prefers-reduced-motion:reduce){.set-view:not([hidden]){animation:none}}
 }

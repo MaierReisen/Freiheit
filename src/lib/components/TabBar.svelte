@@ -13,17 +13,5 @@
 				/></svg
 			><span>Übersicht</span></button
 		>
-		<button type="button" data-tab="more" aria-current={ui.tab === 'more' ? 'page' : undefined} onclick={() => goTab('more')}
-			><svg viewBox="0 0 24 24" aria-hidden="true"
-				><rect class="f" x="3.6" y="3.6" width="7" height="7" rx="2.2" /><rect class="f" x="13.4" y="3.6" width="7" height="7" rx="2.2" /><rect
-					class="f"
-					x="3.6"
-					y="13.4"
-					width="7"
-					height="7"
-					rx="2.2"
-				/><rect class="f" x="13.4" y="13.4" width="7" height="7" rx="2.2" /></svg
-			><span>Mehr</span></button
-		>
 	</div>
 </nav>

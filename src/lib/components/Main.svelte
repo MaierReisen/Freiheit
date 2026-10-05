@@ -1,17 +1,21 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { TABS, closeSheet, goTab, hooks, initFromHash, onHashChange, setFull, ui } from '$lib/app.svelte';
+	import { TABS, closeSettings, closeSheet, goTab, hooks, initFromHash, onHashChange, setFull, ui } from '$lib/app.svelte';
 	import ContinentChips from './ContinentChips.svelte';
 	import Hero from './Hero.svelte';
-	import MoreTab from './MoreTab.svelte';
 	import PlacesOverlay from './PlacesOverlay.svelte';
+	import SettingsView from './SettingsView.svelte';
 	import Sheet from './Sheet.svelte';
 	import TabBar from './TabBar.svelte';
 	import WorldMap from './WorldMap.svelte';
 
 	function onKeydown(e: KeyboardEvent) {
 		if (e.key !== 'Escape') return;
-		// gleiche Reihenfolge wie bisher: Vollbild, Sheet, Übersicht
+		// gleiche Reihenfolge wie bisher: Vollbild, Sheet, Übersicht; Einstellungen nur, wenn kein Sheet offen ist
+		if (ui.settingsOpen && !ui.sheetOpen) {
+			closeSettings(false);
+			return;
+		}
 		if (ui.full && !ui.sheetOpen) setFull(false);
 		closeSheet();
 		if (ui.placesOpen && !ui.sheetOpen) hooks.places?.close(false);
@@ -21,7 +25,7 @@
 	let swipe: { x: number; y: number; t: number } | null = null;
 	function onTouchStart(e: TouchEvent) {
 		swipe = null;
-		if (e.touches.length !== 1 || ui.full || ui.placesOpen || ui.sheetOpen) return;
+		if (TABS.length < 2 || e.touches.length !== 1 || ui.full || ui.placesOpen || ui.sheetOpen || ui.settingsOpen) return;
 		const target = e.target as Element | null;
 		if (target?.closest?.('#mapBox,input,textarea,select,.continents,.chips,.tabbar,.sheet,.count-btn,.hero-add')) return;
 		const t = e.touches[0];
@@ -48,6 +52,7 @@
 		// Beim Abmelden: offene Ansichten schließen
 		return () => {
 			closeSheet();
+			if (ui.settingsOpen) closeSettings(true);
 			if (ui.full) setFull(false, true);
 			ui.placesOpen = false;
 			document.body.classList.remove('noscroll');
@@ -69,12 +74,9 @@
 		<ContinentChips id="continents" />
 		<WorldMap />
 	</main>
-
-	<main class="tab" id="tab-more" hidden={ui.tab !== 'more'}>
-		<MoreTab />
-	</main>
 </div>
 
-<TabBar />
+{#if TABS.length > 1}<TabBar />{/if}
 <PlacesOverlay />
+<SettingsView />
 <Sheet />

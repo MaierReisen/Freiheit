@@ -1,4 +1,5 @@
 -- Freiheit – Datenbankschema für Supabase
+-- Vollständiges Schema für ein neues Projekt. Spätere Änderungen liegen zusätzlich in supabase/migrations/.
 -- Einmal im Supabase-Dashboard unter "SQL Editor" einfügen und "Run" klicken.
 -- Jede Tabelle ist per Row Level Security geschützt: jeder sieht und ändert nur seine eigenen Zeilen.
 
@@ -27,6 +28,14 @@ create table if not exists public.milestones (
   year    integer not null check (year between 1900 and 2100),
   count   integer not null check (count >= 0),
   primary key (user_id, year)
+);
+
+-- ---------- Einstellungen ----------
+
+create table if not exists public.user_settings (
+  user_id        uuid primary key default auth.uid() references auth.users on delete cascade,
+  home_continent text not null default 'EU' check (home_continent in ('EU','AS','AF','NA','SA','OC')),
+  updated_at     timestamptz not null default now()
 );
 
 -- ---------- Reisen, Flüge, Kosten (Oberfläche folgt) ----------
@@ -83,7 +92,7 @@ create index if not exists expenses_trip_idx on public.expenses (trip_id);
 do $$
 declare t text;
 begin
-  foreach t in array array['visited_countries','wishlist','milestones','trips','flights','expenses'] loop
+  foreach t in array array['visited_countries','wishlist','milestones','user_settings','trips','flights','expenses'] loop
     execute format('alter table public.%I enable row level security', t);
     execute format('drop policy if exists "eigene Daten" on public.%I', t);
     execute format(
@@ -94,6 +103,6 @@ end $$;
 
 -- Zugriff über die Data API nur für angemeldete Nutzer (Zeilen filtert die Policy oben)
 grant select, insert, update, delete on
-  public.visited_countries, public.wishlist, public.milestones,
+  public.visited_countries, public.wishlist, public.milestones, public.user_settings,
   public.trips, public.flights, public.expenses
 to authenticated;

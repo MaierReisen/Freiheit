@@ -1,6 +1,6 @@
 import type { User } from '@supabase/supabase-js';
 import { base } from '$app/paths';
-import { endSession, flush, pendingChanges, startSession } from './atlas.svelte';
+import { endSession, flush, loadCache, pendingChanges, startSession } from './atlas.svelte';
 import { supabase } from './supabase';
 
 /* Login per Magic Link. Die Mail enthält zusätzlich einen Code: auf dem iPhone öffnet sich der Link in Safari,
@@ -14,6 +14,8 @@ export function initAuth() {
 	started = true;
 	supabase.auth.onAuthStateChange((_event, session) => {
 		const user = session?.user ?? null;
+		// Cache vor dem Anzeigen laden, damit die Karte gleich mit der richtigen Startregion beginnt
+		if (user) loadCache(user.id);
 		auth.user = user;
 		auth.ready = true;
 		// nicht direkt im Callback auf Supabase warten (sonst kann der Client blockieren)

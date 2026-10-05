@@ -24,6 +24,8 @@ export interface MapOptions {
 	/** Karte sichtbar (Startseite oder Vollbild) */
 	isVisible(): boolean;
 	isFull(): boolean;
+	/** Startregion: Mittelpunkt und Zoom, auf die die Karte beim Start fliegt */
+	getStartView(): { c: [number, number]; k: number } | null | undefined;
 	onTapCountry(code: string): void;
 	onTapEmpty(): void;
 	/** Modus, Drehen oder Ladezustand haben sich geändert */
@@ -183,9 +185,11 @@ export function createWorldMap(o: MapOptions) {
 	}
 	function intro() {
 		introDone = true;
-		const h = [10, 45];
-		const target = { lon: h[0], lat: clamp(h[1] - 4, 12, 48), k: 1 };
-		if (view.mode === 'flat') target.lat = clampFlatLat(target.lat, 1);
+		const sv = o.getStartView();
+		const target = sv
+			? { lon: sv.c[0], lat: sv.c[1], k: view.mode === 'flat' ? sv.k * 1.4 : sv.k }
+			: { lon: 10, lat: 41, k: 1 };
+		target.lat = view.mode === 'flat' ? clampFlatLat(target.lat, target.k) : clamp(target.lat, -85, 85);
 		if (REDUCE) {
 			Object.assign(view, target);
 			return;

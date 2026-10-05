@@ -3,7 +3,8 @@ import { tick } from 'svelte';
 /* App-weiter Zustand der Oberfläche: Tabs, Bottom-Sheet, Vollbild-Karte, Länder-Übersicht, Toast.
    Die Komponenten mit DOM-Animationen (Karte, Übersicht) melden ihre Steuerfunktionen in `hooks` an. */
 
-export const TABS = ['home', 'more'] as const;
+// Weitere Tabs (z. B. Reisen) hier ergänzen; mit nur einem Tab wird die Tab-Leiste ausgeblendet
+export const TABS = ['home'] as const;
 export type Tab = (typeof TABS)[number];
 export type PickerMode = 'visited' | 'wish' | 'fly';
 export type SheetView = { kind: 'country'; code: string } | { kind: 'picker'; mode: PickerMode };
@@ -21,6 +22,7 @@ export const ui = $state({
 	placesOpen: false,
 	seg: 'visited' as 'visited' | 'wish',
 	full: false,
+	settingsOpen: false,
 	/** Hinweis-Puls am Zähler, bis die Übersicht einmal geöffnet wurde */
 	countHint: false,
 	toastMsg: '',
@@ -87,6 +89,37 @@ export function setFull(on: boolean, fromHash = false) {
 	} else if (!on) pushedMap = false;
 }
 
+/* ---------- Einstellungen (Vollbild, über den Button oben rechts) ---------- */
+let pushedSettings = false;
+let settingsReturnFocus: Element | null = null;
+export function openSettings(fromHash = false) {
+	if (ui.settingsOpen) return;
+	if (ui.sheetOpen) closeSheet();
+	if (ui.full) setFull(false, true);
+	if (ui.placesOpen) hooks.places?.close(true);
+	settingsReturnFocus = document.activeElement;
+	ui.settingsOpen = true;
+	document.body.classList.add('noscroll');
+	if (!fromHash) {
+		pushedSettings = true;
+		location.hash = 'einstellungen';
+	}
+	tick().then(() => document.getElementById('setClose')?.focus({ preventScroll: true }));
+}
+export function closeSettings(fromHash = false) {
+	if (!ui.settingsOpen) return;
+	ui.settingsOpen = false;
+	document.body.classList.remove('noscroll');
+	if (!fromHash) {
+		if (pushedSettings && location.hash === '#einstellungen') {
+			pushedSettings = false;
+			history.back();
+		} else if (location.hash === '#einstellungen') location.hash = 'home';
+	} else pushedSettings = false;
+	if (settingsReturnFocus instanceof HTMLElement) settingsReturnFocus.focus({ preventScroll: true });
+}
+const isSettingsHash = (h: string) => h === 'einstellungen' || h === 'more';
+
 /* ---------- Tabs ---------- */
 function showTab(t: Tab, dir: number) {
 	ui.tab = t;
@@ -106,6 +139,7 @@ export function goTab(tab: string, push = true, dir?: number) {
 	if (ui.sheetOpen) closeSheet();
 	if (ui.full) setFull(false, true);
 	if (ui.placesOpen) hooks.places?.close(true);
+	if (ui.settingsOpen) closeSettings(true);
 	if (dir === undefined) dir = Math.sign(TABS.indexOf(t) - TABS.indexOf(ui.tab));
 	showTab(t, dir);
 	if (push && location.hash !== '#' + t) location.hash = t;
@@ -121,6 +155,9 @@ export function initFromHash() {
 	} else if (h === 'laender' || h === 'places') {
 		showTab('home', 0);
 		hooks.places?.open(true);
+	} else if (isSettingsHash(h)) {
+		showTab('home', 0);
+		openSettings(true);
 	} else goTab(h || 'home', false, 0);
 	requestAnimationFrame(() => hooks.map?.resize());
 }
@@ -129,15 +166,20 @@ export function onHashChange() {
 	const h = location.hash.slice(1);
 	if (h === 'map') {
 		if (ui.placesOpen) hooks.places?.close(true);
+		if (ui.settingsOpen) closeSettings(true);
 		if (ui.tab !== 'home') showTab('home', 0);
 		setFull(true, true);
+	} else if (isSettingsHash(h)) {
+		openSettings(true);
 	} else if (h === 'laender' || h === 'places') {
+		if (ui.settingsOpen) closeSettings(true);
 		if (ui.full) setFull(false, true);
 		if (ui.tab !== 'home') showTab('home', 0);
 		hooks.places?.open(true);
 	} else {
 		if (ui.full) setFull(false, true);
 		if (ui.placesOpen) hooks.places?.close(true);
+		if (ui.settingsOpen) closeSettings(true);
 		if (h !== ui.tab) goTab(h, false);
 	}
 }

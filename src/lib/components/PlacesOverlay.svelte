@@ -2,7 +2,7 @@
 	import { onMount, tick } from 'svelte';
 	import { atlas } from '$lib/atlas.svelte';
 	import { contOf, flag } from '$lib/countries';
-	import { REDUCE, closeSheet, dom, hooks, openCountry, openPicker, setFull, ui } from '$lib/app.svelte';
+	import { REDUCE, closeSettings, closeSheet, dom, hooks, openCountry, openPicker, setFull, ui } from '$lib/app.svelte';
 	import Timeline from './Timeline.svelte';
 
 	/* Länder-Übersicht (Vollbild), geöffnet über den Zähler auf der Startseite */
@@ -92,6 +92,7 @@
 		if (ui.placesOpen) return;
 		if (ui.full) setFull(false, true);
 		if (ui.sheetOpen) closeSheet();
+		if (ui.settingsOpen) closeSettings(true);
 		ui.placesOpen = true;
 		lastFocus = document.activeElement;
 		try {

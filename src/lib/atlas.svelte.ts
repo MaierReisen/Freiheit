@@ -1,4 +1,4 @@
-import { nameOf } from './countries';
+import { CONT_VIEW, nameOf, type ContinentCode } from './countries';
 import { toast } from './app.svelte';
 import { supabase } from './supabase';
 
@@ -38,12 +38,21 @@ export interface AtlasData {
 
 export type SyncStatus = 'idle' | 'saving' | 'offline' | 'error';
 
+/** Nutzereinstellungen, auf allen Geräten gleich (Tabelle user_settings) */
+export interface Settings {
+	/** Startregion: darauf zoomt die Karte beim Öffnen der App */
+	homeContinent: ContinentCode;
+}
+export const defaultSettings = (): Settings => ({ homeContinent: 'EU' });
+const isContinent = (c: unknown): c is ContinentCode => typeof c === 'string' && c in CONT_VIEW;
+
 type Op =
 	| { t: 'addCountry'; code: string; name: string; position: number }
 	| { t: 'removeCountry'; code: string }
 	| { t: 'addWish'; code: string; name: string }
 	| { t: 'removeWish'; code: string }
-	| { t: 'replaceAll'; data: AtlasData };
+	| { t: 'replaceAll'; data: AtlasData }
+	| { t: 'settings'; s: Settings };
 
 // Daten der Version ohne Konto: werden beim ersten Login in das Konto übernommen
 const LEGACY_KEY = 'freiheit-state-v2';
@@ -51,6 +60,7 @@ const LEGACY_KEY = 'freiheit-state-v2';
 const LEGACY_JUNK = ['freiheit-gh', 'freiheit-dirty', 'freiheit-run'];
 const cacheKey = (uid: string) => `freiheit-data:${uid}`;
 const queueKey = (uid: string) => `freiheit-queue:${uid}`;
+const settingsKey = (uid: string) => `freiheit-settings:${uid}`;
 
 export const emptyAtlas = (): AtlasData => ({ schemaVersion: 1, countries: [], milestones: [], wishlist: [] });
 
@@ -102,7 +112,11 @@ const removeKey = (key: string) => {
 
 LEGACY_JUNK.forEach(removeKey);
 
-export const atlas = $state<{ data: AtlasData; sync: SyncStatus }>({ data: emptyAtlas(), sync: 'idle' });
+export const atlas = $state<{ data: AtlasData; sync: SyncStatus; settings: Settings }>({
+	data: emptyAtlas(),
+	sync: 'idle',
+	settings: defaultSettings()
+});
 
 let uid: string | null = null;
 let queue: Op[] = [];
@@ -140,6 +154,14 @@ async function runOp(op: Op, user: string) {
 		case 'removeWish':
 			ok(await supabase.from('wishlist').delete().eq('user_id', user).eq('code', op.code));
 			return;
+		case 'settings': {
+			const r = await supabase
+				.from('user_settings')
+				.upsert({ user_id: user, home_continent: op.s.homeContinent, updated_at: new Date().toISOString() });
+			// Tabelle noch nicht angelegt (Migration fehlt): Einstellung bleibt lokal, Warteschlange nicht blockieren
+			if (r.error && r.error.code !== 'PGRST205') throw r.error;
+			return;
+		}
 		case 'replaceAll': {
 			const d = op.data;
 			for (const t of ['visited_countries', 'wishlist', 'milestones']) ok(await supabase.from(t).delete().eq('user_id', user));
@@ -180,11 +202,16 @@ export async function flush(): Promise<boolean> {
 async function pull() {
 	const user = uid;
 	if (!user || !(await flush())) return;
-	const [c, w, m] = await Promise.all([
+	const [c, w, m, st] = await Promise.all([
 		supabase.from('visited_countries').select('code,name,position,created_at').order('position').order('created_at'),
 		supabase.from('wishlist').select('code,name').order('created_at'),
-		supabase.from('milestones').select('year,count').order('year')
+		supabase.from('milestones').select('year,count').order('year'),
+		supabase.from('user_settings').select('home_continent').maybeSingle()
 	]);
+	if (!st.error && st.data && uid === user && !queue.some((o) => o.t === 'settings')) {
+		atlas.settings = { ...atlas.settings, homeContinent: isContinent(st.data.home_continent) ? st.data.home_continent : 'EU' };
+		writeJson(settingsKey(user), atlas.settings);
+	}
 	if (c.error || w.error || m.error) {
 		atlas.sync = navigator.onLine === false ? 'offline' : 'error';
 		return;
@@ -212,14 +239,24 @@ async function pull() {
 	persist();
 }
 
-/** Nach dem Login: zwischengespeicherte Daten zeigen, dann mit Supabase abgleichen */
-export async function startSession(userId: string) {
+/** Zwischengespeicherte Daten und Einstellungen eines Kontos sofort laden (synchron, vor dem ersten Zeichnen) */
+export function loadCache(userId: string) {
 	if (uid === userId) return;
 	uid = userId;
 	atlas.data = normalize(readJson(cacheKey(userId))) ?? emptyAtlas();
+	const st = readJson(settingsKey(userId)) as Partial<Settings> | null;
+	atlas.settings = { ...defaultSettings(), ...(st && isContinent(st.homeContinent) ? { homeContinent: st.homeContinent } : {}) };
 	const q = readJson(queueKey(userId));
 	queue = Array.isArray(q) ? (q as Op[]) : [];
 	atlas.sync = 'idle';
+}
+
+/** Nach dem Login: zwischengespeicherte Daten zeigen, dann mit Supabase abgleichen */
+let pulledFor: string | null = null;
+export async function startSession(userId: string) {
+	loadCache(userId);
+	if (pulledFor === userId) return; // weitere Auth-Ereignisse (z. B. Token erneuert): nicht erneut laden
+	pulledFor = userId;
 	await pull();
 }
 
@@ -228,11 +265,14 @@ export function endSession() {
 	if (uid) {
 		removeKey(cacheKey(uid));
 		removeKey(queueKey(uid));
+		removeKey(settingsKey(uid));
 	}
 	uid = null;
+	pulledFor = null;
 	queue = [];
 	clearTimeout(retryT);
 	atlas.data = emptyAtlas();
+	atlas.settings = defaultSettings();
 	atlas.sync = 'idle';
 }
 export const pendingChanges = () => queue.length;
@@ -278,6 +318,14 @@ export function removeWish(code: string) {
 	persist();
 	enqueue({ t: 'removeWish', code });
 	toast(`${nameOf(code)} von der Wunschliste entfernt`);
+}
+
+/* ---------- Einstellungen ---------- */
+export function setHomeContinent(c: ContinentCode) {
+	if (!isContinent(c) || atlas.settings.homeContinent === c) return;
+	atlas.settings = { ...atlas.settings, homeContinent: c };
+	if (uid) writeJson(settingsKey(uid), atlas.settings);
+	enqueue({ t: 'settings', s: { ...atlas.settings } });
 }
 
 /* ---------- Export / Import ---------- */

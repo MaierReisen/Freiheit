@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { atlas, visitedSet, wishSet } from '$lib/atlas.svelte';
 	import { REDUCE, closeSheet, hooks, openCountry, openPicker, setFull, ui } from '$lib/app.svelte';
+	import { CONT_VIEW } from '$lib/countries';
 	import { createWorldMap, type MapSync, type WorldMap } from '$lib/map/engine';
 	import ContinentChips from './ContinentChips.svelte';
 
@@ -31,6 +32,7 @@
 			getSelected: () => ui.selected,
 			isVisible: () => ui.full || ui.tab === 'home',
 			isFull: () => ui.full,
+			getStartView: () => CONT_VIEW[atlas.settings.homeContinent],
 			onTapCountry: openCountry,
 			onTapEmpty: () => {
 				if (ui.selected) closeSheet();
