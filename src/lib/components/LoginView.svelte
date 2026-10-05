@@ -18,6 +18,8 @@
 		if (x?.status === 429 || /rate/i.test(x?.code ?? '')) return 'Zu viele Versuche. Warte ein paar Minuten und versuche es dann erneut.';
 		if (x?.code === 'email_address_not_authorized')
 			return 'An diese Adresse darf noch keine Login-Mail gehen. Der Mailversand ist noch nicht eingerichtet (eigenes SMTP in Supabase).';
+		if (x?.code === 'signup_disabled' || x?.code === 'otp_disabled' || /signups not allowed/i.test(x?.message ?? ''))
+			return 'Diese E-Mail-Adresse ist nicht freigeschaltet. Die App ist nur mit Einladung nutzbar.';
 		if (x?.code === 'email_address_invalid') return 'Diese E-Mail-Adresse wird nicht angenommen. Bitte eine andere verwenden.';
 		if (x?.code === 'otp_expired' || /expired|invalid/i.test(x?.message ?? '')) return 'Der Code ist falsch oder abgelaufen. Fordere einen neuen Link an.';
 		if (typeof navigator !== 'undefined' && navigator.onLine === false) return 'Keine Internetverbindung.';
@@ -78,7 +80,7 @@
 	<div class="card">
 		{#if step === 'email'}
 			<p class="note" style="margin-top:0">
-				Deine Länder werden in deinem Konto gespeichert und sind auf all deinen Geräten gleich. Du bekommst einen Anmeldelink per E-Mail, ein Passwort brauchst du nicht.
+				Deine Länder werden in deinem Konto gespeichert und sind auf all deinen Geräten gleich. Du bekommst einen Anmeldelink per E-Mail, ein Passwort brauchst du nicht. Die Anmeldung ist nur mit Einladung möglich.
 			</p>
 			<form onsubmit={send} novalidate>
 				<div class="field">

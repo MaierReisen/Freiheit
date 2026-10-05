@@ -24,7 +24,8 @@ export function initAuth() {
 export async function sendLoginLink(email: string) {
 	const { error } = await supabase.auth.signInWithOtp({
 		email,
-		options: { shouldCreateUser: true, emailRedirectTo: `${location.origin}${base}/` }
+		// Nur eingeladene Nutzer: neue Konten legt der Admin im Supabase-Dashboard an (Invite user)
+		options: { shouldCreateUser: false, emailRedirectTo: `${location.origin}${base}/` }
 	});
 	if (error) throw error;
 }
