@@ -23,6 +23,8 @@ export const ui = $state({
 	seg: 'visited' as 'visited' | 'wish',
 	full: false,
 	settingsOpen: false,
+	/** Kontinent, auf den die Karte zuletzt per Chip geflogen ist (null = Startregion); nur Ansicht, wird nicht gespeichert */
+	focusContinent: null as string | null,
 	/** Hinweis-Puls am Zähler, bis die Übersicht einmal geöffnet wurde */
 	countHint: false,
 	toastMsg: '',

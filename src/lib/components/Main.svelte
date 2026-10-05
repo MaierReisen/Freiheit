@@ -53,6 +53,7 @@
 		return () => {
 			closeSheet();
 			if (ui.settingsOpen) closeSettings(true);
+			ui.focusContinent = null;
 			if (ui.full) setFull(false, true);
 			ui.placesOpen = false;
 			document.body.classList.remove('noscroll');

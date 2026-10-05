@@ -17,6 +17,7 @@
 	function chooseContinent(k: ContinentCode) {
 		if (k === atlas.settings.homeContinent) return;
 		setHomeContinent(k);
+		ui.focusContinent = k;
 		hooks.map?.flyToContinent(k); // Karte steht beim Schließen schon auf der neuen Region
 		toast(`Startregion: ${CONT_NAMES[k]}`);
 	}
