@@ -52,6 +52,7 @@
 			onSync: (v) => (s = v)
 		});
 		map = m;
+		if (import.meta.env.DEV) (window as unknown as { __freiheitMap: WorldMap }).__freiheitMap = m;
 		// Tipp außerhalb des Globus beendet den aktiven Modus (Sheet und Abdunklung zählen dazu)
 		const onOutside = (e: PointerEvent) => {
 			if (!ui.mapActive) return;

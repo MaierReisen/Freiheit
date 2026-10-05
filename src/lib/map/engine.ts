@@ -1,6 +1,6 @@
 import { geoContains, geoDistance, geoGraticule10, geoNaturalEarth1, geoOrthographic, geoPath, type GeoProjection } from 'd3-geo';
 import { CONT_VIEW, nameOf, type ContinentCode } from '../countries';
-import { FC, INFO, features, fetchFineLod, fineLod, getLod, small, smallIds, wrapLon, type Lod } from './geo';
+import { FC, INFO, features, fetchFineLod, fineLod, getLod, smallIds, wrapLon, type Lod } from './geo';
 
 /* Weltkarte auf zwei Canvas-Ebenen: Globus (orthografisch) und flache Karte (Natural Earth).
    cvB: Karte (ändert sich selten), cvT: Punkte kleiner Länder und Beschriftung. */
@@ -442,30 +442,50 @@ export function createWorldMap(o: MapOptions) {
 			wish = o.getWish(),
 			selected = o.getSelected();
 
-		for (const f of small) {
-			// kleine Länder als Punkte
+		// Länder, die auf dem Bildschirm zu klein zum Erkennen sind, als leuchtende Punkte (nur bereiste und das gewählte);
+		// beim Hineinzoomen verschwindet der Punkt und die echte Form ist zu sehen
+		const ppd = pxPerDeg();
+		for (const f of features) {
 			const isSel = f.id === selected,
-				counted = o.isCounted(f.id),
-				st = visited.has(f.id) ? (counted ? PAL.visited : PAL.visitedSoft) : wish.has(f.id) ? PAL.wish : null;
-			if (!st && !isSel) continue;
-			const ctr = INFO[f.id].c;
-			if (!onFront(ctr)) continue;
-			const p = P(ctr);
+				been = visited.has(f.id);
+			if (!been && !isSel) continue;
+			const i = INFO[f.id];
+			if (i.size * ppd >= 7 || !onFront(i.c)) continue;
+			const p = P(i.c);
 			if (!p) continue;
-			c.beginPath();
-			c.arc(p[0], p[1], isSel ? 6 : 4.5, 0, TAU);
-			c.fillStyle = st || PAL.sel;
-			c.fill();
-			const soft = visited.has(f.id) && !counted;
-			c.lineWidth = isSel ? 2.2 : soft ? 1.6 : 1.4;
-			c.strokeStyle = isSel ? PAL.sel : soft ? PAL.visited : PAL.border;
-			c.stroke();
+			const counted = o.isCounted(f.id);
+			if (been) {
+				const g = c.createRadialGradient(p[0], p[1], 0, p[0], p[1], 9);
+				g.addColorStop(0, counted ? 'rgba(52,209,191,.55)' : 'rgba(52,209,191,.3)');
+				g.addColorStop(1, 'rgba(52,209,191,0)');
+				c.fillStyle = g;
+				c.beginPath();
+				c.arc(p[0], p[1], 9, 0, TAU);
+				c.fill();
+				c.beginPath();
+				c.arc(p[0], p[1], 3, 0, TAU);
+				if (counted) {
+					c.fillStyle = PAL.visited;
+					c.fill();
+				} else {
+					c.lineWidth = 1.5;
+					c.strokeStyle = PAL.visited;
+					c.stroke();
+				}
+			}
+			if (isSel) {
+				c.beginPath();
+				c.arc(p[0], p[1], 6.5, 0, TAU);
+				c.lineWidth = 2;
+				c.strokeStyle = PAL.sel;
+				c.stroke();
+			}
 		}
 		if (selected && INFO[selected]) {
 			const ctr = INFO[selected].c;
 			if (onFront(ctr)) {
 				const p = P(ctr);
-				if (p) pill(c, nameOf(selected), p[0], p[1] - (smallIds.has(selected) ? 12 : 8));
+				if (p) pill(c, nameOf(selected), p[0], p[1] - (INFO[selected].size * ppd < 7 ? 12 : 8));
 			}
 		}
 	}
@@ -522,28 +542,55 @@ export function createWorldMap(o: MapOptions) {
 		flyTo({ lon: v.c[0], lat: v.c[1], k: view.mode === 'flat' ? v.k * 1.4 : v.k }, 1000);
 	}
 
-	function pick(x: number, y: number): string | null {
+	/** Pixel pro Grad am Kartenmittelpunkt (für die Bildschirmgröße eines Landes) */
+	const pxPerDeg = () => ((baseScale() * view.k) / 57.2958) * (view.mode === 'globe' ? 1 : 0.87);
+	/** Land unter einem Bildschirmpunkt (exakt) */
+	function at(x: number, y: number): string | null {
 		const P = curProj();
-		const visited = o.getVisited(),
-			wish = o.getWish(),
-			selected = o.getSelected();
-		for (const f of small) {
-			// nur Länder, für die auch ein Punkt gezeichnet wird
-			if (!visited.has(f.id) && !wish.has(f.id) && f.id !== selected) continue;
-			const c = INFO[f.id].c;
-			if (!onFront(c)) continue;
-			const p = P(c);
-			if (p && Math.hypot(p[0] - x, p[1] - y) < 11) return f.id;
-		}
 		const g = P.invert!([x, y]);
 		if (!g || isNaN(g[0]) || isNaN(g[1])) return null;
 		if (view.mode === 'globe' && geoDistance(g, [view.lon, view.lat]) > Math.PI / 2) return null;
 		for (const f of features) if (geoContains(f, g)) return f.id;
 		return null;
 	}
-	function tap(cx: number, cy: number) {
+	/** Land für einen Tipp; r = Fingerreichweite in Pixeln.
+	    - Kleinststaaten (auf dem Bildschirm unter 7 px): im Meer im ganzen Umkreis,
+	      auf Land nur ganz nah an ihrem sichtbaren Punkt (bereist oder ausgewählt)
+	    - sonst das Land unter dem Finger, knapp daneben das nächste Land im Umkreis */
+	function pick(x: number, y: number, r = 8): string | null {
+		const P = curProj(),
+			ppd = pxPerDeg();
+		let near: string | null = null,
+			nearD = Infinity;
+		for (const f of features) {
+			const i = INFO[f.id],
+				sz = i.size * ppd;
+			if (sz >= 7 || !onFront(i.c)) continue; // nur Länder, die als Punkt gezeigt werden
+			const p = P(i.c);
+			if (!p) continue;
+			const dd = Math.hypot(p[0] - x, p[1] - y);
+			if (dd <= r + sz / 2 && dd < nearD) {
+				near = f.id;
+				nearD = dd;
+			}
+		}
+		const hit = at(x, y);
+		if (hit && smallIds.has(hit)) return hit;
+		const dotShown = (id: string) => o.getVisited().has(id) || o.getSelected() === id;
+		if (near && (!hit || (nearD <= 4 && dotShown(near)))) return near;
+		if (hit) return hit;
+		// knapp neben einem Land: Ringe um den Tipp absuchen
+		for (const rr of [r * 0.5, r])
+			for (let k = 0; k < 12; k++) {
+				const a = (k / 12) * TAU,
+					h = at(x + Math.cos(a) * rr, y + Math.sin(a) * rr);
+				if (h) return h;
+			}
+		return null;
+	}
+	function tap(cx: number, cy: number, touch = false) {
 		const r = cv.getBoundingClientRect(),
-			hit = pick(cx - r.left, cy - r.top);
+			hit = pick(cx - r.left, cy - r.top, touch ? 16 : 8);
 		if (!hit) {
 			o.onTapEmpty();
 			markDirty(false);
@@ -555,7 +602,21 @@ export function createWorldMap(o: MapOptions) {
 
 	/* --- Zeiger: Ziehen, Pinch, Tippen, Schwung --- */
 	const ptrs = new Map<number, { x: number; y: number }>();
-	let gest: { t0: number; moved: number; lt: number; vx: number; vy: number; pinch: boolean; freeLat: boolean; d0?: number; k0?: number } | null = null;
+	let gest: {
+		t0: number;
+		moved: number;
+		lt: number;
+		vx: number;
+		vy: number;
+		pinch: boolean;
+		freeLat: boolean;
+		touch: boolean;
+		x0: number;
+		y0: number;
+		dist: number; // größter Abstand vom Startpunkt (für die Tipp-Erkennung)
+		d0?: number;
+		k0?: number;
+	} | null = null;
 	// Touch auf dem inaktiven Globus: nicht ziehen (die Seite scrollt), nur einen Tipp erkennen
 	let tapOnly: { id: number; x: number; y: number; t: number; moved: number } | null = null;
 	const passiveTouch = (e: PointerEvent) => e.pointerType === 'touch' && !o.isFull() && !o.isActive();
@@ -570,7 +631,7 @@ export function createWorldMap(o: MapOptions) {
 		cancelMotion();
 		ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
 		const now = performance.now();
-		if (ptrs.size === 1) gest = { t0: now, moved: 0, lt: now, vx: 0, vy: 0, pinch: false, freeLat: true }; // Touch erreicht das nur im Vollbild oder aktiviert
+		if (ptrs.size === 1) gest = { t0: now, moved: 0, lt: now, vx: 0, vy: 0, pinch: false, freeLat: true, touch: e.pointerType === 'touch', x0: e.clientX, y0: e.clientY, dist: 0 }; // Touch erreicht das nur im Vollbild oder aktiviert
 		else if (ptrs.size === 2 && gest) {
 			const [a, b] = [...ptrs.values()];
 			gest.pinch = true;
@@ -601,7 +662,8 @@ export function createWorldMap(o: MapOptions) {
 		p.x = e.clientX;
 		p.y = e.clientY;
 		gest.moved += Math.abs(dx) + Math.abs(dy);
-		if (gest.moved < 4) return;
+		gest.dist = Math.max(gest.dist, Math.hypot(e.clientX - gest.x0, e.clientY - gest.y0));
+		if (gest.dist < (gest.touch ? 8 : 4) && gest.moved < 40) return; // kleines Wackeln beim Tippen dreht nicht
 		dragBy(dx, dy, gest.freeLat);
 		const now = performance.now(),
 			dt = Math.max(1, now - gest.lt);
@@ -616,10 +678,11 @@ export function createWorldMap(o: MapOptions) {
 		ptrs.delete(e.pointerId);
 		if (ptrs.size === 0) {
 			interacting = false;
-			if (g && !cancelled && !g.pinch && g.moved < 8 && performance.now() - g.t0 < 450) tap(e.clientX, e.clientY);
+			const touch = e.pointerType === 'touch';
+			if (g && !cancelled && !g.pinch && g.dist < (touch ? 14 : 8) && performance.now() - g.t0 < 500) tap(e.clientX, e.clientY, touch);
 			else if (g && !cancelled && !REDUCE && !g.pinch && Math.hypot(g.vx, g.vy) > 0.05 && performance.now() - g.lt < 80)
 				inertia = { vx: g.vx, vy: g.vy, freeLat: g.freeLat };
-			const changed = g && g.moved >= 4;
+			const changed = g && (g.dist >= 4 || g.pinch);
 			gest = null;
 			if (changed) scheduleRefine(); // scharf zeichnen erst kurz nach dem Loslassen
 			markDirty(false);
@@ -629,9 +692,9 @@ export function createWorldMap(o: MapOptions) {
 		if (tapOnly && tapOnly.id === e.pointerId) {
 			const t = tapOnly;
 			tapOnly = null;
-			if (t.moved < 10 && performance.now() - t.t < 450) {
+			if (t.moved < 14 && performance.now() - t.t < 500) {
 				o.onActivate();
-				tap(e.clientX, e.clientY);
+				tap(e.clientX, e.clientY, true);
 			}
 			return;
 		}
@@ -682,6 +745,14 @@ export function createWorldMap(o: MapOptions) {
 	})();
 
 	return {
+		/** Bildschirmposition (clientX/Y) eines Landes – für Tests */
+		screenOf(code: string) {
+			const i = INFO[code];
+			if (!i || !onFront(i.c)) return null;
+			const p = curProj()(i.c),
+				r = cv.getBoundingClientRect();
+			return p ? { x: r.left + p[0], y: r.top + p[1] } : null;
+		},
 		markDirty,
 		resize,
 		flyToCountry,
