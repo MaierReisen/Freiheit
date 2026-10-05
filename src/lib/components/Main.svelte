@@ -3,10 +3,10 @@
 	import { TABS, closeSettings, closeSheet, goTab, hooks, initFromHash, onHashChange, setFull, ui } from '$lib/app.svelte';
 	import ContinentChips from './ContinentChips.svelte';
 	import Hero from './Hero.svelte';
-	import PlacesOverlay from './PlacesOverlay.svelte';
 	import SettingsView from './SettingsView.svelte';
 	import Sheet from './Sheet.svelte';
 	import TabBar from './TabBar.svelte';
+	import VisitedList from './VisitedList.svelte';
 	import WorldMap from './WorldMap.svelte';
 
 	function onKeydown(e: KeyboardEvent) {
@@ -45,9 +45,6 @@
 	}
 
 	onMount(() => {
-		try {
-			if (!localStorage.getItem('freiheit-count-seen')) ui.countHint = true;
-		} catch {}
 		initFromHash();
 		// Beim Abmelden: offene Ansichten schließen
 		return () => {
@@ -74,10 +71,10 @@
 		<Hero />
 		<ContinentChips id="continents" />
 		<WorldMap />
+		<VisitedList />
 	</main>
 </div>
 
 {#if TABS.length > 1}<TabBar />{/if}
-<PlacesOverlay />
 <SettingsView />
 <Sheet />

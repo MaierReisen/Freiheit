@@ -48,7 +48,6 @@ button{cursor:pointer}
 
 /* hero: number rising over the horizon */
 .hero{position:relative;margin-top:26px;padding-bottom:16px;border-bottom:2px solid var(--ink);overflow:hidden}
-.sun{position:absolute;left:clamp(60px,26vw,130px);bottom:-70px;width:150px;height:150px;border-radius:50%;background:var(--sun);opacity:.95}
 .count{position:relative;font-family:var(--display);font-weight:800;font-size:clamp(96px,32vw,168px);line-height:.85;letter-spacing:-.05em}
 .hero-text{position:relative;display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-top:6px}
 .count-label{font-size:19px;font-weight:600}
@@ -203,17 +202,11 @@ body.noscroll{overflow:hidden}
 
 /* Startseite: Zähler als Button + Hinzufügen */
 .hero{overflow:visible;border-bottom:2px solid var(--ink)}
-.sun-clip{position:absolute;inset:0;overflow:hidden;pointer-events:none}
 .hero-row{position:relative;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:14px 12px}
 .count-btn{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:4px 8px 4px 0;margin:0;background:none;border:0;color:inherit;text-align:left;cursor:pointer;border-radius:22px;-webkit-tap-highlight-color:transparent;transition:transform .15s}
 .count-btn:active{transform:scale(.96)}
 .count-wrap{position:relative;display:inline-block}
 .count-meta{display:flex;flex-direction:column;align-items:flex-start;gap:3px}
-.count-more{display:inline-flex;align-items:center;gap:3px;margin-top:7px;padding:6px 10px 6px 13px;border-radius:999px;background:var(--chip);color:var(--primary);font-weight:700;font-size:14px}
-.count-more svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round;animation:nudge 2.8s ease-in-out infinite}
-@keyframes nudge{0%,55%,100%{transform:translateX(0)}72%{transform:translateX(4px)}88%{transform:translateX(1px)}}
-.count-btn.hint .count-wrap::after{content:"";position:absolute;inset:-6px -14px;border:2.5px solid var(--primary);border-radius:34px;opacity:0;pointer-events:none;animation:ping 2s ease-out 1.1s 3}
-@keyframes ping{0%{transform:scale(.93);opacity:.9}70%{transform:scale(1.1);opacity:0}100%{opacity:0}}
 .hero-add{display:flex;align-items:center;gap:8px;margin-left:auto;padding:15px 22px 15px 17px;border:0;border-radius:999px;background:var(--ink);color:var(--bg);font-weight:700;font-size:17px;box-shadow:0 8px 20px rgba(13,43,58,.2);transition:transform .15s}
 .hero-add svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round}
 .hero-add:active{transform:scale(.94)}
@@ -228,18 +221,9 @@ body.noscroll{overflow:hidden}
 .ov-lab{font-weight:600;font-size:17px}
 .ov-add{flex:none;border:0;border-radius:999px;padding:12px 16px;background:var(--ink);color:var(--bg);font-weight:700;white-space:nowrap}
 .ov-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:0 20px calc(40px + env(safe-area-inset-bottom,0px))}
-.ov-body .seg{margin-top:16px}
-.ov-enter .list li{animation:rowIn .55s cubic-bezier(.2,.9,.3,1.15) both;animation-delay:calc(var(--i,16)*36ms + 300ms)}
-.ov-enter .list .flag{display:inline-block;animation:flagPop .6s cubic-bezier(.3,1.9,.5,1) both;animation-delay:calc(var(--i,16)*36ms + 380ms)}
-@keyframes rowIn{from{opacity:0;transform:translateY(20px) scale(.97)}to{opacity:1;transform:none}}
-@keyframes flagPop{from{transform:scale(0) rotate(-45deg)}to{transform:none}}
-.wave{position:fixed;z-index:39;border-radius:50%;background:var(--sun);pointer-events:none}
-#fx{position:fixed;inset:0;z-index:55;pointer-events:none;overflow:hidden}
-.fx-flag{position:absolute;font-size:26px;line-height:1;will-change:transform,opacity}
 
 @media (prefers-reduced-motion:reduce){
   .tab.in-r,.tab.in-l{animation:none}.tabbar .ind{transition:none}
-  .count-more svg,.count-btn.hint .count-wrap::after,.ov-enter .list li,.ov-enter .list .flag{animation:none}
 }
 
 /* Weltkarte: dunkle Bühne, zwei Canvas-Ebenen */
@@ -298,14 +282,17 @@ button.cont{border:0;font:inherit;font-size:14px;color:inherit}
 .map-panel .sw.vs{background:repeating-linear-gradient(135deg,#34D1BF 0 1.5px,transparent 1.5px 4px),rgba(52,209,191,.32)}
 .legend{flex-wrap:wrap;gap:8px 18px}
 
-/* Startseite: Logo-Motiv als Fortschritt – das Flugzeug fliegt so weit, wie Länder bereist sind */
-.flight{position:absolute;inset:0;pointer-events:none}
+/* Startseite: Logo-Motiv als eigener Streifen unter der Zahl – das Flugzeug fliegt so weit, wie Länder bereist sind */
+.hero{padding-bottom:0}
+.flight{position:relative;height:132px;margin-top:14px}
 .flight svg{position:absolute;left:0;top:0;overflow:visible}
+.flight-sun{fill:var(--sun)}
 .flight-rest{fill:none;stroke:var(--ink);stroke-opacity:.4;stroke-width:2.6;stroke-linecap:round;stroke-dasharray:.1 7}
 .flight-done{fill:none;stroke:var(--primary);stroke-width:3;stroke-linecap:round}
 .flight-plane{fill:var(--ink)}
-.flight-tag{position:absolute;transform:translateY(calc(-100% - 14px));padding:4px 10px;border-radius:999px;background:var(--ink);color:var(--bg);font-family:var(--display);font-weight:700;font-size:12px;line-height:1.2;white-space:nowrap;font-variant-numeric:tabular-nums;box-shadow:0 4px 12px rgba(13,43,58,.18)}
-.flight-tag.below{transform:translateY(16px)}
+.flight-pct{position:absolute;right:0;bottom:8px;display:flex;flex-direction:column;align-items:flex-end;line-height:1}
+.flight-pct b{font-family:var(--display);font-weight:800;font-size:30px;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.flight-pct span{margin-top:4px;font-size:13px;font-weight:600;color:var(--muted)}
 
 /* Länder-Übersicht: bereiste Gebiete, die nicht zählen */
 .list-sub{font-family:var(--display);font-size:15px;font-weight:700;margin:28px 0 2px}
@@ -313,4 +300,13 @@ button.cont{border:0;font:inherit;font-size:14px;color:inherit}
 .ov-of{display:block;font-size:13px;font-weight:500;color:var(--muted);margin-top:2px}
 /* Dreistellige Länderzahl etwas kleiner, damit der „+ Land“-Button daneben bleibt */
 .count.d3{font-size:clamp(72px,24vw,140px)}
+
+/* Länderliste unter dem Globus */
+.visited{scroll-margin-top:calc(16px + env(safe-area-inset-top,0px))}
+.visited h2{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.h-count{font-family:var(--text);font-size:14px;font-weight:600;color:var(--muted);letter-spacing:0}
+.list-sub .h-count{font-size:13px}
+.sort-seg{margin:14px 0 12px}
+.visited .search{margin-top:0}
+.visited .list-sub:first-of-type{margin-top:18px}
 }
