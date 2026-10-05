@@ -23,15 +23,24 @@ npm run icons     # PWA-Icons aus static/icon.svg neu erzeugen
 | --- | --- |
 | `src/lib/data/` | Weltkarte (TopoJSON 50m), ISO-Numerisch → Alpha-2, Kontinente |
 | `src/lib/countries.ts` | Ländernamen (deutsch), Flaggen, Kontinente |
-| `src/lib/atlas.svelte.ts` | Daten-Store (localStorage), Änderungen, JSON-Export/-Import |
+| `src/lib/atlas.svelte.ts` | Daten-Store: lokaler Cache, Sync-Warteschlange zu Supabase, JSON-Export/-Import |
+| `src/lib/auth.svelte.ts`, `src/lib/supabase.ts` | Supabase-Client und Login |
 | `src/lib/app.svelte.ts` | UI-Zustand: Tabs, Sheets, Vollbild-Karte, Hash-Navigation, Toast |
 | `src/lib/map/` | Canvas-Weltkarte (Globus und flache Karte), Detailstufen |
 | `src/lib/components/` | Svelte-Komponenten der Oberfläche |
 | `src/app.css` | Design (Farben, Typografie, Komponenten-Styles) |
 
-## Daten
+## Daten und Login
 
-Die Daten liegen vorerst nur im Browser (localStorage, Schlüssel `freiheit-state-v2`). Über „Mehr“ lassen sie sich als JSON exportieren und importieren.
+Login per Magic Link (Supabase Auth); die Mail enthält zusätzlich einen Code für die App auf dem Home-Bildschirm.
+Daten liegen in Supabase (`supabase/schema.sql`, geschützt per Row Level Security) und werden lokal zwischengespeichert,
+damit die App offline funktioniert. Änderungen gehen über eine Warteschlange an Supabase. Beim ersten Login werden
+Länder aus der früheren Version ohne Konto (localStorage `freiheit-state-v2`) ins Konto übernommen.
+
+Einrichtung in Supabase:
+1. `supabase/schema.sql` im SQL Editor ausführen.
+2. *Authentication → URL Configuration*: Site URL `https://maierreisen.github.io/Freiheit/`, Redirect URLs zusätzlich `http://localhost:5173/**` und `http://localhost:4173/Freiheit/**`.
+3. *Authentication → Email Templates → Magic Link* und *Confirm signup*: `{{ .Token }}` in die Mail aufnehmen.
 
 ## Deployment
 
