@@ -14,7 +14,11 @@
 
 	function errText(e: unknown) {
 		const x = e as { status?: number; code?: string; message?: string };
+		if (x?.code === 'over_email_send_rate_limit') return 'Es wurden gerade zu viele Login-Mails verschickt. Warte etwa eine Stunde und versuche es dann erneut.';
 		if (x?.status === 429 || /rate/i.test(x?.code ?? '')) return 'Zu viele Versuche. Warte ein paar Minuten und versuche es dann erneut.';
+		if (x?.code === 'email_address_not_authorized')
+			return 'An diese Adresse darf noch keine Login-Mail gehen. Der Mailversand ist noch nicht eingerichtet (eigenes SMTP in Supabase).';
+		if (x?.code === 'email_address_invalid') return 'Diese E-Mail-Adresse wird nicht angenommen. Bitte eine andere verwenden.';
 		if (x?.code === 'otp_expired' || /expired|invalid/i.test(x?.message ?? '')) return 'Der Code ist falsch oder abgelaufen. Fordere einen neuen Link an.';
 		if (typeof navigator !== 'undefined' && navigator.onLine === false) return 'Keine Internetverbindung.';
 		return 'Das hat nicht geklappt. Bitte versuche es noch einmal.';
