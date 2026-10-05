@@ -34,7 +34,7 @@
 		const input = e.currentTarget as HTMLInputElement;
 		const f = input.files?.[0];
 		if (!f) return;
-		if (!confirm('Importieren? Deine Länder, Wunschliste und Meilensteine im Konto werden durch die Datei ersetzt.')) {
+		if (!confirm('Importieren? Deine Länder und Meilensteine im Konto werden durch die Datei ersetzt.')) {
 			input.value = '';
 			return;
 		}

@@ -6,7 +6,8 @@ import { tick } from 'svelte';
 // Weitere Tabs (z. B. Reisen) hier ergänzen; mit nur einem Tab wird die Tab-Leiste ausgeblendet
 export const TABS = ['home'] as const;
 export type Tab = (typeof TABS)[number];
-export type PickerMode = 'visited' | 'wish' | 'fly';
+// Wunschliste vorerst ausgeblendet (Daten bleiben erhalten)
+export type PickerMode = 'visited' | 'fly';
 export type SheetView = { kind: 'country'; code: string } | { kind: 'picker'; mode: PickerMode };
 
 export const REDUCE =
@@ -20,7 +21,6 @@ export const ui = $state({
 	/** zählt jedes Öffnen hoch, damit das Sheet frisch aufgebaut wird (wie vorher per innerHTML) */
 	sheetKey: 0,
 	placesOpen: false,
-	seg: 'visited' as 'visited' | 'wish',
 	full: false,
 	settingsOpen: false,
 	/** Kontinent, auf den die Karte zuletzt per Chip geflogen ist (null = Startregion); nur Ansicht, wird nicht gespeichert */

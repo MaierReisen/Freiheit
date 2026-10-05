@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { atlas, isCounted, visitedSet, wishSet } from '$lib/atlas.svelte';
+	import { atlas, isCounted, visitedSet } from '$lib/atlas.svelte';
 	import { REDUCE, closeSheet, hooks, openCountry, openPicker, setFull, ui } from '$lib/app.svelte';
 	import { CONT_VIEW } from '$lib/countries';
 	import { createWorldMap, type MapSync, type WorldMap } from '$lib/map/engine';
@@ -32,7 +32,7 @@
 			reduce: REDUCE,
 			getVisited: visitedSet,
 			isCounted,
-			getWish: wishSet,
+			getWish: () => new Set<string>(), // Wunschliste vorerst ausgeblendet
 			getSelected: () => ui.selected,
 			isVisible: () => ui.full || ui.tab === 'home',
 			isFull: () => ui.full,
@@ -57,10 +57,9 @@
 		};
 	});
 
-	// Länder, Wunschliste oder Auswahl geändert: Karte neu zeichnen
+	// Länder, Länderliste oder Auswahl geändert: Karte neu zeichnen
 	$effect(() => {
 		void atlas.data.countries;
-		void atlas.data.wishlist;
 		void atlas.settings.countryScope;
 		void ui.selected;
 		map?.markDirty(true);
@@ -75,7 +74,7 @@
 <div class="map-box" class:full={ui.full} id="mapBox" bind:this={box}>
 	<canvas id="mapCv" aria-hidden="true" bind:this={cvB}></canvas>
 	<!-- svelte-ignore a11y_no_interactive_element_to_noninteractive_role -->
-	<canvas id="mapTop" role="img" aria-label="Interaktive Weltkarte mit deinen bereisten Ländern und Wunschzielen" bind:this={cvT}></canvas>
+	<canvas id="mapTop" role="img" aria-label="Interaktive Weltkarte mit deinen bereisten Ländern" bind:this={cvT}></canvas>
 	<div class="mseg" id="mapMode" role="group" aria-label="Kartenansicht">
 		<button type="button" data-mode="globe" aria-pressed={s.mode === 'globe'} onclick={() => map?.setMode('globe')}>Globus</button>
 		<button type="button" data-mode="flat" aria-pressed={s.mode === 'flat'} onclick={() => map?.setMode('flat')}>Karte</button>
@@ -90,7 +89,7 @@
 	</div>
 	<span class="map-hint" id="mapHint">{hint}</span>
 	<div class="map-panel" id="mapPanel">
-		<div class="legend"><span><i class="sw v"></i>Bereist</span>{#if hasUncounted}<span><i class="sw vs"></i>Bereist, zählt nicht</span>{/if}<span><i class="sw w"></i>Wunschziel</span></div>
+		<div class="legend"><span><i class="sw v"></i>Bereist</span>{#if hasUncounted}<span><i class="sw vs"></i>Bereist, zählt nicht</span>{/if}</div>
 		<div class="panel-row">
 			<button type="button" class="mchip" id="mSpin" aria-pressed={s.spin} hidden={s.mode !== 'globe'} onclick={() => map?.toggleSpin()}>Drehen</button>
 			<button type="button" class="mchip" id="mSearch" onclick={() => openPicker('fly')}>Land suchen</button>
@@ -98,4 +97,4 @@
 		<ContinentChips id="mapConts" all />
 	</div>
 </div>
-<div class="legend"><span><i class="sw v"></i>Bereist</span>{#if hasUncounted}<span><i class="sw vs"></i>Bereist, zählt nicht</span>{/if}<span><i class="sw w"></i>Wunschziel</span></div>
+<div class="legend"><span><i class="sw v"></i>Bereist</span>{#if hasUncounted}<span><i class="sw vs"></i>Bereist, zählt nicht</span>{/if}</div>

@@ -3,6 +3,7 @@
 	import { scopeTotal } from '$lib/scope';
 	import { contOf } from '$lib/countries';
 	import { dom, hooks, openPicker, ui } from '$lib/app.svelte';
+	import HeroFlight from './HeroFlight.svelte';
 
 	let countEl: HTMLSpanElement;
 	$effect(() => {
@@ -16,11 +17,11 @@
 	const total = $derived(scopeTotal(atlas.settings.countryScope));
 	const pct = $derived(total ? Math.round((n / total) * 100) : 0);
 	const continents = $derived(new Set(counted.map((c) => contOf(c.code) || 'Sonstige')).size);
-	const RING = 2 * Math.PI * 20; // Umfang des Fortschrittsrings (r = 20)
 </script>
 
 <section class="hero" aria-live="polite">
 	<div class="sun-clip" aria-hidden="true"><div class="sun"></div></div>
+	<HeroFlight progress={total ? n / total : 0} label="{pct} % der Welt" />
 	<div class="hero-row">
 		<button
 			type="button"
@@ -31,25 +32,10 @@
 			aria-label="{n} von {total} Ländern bereist, {pct} Prozent. Übersicht öffnen"
 			onclick={() => hooks.places?.open(false)}
 		>
-			<span class="count-line">
-				<span class="count-wrap"><span class="count" id="count" bind:this={countEl}>{n}</span></span>
-				<span class="count-of" aria-hidden="true">
-					<svg class="prog" viewBox="0 0 46 46"
-						><circle class="prog-track" cx="23" cy="23" r="20" /><circle
-							class="prog-fill"
-							cx="23"
-							cy="23"
-							r="20"
-							stroke-dasharray="{n ? Math.max(1.5, (n / total) * RING) : 0} {RING}"
-						/></svg
-					>
-					<span class="prog-pct">{pct} %</span>
-					<span class="of-total">von {total}</span>
-				</span>
-			</span>
+			<span class="count-wrap"><span class="count" class:d3={n >= 100} id="count" bind:this={countEl}>{n}</span></span>
 			<span class="count-meta">
 				<span class="count-label" id="countLabel">{n === 1 ? 'Land bereist' : 'Länder bereist'}</span>
-				<span class="count-sub" id="countSub">{continents ? `auf ${continents} Kontinent${continents === 1 ? '' : 'en'}` : ''}</span>
+				<span class="count-sub" id="countSub">von {total}{continents ? ` · auf ${continents} Kontinent${continents === 1 ? '' : 'en'}` : ''}</span>
 				<span class="count-more">Alle ansehen<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" /></svg></span>
 			</span>
 		</button>

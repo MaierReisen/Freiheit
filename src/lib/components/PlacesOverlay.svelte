@@ -207,14 +207,10 @@
 			><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg></button
 		>
 		<div class="ov-count"><span class="ov-num" id="ovNum">{ovNum}</span><span class="ov-lab" id="ovTitle">{n === 1 ? 'Land' : 'Länder'} bereist<small class="ov-of">von {total}</small></span></div>
-		<button type="button" class="ov-add" id="ovAdd" onclick={() => openPicker(ui.seg === 'wish' ? 'wish' : 'visited')}>{ui.seg === 'wish' ? '+ Wunschziel' : '+ Land'}</button>
+		<button type="button" class="ov-add" id="ovAdd" onclick={() => openPicker('visited')}>+ Land</button>
 	</div>
 	<div class="ov-body" id="ovBody" bind:this={ovBody}>
-		<div class="seg" role="group" aria-label="Ansicht wählen">
-			<button type="button" data-seg="visited" aria-pressed={ui.seg === 'visited'} onclick={() => (ui.seg = 'visited')}>Bereist<b id="segV">{n}</b></button>
-			<button type="button" data-seg="wish" aria-pressed={ui.seg === 'wish'} onclick={() => (ui.seg = 'wish')}>Wunschliste<b id="segW">{atlas.data.wishlist.length}</b></button>
-		</div>
-		<div id="paneVisited" hidden={ui.seg !== 'visited'}>
+		<div id="paneVisited">
 			<Timeline />
 			<input class="search" id="filter" type="search" placeholder="Land suchen" autocomplete="off" style="margin-top:18px" bind:value={filter} />
 			<ul class="list" id="list">
@@ -241,19 +237,6 @@
 					{/each}
 				</ul>
 			{/if}
-		</div>
-		<div id="paneWish" hidden={ui.seg !== 'wish'}>
-			<ul class="list" id="wishList">
-				{#each atlas.data.wishlist as c (c.code)}
-					<li>
-						<button data-code={c.code} onclick={() => openCountry(c.code)}
-							><span class="flag">{flag(c.code)}</span><span class="nm">{c.name}</span><span class="ct">{contOf(c.code)}</span></button
-						>
-					</li>
-				{:else}
-					<li class="empty">Noch keine Wunschziele. Tippe auf ein Land in der Karte oder auf den Button unten.</li>
-				{/each}
-			</ul>
 		</div>
 	</div>
 </section>
