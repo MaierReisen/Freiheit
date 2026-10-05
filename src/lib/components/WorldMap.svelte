@@ -15,14 +15,20 @@
 	// Legende "zählt nicht" nur zeigen, wenn es solche bereisten Gebiete gibt
 	const hasUncounted = $derived(atlas.data.countries.some((c) => !isCounted(c.code)));
 
+	// Touch-Geräte: Globus erst nach einem Tipp drehbar, sonst scrollt die Seite (siehe engine.ts)
+	const coarse = typeof window !== 'undefined' && !!window.matchMedia?.('(pointer: coarse)').matches;
 	const hint = $derived(
 		s.fineState === 'loading'
 			? 'Feine Details werden geladen …'
 			: ui.full
 				? 'Ziehen, zoomen, tippen'
-				: s.mode === 'globe'
-					? 'Ziehen zum Drehen'
-					: 'Tippe auf ein Land'
+				: ui.mapActive
+					? 'Aktiv · außerhalb tippen zum Beenden'
+					: coarse
+						? 'Tippen zum Drehen'
+						: s.mode === 'globe'
+							? 'Ziehen zum Drehen'
+							: 'Tippe auf ein Land'
 	);
 
 	onMount(() => {
@@ -36,6 +42,8 @@
 			getSelected: () => ui.selected,
 			isVisible: () => ui.full || ui.tab === 'home',
 			isFull: () => ui.full,
+			isActive: () => ui.mapActive,
+			onActivate: () => (ui.mapActive = true),
 			getStartView: () => CONT_VIEW[atlas.settings.homeContinent],
 			onTapCountry: openCountry,
 			onTapEmpty: () => {
@@ -44,6 +52,14 @@
 			onSync: (v) => (s = v)
 		});
 		map = m;
+		// Tipp außerhalb des Globus beendet den aktiven Modus (Sheet und Abdunklung zählen dazu)
+		const onOutside = (e: PointerEvent) => {
+			if (!ui.mapActive) return;
+			const t = e.target as Element | null;
+			if (t && (box.contains(t) || t.closest('.sheet, .scrim'))) return;
+			ui.mapActive = false;
+		};
+		document.addEventListener('pointerdown', onOutside, true);
 		hooks.map = {
 			resize: m.resize,
 			flyToCountry: m.flyToCountry,
@@ -51,6 +67,8 @@
 			scrollIntoView: () => box.scrollIntoView?.({ behavior: REDUCE ? 'auto' : 'smooth', block: 'center' })
 		};
 		return () => {
+			document.removeEventListener('pointerdown', onOutside, true);
+			ui.mapActive = false;
 			m.destroy();
 			hooks.map = null;
 			map = null;
@@ -71,7 +89,7 @@
 	});
 </script>
 
-<div class="map-box" class:full={ui.full} id="mapBox" bind:this={box}>
+<div class="map-box" class:full={ui.full} class:active={ui.mapActive && !ui.full} id="mapBox" bind:this={box}>
 	<canvas id="mapCv" aria-hidden="true" bind:this={cvB}></canvas>
 	<!-- svelte-ignore a11y_no_interactive_element_to_noninteractive_role -->
 	<canvas id="mapTop" role="img" aria-label="Interaktive Weltkarte mit deinen bereisten Ländern" bind:this={cvT}></canvas>

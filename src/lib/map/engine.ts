@@ -26,6 +26,10 @@ export interface MapOptions {
 	/** Karte sichtbar (Startseite oder Vollbild) */
 	isVisible(): boolean;
 	isFull(): boolean;
+	/** Globus per Tipp aktiviert? Nur dann reagiert er bei Touch auf Ziehen (sonst scrollt die Seite) */
+	isActive(): boolean;
+	/** Tipp auf den inaktiven Globus (Touch): aktivieren */
+	onActivate(): void;
 	/** Startregion: Mittelpunkt und Zoom, auf die die Karte beim Start fliegt */
 	getStartView(): { c: [number, number]; k: number } | null | undefined;
 	onTapCountry(code: string): void;
@@ -552,14 +556,21 @@ export function createWorldMap(o: MapOptions) {
 	/* --- Zeiger: Ziehen, Pinch, Tippen, Schwung --- */
 	const ptrs = new Map<number, { x: number; y: number }>();
 	let gest: { t0: number; moved: number; lt: number; vx: number; vy: number; pinch: boolean; freeLat: boolean; d0?: number; k0?: number } | null = null;
+	// Touch auf dem inaktiven Globus: nicht ziehen (die Seite scrollt), nur einen Tipp erkennen
+	let tapOnly: { id: number; x: number; y: number; t: number; moved: number } | null = null;
+	const passiveTouch = (e: PointerEvent) => e.pointerType === 'touch' && !o.isFull() && !o.isActive();
 	const onDown = (e: PointerEvent) => {
+		if (passiveTouch(e)) {
+			tapOnly = ptrs.size === 0 && !tapOnly ? { id: e.pointerId, x: e.clientX, y: e.clientY, t: performance.now(), moved: 0 } : null;
+			return;
+		}
 		try {
 			cv.setPointerCapture(e.pointerId);
 		} catch {}
 		cancelMotion();
 		ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
 		const now = performance.now();
-		if (ptrs.size === 1) gest = { t0: now, moved: 0, lt: now, vx: 0, vy: 0, pinch: false, freeLat: o.isFull() || e.pointerType !== 'touch' };
+		if (ptrs.size === 1) gest = { t0: now, moved: 0, lt: now, vx: 0, vy: 0, pinch: false, freeLat: true }; // Touch erreicht das nur im Vollbild oder aktiviert
 		else if (ptrs.size === 2 && gest) {
 			const [a, b] = [...ptrs.values()];
 			gest.pinch = true;
@@ -571,6 +582,10 @@ export function createWorldMap(o: MapOptions) {
 		markDirty(false);
 	};
 	const onMove = (e: PointerEvent) => {
+		if (tapOnly && tapOnly.id === e.pointerId) {
+			tapOnly.moved = Math.max(tapOnly.moved, Math.hypot(e.clientX - tapOnly.x, e.clientY - tapOnly.y));
+			return;
+		}
 		const p = ptrs.get(e.pointerId);
 		if (!p || !gest) return;
 		if (gest.pinch && ptrs.size >= 2) {
@@ -610,10 +625,24 @@ export function createWorldMap(o: MapOptions) {
 			markDirty(false);
 		}
 	}
-	const onUp = (e: PointerEvent) => endPtr(e, false);
-	const onCancel = (e: PointerEvent) => endPtr(e, true);
+	const onUp = (e: PointerEvent) => {
+		if (tapOnly && tapOnly.id === e.pointerId) {
+			const t = tapOnly;
+			tapOnly = null;
+			if (t.moved < 10 && performance.now() - t.t < 450) {
+				o.onActivate();
+				tap(e.clientX, e.clientY);
+			}
+			return;
+		}
+		endPtr(e, false);
+	};
+	const onCancel = (e: PointerEvent) => {
+		if (tapOnly && tapOnly.id === e.pointerId) tapOnly = null; // Browser scrollt die Seite
+		endPtr(e, true);
+	};
 	const onWheel = (e: WheelEvent) => {
-		if (!o.isFull() && !e.ctrlKey) return;
+		if (!o.isFull() && !o.isActive() && !e.ctrlKey) return;
 		e.preventDefault();
 		cancelMotion();
 		setK(view.k * Math.exp(-e.deltaY * 0.0015));

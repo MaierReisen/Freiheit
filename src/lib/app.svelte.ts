@@ -23,6 +23,8 @@ export const ui = $state({
 	placesOpen: false,
 	full: false,
 	settingsOpen: false,
+	/** Globus auf der Startseite per Tipp aktiviert (Touch): dann drehen, kippen, zoomen statt Seite scrollen */
+	mapActive: false,
 	/** Kontinent, auf den die Karte zuletzt per Chip geflogen ist (null = Startregion); nur Ansicht, wird nicht gespeichert */
 	focusContinent: null as string | null,
 	toastMsg: '',
@@ -75,6 +77,7 @@ let pushedMap = false;
 export function setFull(on: boolean, fromHash = false) {
 	if (on === ui.full) return;
 	ui.full = on;
+	ui.mapActive = false;
 	document.body.classList.toggle('noscroll', on);
 	if (!fromHash) {
 		if (on) {
