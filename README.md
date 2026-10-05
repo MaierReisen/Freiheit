@@ -40,7 +40,8 @@ Länder aus der früheren Version ohne Konto (localStorage `freiheit-state-v2`) 
 Einrichtung in Supabase:
 1. `supabase/schema.sql` im SQL Editor ausführen.
 2. *Authentication → URL Configuration*: Site URL `https://maierreisen.github.io/Freiheit/`, Redirect URLs zusätzlich `http://localhost:5173/**` und `http://localhost:4173/Freiheit/**`.
-3. *Authentication → Email Templates → Magic Link* und *Confirm signup*: `{{ .Token }}` in die Mail aufnehmen.
+3. *Authentication → Emails → SMTP Settings*: eigenes SMTP (Brevo, `smtp-relay.brevo.com:587`), sonst sind die Templates gesperrt.
+4. *Authentication → Emails → Templates → Magic Link* und *Confirm signup*: `{{ .Token }}` in die Mail aufnehmen.
 
 ## Deployment
 

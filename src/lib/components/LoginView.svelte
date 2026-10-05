@@ -2,8 +2,8 @@
 	import { onMount } from 'svelte';
 	import { sendLoginLink, verifyCode } from '$lib/auth.svelte';
 
-	// Code-Eingabe erst anzeigen, wenn die Login-Mail den Code enthält ({{ .Token }} im Supabase-Template, braucht eigenes SMTP)
-	const SHOW_CODE = false;
+	// Login-Mail enthält den Code ({{ .Token }} im Supabase-Template, Versand über Brevo-SMTP)
+	const SHOW_CODE = true;
 
 	let step = $state<'email' | 'sent'>('email');
 	let email = $state('');
