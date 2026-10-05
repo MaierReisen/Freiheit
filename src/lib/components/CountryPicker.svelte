@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { addCountry, addWish, visitedSet, wishSet } from '$lib/atlas.svelte';
+	import { addCountry, addWish, isCounted, visitedSet, wishSet } from '$lib/atlas.svelte';
 	import { contOf, flag, nameOf } from '$lib/countries';
 	import { ALL } from '$lib/map/geo';
 	import { closeSheet, hooks, openCountry, type PickerMode } from '$lib/app.svelte';
@@ -44,7 +44,7 @@
 <input class="search" id="pickSearch" type="search" placeholder="Land suchen" autocomplete="off" style="margin-top:12px" bind:value={q} />
 <ul class="pick-list" id="pickList">
 	{#each items as c (c)}
-		<li><button data-code={c} onclick={() => choose(c)}><span>{flag(c)}</span>{flyMode ? mark(c) : ''}{nameOf(c)}<span class="ct">{contOf(c)}</span></button></li>
+		<li><button data-code={c} onclick={() => choose(c)}><span>{flag(c)}</span>{flyMode ? mark(c) : ''}{nameOf(c)}<span class="ct">{contOf(c)}{isCounted(c) ? '' : ' · zählt nicht'}</span></button></li>
 	{:else}
 		<li class="empty">Kein Land gefunden.</li>
 	{/each}

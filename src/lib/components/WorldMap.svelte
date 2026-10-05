@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { atlas, visitedSet, wishSet } from '$lib/atlas.svelte';
+	import { atlas, isCounted, visitedSet, wishSet } from '$lib/atlas.svelte';
 	import { REDUCE, closeSheet, hooks, openCountry, openPicker, setFull, ui } from '$lib/app.svelte';
 	import { CONT_VIEW } from '$lib/countries';
 	import { createWorldMap, type MapSync, type WorldMap } from '$lib/map/engine';
@@ -11,6 +11,9 @@
 	let cvT: HTMLCanvasElement;
 	let map: WorldMap | null = null;
 	let s = $state<MapSync>({ mode: 'globe', spin: false, fineState: 'idle' });
+
+	// Legende "zählt nicht" nur zeigen, wenn es solche bereisten Gebiete gibt
+	const hasUncounted = $derived(atlas.data.countries.some((c) => !isCounted(c.code)));
 
 	const hint = $derived(
 		s.fineState === 'loading'
@@ -28,6 +31,7 @@
 			cvT,
 			reduce: REDUCE,
 			getVisited: visitedSet,
+			isCounted,
 			getWish: wishSet,
 			getSelected: () => ui.selected,
 			isVisible: () => ui.full || ui.tab === 'home',
@@ -57,6 +61,7 @@
 	$effect(() => {
 		void atlas.data.countries;
 		void atlas.data.wishlist;
+		void atlas.settings.countryScope;
 		void ui.selected;
 		map?.markDirty(true);
 	});
@@ -85,7 +90,7 @@
 	</div>
 	<span class="map-hint" id="mapHint">{hint}</span>
 	<div class="map-panel" id="mapPanel">
-		<div class="legend"><span><i class="sw v"></i>Bereist</span><span><i class="sw w"></i>Wunschziel</span></div>
+		<div class="legend"><span><i class="sw v"></i>Bereist</span>{#if hasUncounted}<span><i class="sw vs"></i>Bereist, zählt nicht</span>{/if}<span><i class="sw w"></i>Wunschziel</span></div>
 		<div class="panel-row">
 			<button type="button" class="mchip" id="mSpin" aria-pressed={s.spin} hidden={s.mode !== 'globe'} onclick={() => map?.toggleSpin()}>Drehen</button>
 			<button type="button" class="mchip" id="mSearch" onclick={() => openPicker('fly')}>Land suchen</button>
@@ -93,4 +98,4 @@
 		<ContinentChips id="mapConts" all />
 	</div>
 </div>
-<div class="legend"><span><i class="sw v"></i>Bereist</span><span><i class="sw w"></i>Wunschziel</span></div>
+<div class="legend"><span><i class="sw v"></i>Bereist</span>{#if hasUncounted}<span><i class="sw vs"></i>Bereist, zählt nicht</span>{/if}<span><i class="sw w"></i>Wunschziel</span></div>

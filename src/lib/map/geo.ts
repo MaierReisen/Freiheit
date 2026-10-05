@@ -32,7 +32,15 @@ export const wrapLon = (l: number) => ((l + 540) % 360) - 180;
 const toFeatures = (topo: Topology): CountryFeature[] =>
 	(feature(topo, topo.objects.countries) as unknown as GeoJSON.FeatureCollection<CountryGeometry>).features as CountryFeature[];
 
-export const features = toFeatures(WORLD).filter((f) => f.id && f.id !== 'AQ');
+// Tuvalu fehlt in den 50m-Kartendaten: als winzige Fläche um Funafuti ergänzen (wird wie andere Kleinstaaten als Punkt gezeichnet)
+const TUVALU: CountryFeature = {
+	type: 'Feature',
+	id: 'TV',
+	properties: { name: 'Tuvalu' },
+	geometry: { type: 'Polygon', coordinates: [[[179.17, -8.56], [179.17, -8.48], [179.23, -8.48], [179.23, -8.56], [179.17, -8.56]]] }
+};
+
+export const features = [...toFeatures(WORLD).filter((f) => f.id && f.id !== 'AQ'), TUVALU];
 
 // Lage und Größe jedes Landes (größtes Teilgebiet, damit z. B. Frankreich nicht in Südamerika zentriert wird)
 function mainPoly(f: CountryFeature): GeoJSON.Feature | CountryFeature {

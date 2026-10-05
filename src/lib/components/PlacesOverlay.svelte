@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
-	import { atlas } from '$lib/atlas.svelte';
+	import { atlas, countedCountries, isCounted } from '$lib/atlas.svelte';
+	import { SCOPES, scopeTotal } from '$lib/scope';
 	import { contOf, flag } from '$lib/countries';
 	import { REDUCE, closeSettings, closeSheet, dom, hooks, openCountry, openPicker, setFull, ui } from '$lib/app.svelte';
 	import Timeline from './Timeline.svelte';
@@ -21,15 +22,22 @@
 	let pushedPlaces = false;
 	let lastFocus: Element | null = null;
 
-	const n = $derived(atlas.data.countries.length);
+	// Gezählte Länder (gewählte Länderliste) mit Nummer; andere bereiste Gebiete separat ohne Nummer
+	const counted = $derived(countedCountries());
+	const others = $derived(atlas.data.countries.filter((c) => !isCounted(c.code)));
+	const n = $derived(counted.length);
+	const total = $derived(scopeTotal(atlas.settings.countryScope));
+	const scopeLabel = $derived(SCOPES.find((s) => s.id === atlas.settings.countryScope)?.label ?? '');
 	$effect(() => {
 		if (countAnim === null) ovNum = n;
 	});
 
-	const items = $derived.by(() => {
+	const match = (name: string) => {
 		const q = filter.trim().toLowerCase();
-		return atlas.data.countries.map((c, i) => ({ ...c, nr: i + 1 })).filter((c) => !q || (c.name || '').toLowerCase().includes(q));
-	});
+		return !q || name.toLowerCase().includes(q);
+	};
+	const items = $derived(counted.map((c, i) => ({ ...c, nr: i + 1 })).filter((c) => match(c.name || '')));
+	const otherItems = $derived(others.filter((c) => match(c.name || '')));
 
 	function countCenter() {
 		const r = (dom.count ?? document.body).getBoundingClientRect();
@@ -44,7 +52,7 @@
 		return { x, y, R: Math.hypot(Math.max(x, w - x), Math.max(y, h - y)) + 20 };
 	}
 	function flagBurst(x: number, y: number) {
-		const codes = atlas.data.countries.map((c) => c.code).filter((c) => /^[A-Z]{2}$/.test(c));
+		const codes = counted.map((c) => c.code).filter((c) => /^[A-Z]{2}$/.test(c));
 		if (!codes.length || !document.body.animate) return;
 		const count = Math.min(11, codes.length);
 		for (let i = 0; i < count; i++) {
@@ -198,12 +206,12 @@
 		<button type="button" class="ov-close" id="ovClose" aria-label="Übersicht schließen" bind:this={ovClose} onclick={() => close(false)}
 			><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg></button
 		>
-		<div class="ov-count"><span class="ov-num" id="ovNum">{ovNum}</span><span class="ov-lab" id="ovTitle">Länder bereist</span></div>
+		<div class="ov-count"><span class="ov-num" id="ovNum">{ovNum}</span><span class="ov-lab" id="ovTitle">{n === 1 ? 'Land' : 'Länder'} bereist<small class="ov-of">von {total}</small></span></div>
 		<button type="button" class="ov-add" id="ovAdd" onclick={() => openPicker(ui.seg === 'wish' ? 'wish' : 'visited')}>{ui.seg === 'wish' ? '+ Wunschziel' : '+ Land'}</button>
 	</div>
 	<div class="ov-body" id="ovBody" bind:this={ovBody}>
 		<div class="seg" role="group" aria-label="Ansicht wählen">
-			<button type="button" data-seg="visited" aria-pressed={ui.seg === 'visited'} onclick={() => (ui.seg = 'visited')}>Bereist<b id="segV">{atlas.data.countries.length}</b></button>
+			<button type="button" data-seg="visited" aria-pressed={ui.seg === 'visited'} onclick={() => (ui.seg = 'visited')}>Bereist<b id="segV">{n}</b></button>
 			<button type="button" data-seg="wish" aria-pressed={ui.seg === 'wish'} onclick={() => (ui.seg = 'wish')}>Wunschliste<b id="segW">{atlas.data.wishlist.length}</b></button>
 		</div>
 		<div id="paneVisited" hidden={ui.seg !== 'visited'}>
@@ -220,6 +228,19 @@
 					<li class="empty">{atlas.data.countries.length ? 'Kein Treffer.' : 'Noch keine Länder. Tippe oben auf Land, um dein erstes Land hinzuzufügen.'}</li>
 				{/each}
 			</ul>
+			{#if otherItems.length}
+				<h3 class="list-sub">Weitere bereiste Gebiete</h3>
+				<p class="note">Zählen bei „{scopeLabel} ({total})“ nicht als Land. Ändern kannst du das in den Einstellungen.</p>
+				<ul class="list" id="otherList">
+					{#each otherItems as c (c.code)}
+						<li>
+							<button data-code={c.code} onclick={() => openCountry(c.code)}
+								><span class="nr"></span><span class="flag">{flag(c.code)}</span><span class="nm">{c.name}</span><span class="ct">{contOf(c.code)}</span></button
+							>
+						</li>
+					{/each}
+				</ul>
+			{/if}
 		</div>
 		<div id="paneWish" hidden={ui.seg !== 'wish'}>
 			<ul class="list" id="wishList">

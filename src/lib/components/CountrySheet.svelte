@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { addCountry, addWish, atlas, removeCountry, removeWish } from '$lib/atlas.svelte';
+	import { addCountry, addWish, atlas, countedCountries, isCounted, removeCountry, removeWish } from '$lib/atlas.svelte';
+	import { SCOPES, inScope } from '$lib/scope';
 	import { contOf, flag, nameOf } from '$lib/countries';
 	import { closeSheet } from '$lib/app.svelte';
 
@@ -13,6 +14,17 @@
 	// svelte-ignore state_referenced_locally
 	const wish = s.wishlist.some((w) => w.code === code);
 	// svelte-ignore state_referenced_locally
+	const counted = isCounted(code);
+	// svelte-ignore state_referenced_locally
+	const nr = countedCountries().findIndex((c) => c.code === code) + 1;
+	// Gebiet (zählt in keiner Liste) oder Staat außerhalb der gewählten Liste (z. B. Kosovo bei „UN-Mitglieder“)
+	// svelte-ignore state_referenced_locally
+	const why = counted
+		? ''
+		: inScope(code, 'sovereign')
+			? `zählt bei „${SCOPES.find((x) => x.id === atlas.settings.countryScope)?.label}“ nicht als Land`
+			: 'Gebiet, zählt nicht als eigenes Land';
+	// svelte-ignore state_referenced_locally
 	const name = been ? s.countries[idx].name || nameOf(code) : nameOf(code);
 
 	function toggle() {
@@ -25,9 +37,9 @@
 	}
 </script>
 
-{#if been}<div class="stamp">✓ Bereist, Land Nr. {idx + 1}</div>{:else if wish}<div class="stamp">★ Wunschziel</div>{/if}
+{#if been}<div class="stamp">✓ Bereist{counted ? `, Land Nr. ${nr}` : ''}</div>{:else if wish}<div class="stamp">★ Wunschziel</div>{/if}
 <h3 id="sheetTitle"><span>{flag(code)}</span>{name}</h3>
-<div class="meta">{contOf(code)}{been || wish ? '' : ', noch nicht bereist'}</div>
+<div class="meta">{contOf(code)}{been || wish ? '' : ', noch nicht bereist'}{#if why}<br />{why}{/if}</div>
 <div class="actions">
 	{#if been}
 		<button class="btn" id="toggleBtn" onclick={toggle}>Aus Liste entfernen</button>

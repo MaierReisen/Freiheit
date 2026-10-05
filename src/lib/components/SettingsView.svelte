@@ -1,10 +1,11 @@
 <script lang="ts">
-	import { atlas, exportJson, importJson, setHomeContinent } from '$lib/atlas.svelte';
+	import { atlas, exportJson, importJson, setCountryScope, setHomeContinent } from '$lib/atlas.svelte';
+	import { SCOPES, scopeTotal, type CountryScope } from '$lib/scope';
 	import { auth, signOut } from '$lib/auth.svelte';
 	import { CONT_NAMES, CONT_VIEW, type ContinentCode } from '$lib/countries';
 	import { closeSettings, hooks, toast, ui } from '$lib/app.svelte';
 
-	/* Einstellungen: Karte (Startregion), Konto (E-Mail, Sync, Abmelden), Daten (Export/Import) */
+	/* Einstellungen: Karte (Startregion), Statistik (Was zählt als Land?), Konto (E-Mail, Sync, Abmelden), Daten (Export/Import) */
 
 	const continents = Object.keys(CONT_VIEW) as ContinentCode[];
 	let fileInput: HTMLInputElement;
@@ -20,6 +21,13 @@
 		ui.focusContinent = k;
 		hooks.map?.flyToContinent(k); // Karte steht beim Schließen schon auf der neuen Region
 		toast(`Startregion: ${CONT_NAMES[k]}`);
+	}
+
+	const scopeDesc = $derived(SCOPES.find((s) => s.id === atlas.settings.countryScope)?.desc ?? '');
+	function chooseScope(s: CountryScope) {
+		if (s === atlas.settings.countryScope) return;
+		setCountryScope(s);
+		toast(`Es zählen jetzt ${scopeTotal(s)} Länder`);
 	}
 
 	async function onFile(e: Event) {
@@ -62,6 +70,19 @@
 						<button type="button" class="chip" aria-pressed={atlas.settings.homeContinent === k} onclick={() => chooseContinent(k)}>{CONT_NAMES[k]}</button>
 					{/each}
 				</div>
+			</div>
+		</div>
+
+		<h2>Statistik</h2>
+		<div class="card">
+			<div class="field" style="margin-bottom:0">
+				<span class="lbl" id="scopeLbl">Was zählt als Land?<small>Bestimmt deine Länderzahl und den Fortschritt. Gebiete wie Grönland kannst du trotzdem markieren, sie zählen dann nicht mit.</small></span>
+				<div class="chips" role="group" aria-labelledby="scopeLbl">
+					{#each SCOPES as s (s.id)}
+						<button type="button" class="chip" aria-pressed={atlas.settings.countryScope === s.id} onclick={() => chooseScope(s.id)}>{s.label}<small>{scopeTotal(s.id)}</small></button>
+					{/each}
+				</div>
+				<p class="note" style="margin-bottom:0">{scopeDesc}</p>
 			</div>
 		</div>
 

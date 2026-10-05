@@ -19,6 +19,8 @@ export interface MapOptions {
 	cvT: HTMLCanvasElement;
 	reduce: boolean;
 	getVisited(): Set<string>;
+	/** Zählt das Land in der gewählten Länderliste? Bereiste, nicht gezählte Gebiete werden schraffiert gezeichnet */
+	isCounted(code: string): boolean;
 	getWish(): Set<string>;
 	getSelected(): string | null;
 	/** Karte sichtbar (Startseite oder Vollbild) */
@@ -47,6 +49,7 @@ const PAL = {
 	border: '#0D2A3D',
 	grat: 'rgba(255,255,255,.07)',
 	visited: '#34D1BF',
+	visitedSoft: 'rgba(52,209,191,.32)', // bereist, zählt nicht (Grundfarbe unter der Schraffur)
 	wish: '#F6C445',
 	sel: '#FFFFFF',
 	label: 'rgba(7,20,31,.92)'
@@ -91,6 +94,27 @@ export function createWorldMap(o: MapOptions) {
 	let baseDirty = true,
 		topDirty = true,
 		refineT: ReturnType<typeof setTimeout> | undefined;
+
+	// Schraffur für bereiste Gebiete, die nicht zählen
+	let hatch: CanvasPattern | null = null;
+	function hatchPattern(c: CanvasRenderingContext2D) {
+		if (hatch) return hatch;
+		const t = document.createElement('canvas');
+		t.width = t.height = 6;
+		const g = t.getContext('2d');
+		if (!g) return null;
+		g.strokeStyle = PAL.visited;
+		g.lineWidth = 1.3;
+		g.beginPath();
+		g.moveTo(-1, 7);
+		g.lineTo(7, -1);
+		g.moveTo(5, 7);
+		g.lineTo(7, 5);
+		g.moveTo(-1, 1);
+		g.lineTo(1, -1);
+		g.stroke();
+		return (hatch = c.createPattern(t, 'repeat'));
+	}
 
 	const sync = () => o.onSync({ mode: view.mode, spin: view.spin, fineState });
 
@@ -349,21 +373,27 @@ export function createWorldMap(o: MapOptions) {
 		const seenIds: Record<string, boolean> = {},
 			base: GeoJSON.Polygon[] = [],
 			vis: GeoJSON.Polygon[] = [],
+			soft: GeoJSON.Polygon[] = [],
 			wsh: GeoJSON.Polygon[] = [];
 		for (const pg of lod.polys) {
 			let ok = seenIds[pg.id];
 			if (ok === undefined) ok = seenIds[pg.id] = inView(pg.id, ci);
 			if (!ok || pg.size < minDeg) continue;
-			(visited.has(pg.id) ? vis : wish.has(pg.id) ? wsh : base).push(pg.g);
+			(visited.has(pg.id) ? (o.isCounted(pg.id) ? vis : soft) : wish.has(pg.id) ? wsh : base).push(pg.g);
 		}
-		const fillGroup = (arr: GeoJSON.Polygon[], color: string) => {
+		const fillGroup = (arr: GeoJSON.Polygon[], ...fills: (string | CanvasPattern | null)[]) => {
+			if (!arr.length) return;
 			c.beginPath();
 			for (const g of arr) path(g);
-			c.fillStyle = color;
-			c.fill();
+			for (const f of fills) {
+				if (!f) continue;
+				c.fillStyle = f;
+				c.fill();
+			}
 		};
 		fillGroup(base, PAL.land);
 		fillGroup(wsh, PAL.wish);
+		fillGroup(soft, PAL.land, PAL.visitedSoft, hatchPattern(c));
 		fillGroup(vis, PAL.visited);
 		c.beginPath();
 		path(moving ? getLod('s10')!.borders : lod.borders);
@@ -411,7 +441,8 @@ export function createWorldMap(o: MapOptions) {
 		for (const f of small) {
 			// kleine Länder als Punkte
 			const isSel = f.id === selected,
-				st = visited.has(f.id) ? PAL.visited : wish.has(f.id) ? PAL.wish : null;
+				counted = o.isCounted(f.id),
+				st = visited.has(f.id) ? (counted ? PAL.visited : PAL.visitedSoft) : wish.has(f.id) ? PAL.wish : null;
 			if (!st && !isSel) continue;
 			const ctr = INFO[f.id].c;
 			if (!onFront(ctr)) continue;
@@ -421,8 +452,9 @@ export function createWorldMap(o: MapOptions) {
 			c.arc(p[0], p[1], isSel ? 6 : 4.5, 0, TAU);
 			c.fillStyle = st || PAL.sel;
 			c.fill();
-			c.lineWidth = isSel ? 2.2 : 1.4;
-			c.strokeStyle = isSel ? PAL.sel : PAL.border;
+			const soft = visited.has(f.id) && !counted;
+			c.lineWidth = isSel ? 2.2 : soft ? 1.6 : 1.4;
+			c.strokeStyle = isSel ? PAL.sel : soft ? PAL.visited : PAL.border;
 			c.stroke();
 		}
 		if (selected && INFO[selected]) {

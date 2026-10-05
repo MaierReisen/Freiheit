@@ -1,5 +1,6 @@
 import { CONT_VIEW, nameOf, type ContinentCode } from './countries';
 import { toast } from './app.svelte';
+import { DEFAULT_SCOPE, inScope, isScope, type CountryScope } from './scope';
 import { supabase } from './supabase';
 
 /* Daten der App: lokal zwischengespeichert (offline nutzbar) und mit Supabase synchronisiert.
@@ -42,8 +43,10 @@ export type SyncStatus = 'idle' | 'saving' | 'offline' | 'error';
 export interface Settings {
 	/** Startregion: darauf zoomt die Karte beim Öffnen der App */
 	homeContinent: ContinentCode;
+	/** Was zählt als Land? (193 / 195 / 197) – andere Gebiete sind markierbar, zählen aber nicht */
+	countryScope: CountryScope;
 }
-export const defaultSettings = (): Settings => ({ homeContinent: 'EU' });
+export const defaultSettings = (): Settings => ({ homeContinent: 'EU', countryScope: DEFAULT_SCOPE });
 const isContinent = (c: unknown): c is ContinentCode => typeof c === 'string' && c in CONT_VIEW;
 
 type Op =
@@ -134,6 +137,10 @@ function enqueue(...ops: Op[]) {
 }
 
 export const visitedSet = () => new Set(atlas.data.countries.map((c) => c.code));
+/** Zählt dieses Land in der gewählten Länderliste? */
+export const isCounted = (code: string) => inScope(code, atlas.settings.countryScope);
+/** Bereiste Länder, die in der gewählten Liste zählen (in Reihenfolge = "Land Nr. X") */
+export const countedCountries = () => atlas.data.countries.filter((c) => isCounted(c.code));
 export const wishSet = () => new Set(atlas.data.wishlist.map((c) => c.code));
 
 /* ---------- Supabase ---------- */
@@ -157,9 +164,10 @@ async function runOp(op: Op, user: string) {
 		case 'settings': {
 			const r = await supabase
 				.from('user_settings')
-				.upsert({ user_id: user, home_continent: op.s.homeContinent, updated_at: new Date().toISOString() });
+				.upsert({ user_id: user, home_continent: op.s.homeContinent, country_scope: op.s.countryScope, updated_at: new Date().toISOString() });
 			// Tabelle noch nicht angelegt (Migration fehlt): Einstellung bleibt lokal, Warteschlange nicht blockieren
-			if (r.error && r.error.code !== 'PGRST205') throw r.error;
+			// bzw. Spalte fehlt (PGRST204): Einstellung bleibt lokal, Warteschlange nicht blockieren
+			if (r.error && r.error.code !== 'PGRST205' && r.error.code !== 'PGRST204') throw r.error;
 			return;
 		}
 		case 'replaceAll': {
@@ -206,10 +214,14 @@ async function pull() {
 		supabase.from('visited_countries').select('code,name,position,created_at').order('position').order('created_at'),
 		supabase.from('wishlist').select('code,name').order('created_at'),
 		supabase.from('milestones').select('year,count').order('year'),
-		supabase.from('user_settings').select('home_continent').maybeSingle()
+		supabase.from('user_settings').select('*').maybeSingle()
 	]);
 	if (!st.error && st.data && uid === user && !queue.some((o) => o.t === 'settings')) {
-		atlas.settings = { ...atlas.settings, homeContinent: isContinent(st.data.home_continent) ? st.data.home_continent : 'EU' };
+		atlas.settings = {
+			...atlas.settings,
+			homeContinent: isContinent(st.data.home_continent) ? st.data.home_continent : 'EU',
+			countryScope: isScope(st.data.country_scope) ? st.data.country_scope : atlas.settings.countryScope
+		};
 		writeJson(settingsKey(user), atlas.settings);
 	}
 	if (c.error || w.error || m.error) {
@@ -245,7 +257,11 @@ export function loadCache(userId: string) {
 	uid = userId;
 	atlas.data = normalize(readJson(cacheKey(userId))) ?? emptyAtlas();
 	const st = readJson(settingsKey(userId)) as Partial<Settings> | null;
-	atlas.settings = { ...defaultSettings(), ...(st && isContinent(st.homeContinent) ? { homeContinent: st.homeContinent } : {}) };
+	atlas.settings = {
+		...defaultSettings(),
+		...(st && isContinent(st.homeContinent) ? { homeContinent: st.homeContinent } : {}),
+		...(st && isScope(st.countryScope) ? { countryScope: st.countryScope } : {})
+	};
 	const q = readJson(queueKey(userId));
 	queue = Array.isArray(q) ? (q as Op[]) : [];
 	atlas.sync = 'idle';
@@ -297,7 +313,7 @@ export function addCountry(code: string) {
 	};
 	persist();
 	enqueue({ t: 'addCountry', code, name: nameOf(code), position }, ...(wasWish ? [{ t: 'removeWish', code } as Op] : []));
-	toast(`${nameOf(code)} hinzugefügt – Land Nr. ${atlas.data.countries.length}`);
+	toast(isCounted(code) ? `${nameOf(code)} hinzugefügt – Land Nr. ${countedCountries().length}` : `${nameOf(code)} hinzugefügt – zählt nicht als Land`);
 }
 export function removeCountry(code: string) {
 	atlas.data = { ...atlas.data, countries: atlas.data.countries.filter((c) => c.code !== code) };
@@ -324,6 +340,13 @@ export function removeWish(code: string) {
 export function setHomeContinent(c: ContinentCode) {
 	if (!isContinent(c) || atlas.settings.homeContinent === c) return;
 	atlas.settings = { ...atlas.settings, homeContinent: c };
+	if (uid) writeJson(settingsKey(uid), atlas.settings);
+	enqueue({ t: 'settings', s: { ...atlas.settings } });
+}
+
+export function setCountryScope(scope: CountryScope) {
+	if (!isScope(scope) || atlas.settings.countryScope === scope) return;
+	atlas.settings = { ...atlas.settings, countryScope: scope };
 	if (uid) writeJson(settingsKey(uid), atlas.settings);
 	enqueue({ t: 'settings', s: { ...atlas.settings } });
 }

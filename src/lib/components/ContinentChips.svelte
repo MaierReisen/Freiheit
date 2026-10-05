@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { atlas } from '$lib/atlas.svelte';
+	import { atlas, isCounted } from '$lib/atlas.svelte';
 	import { CONT, CONT_NAMES, CONT_VIEW, type ContinentCode } from '$lib/countries';
 	import { hooks, ui } from '$lib/app.svelte';
 
@@ -12,7 +12,7 @@
 		const c: Partial<Record<ContinentCode, number>> = {};
 		atlas.data.countries.forEach((x) => {
 			const k = CONT[x.code];
-			if (k) c[k] = (c[k] || 0) + 1;
+			if (k && isCounted(x.code)) c[k] = (c[k] || 0) + 1;
 		});
 		return c;
 	});

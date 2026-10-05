@@ -1,11 +1,11 @@
 <script lang="ts">
-	import { atlas } from '$lib/atlas.svelte';
+	import { atlas, countedCountries } from '$lib/atlas.svelte';
 
 	/* Länder pro Jahr: Meilensteine aus den Daten plus der heutige Stand */
 	const pts = $derived.by(() => {
 		const ms = (atlas.data.milestones || []).slice().sort((a, b) => a.year - b.year);
 		if (!ms.length) return [];
-		return [...ms.map((m) => ({ y: String(m.year), n: m.count })), { y: 'Heute', n: atlas.data.countries.length }];
+		return [...ms.map((m) => ({ y: String(m.year), n: m.count })), { y: 'Heute', n: countedCountries().length }];
 	});
 	const max = $derived(Math.max(...pts.map((p) => p.n), 1));
 </script>
