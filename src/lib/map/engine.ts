@@ -26,6 +26,8 @@ export interface MapOptions {
 	/** Karte sichtbar (Startseite oder Vollbild) */
 	isVisible(): boolean;
 	isFull(): boolean;
+	/** Bedienelemente über der Karte (relativ zur Zeichenfläche): Namen weichen ihnen aus */
+	getAvoid?(): [number, number, number, number][];
 	/** Globus per Tipp aktiviert? Nur dann reagiert er bei Touch auf Ziehen (sonst scrollt die Seite) */
 	isActive(): boolean;
 	/** Tipp auf den inaktiven Globus (Touch): aktivieren */
@@ -108,6 +110,7 @@ export function createWorldMap(o: MapOptions) {
 		fadeT0 = 0,
 		lastDrawMoving = false;
 	const FADE_MS = 260;
+	let fadeMs = FADE_MS;
 	let fineState: FineState = 'idle',
 		fineTry = 0;
 	let cw = 0,
@@ -245,21 +248,36 @@ export function createWorldMap(o: MapOptions) {
 	}
 
 	function resize() {
-		dpr = Math.min(2, window.devicePixelRatio || 1);
-		cw = cvB.clientWidth;
-		ch = cvB.clientHeight;
-		if (!cw || !ch) return;
-		for (const c of [cvB, cvT]) {
-			c.width = Math.round(cw * dpr);
-			c.height = Math.round(ch * dpr);
+		const ndpr = Math.min(2, window.devicePixelRatio || 1),
+			ncw = cvB.clientWidth,
+			nch = cvB.clientHeight;
+		if (!ncw || !nch) return;
+		// iOS meldet beim Scrollen (Leisten ein/aus) und beim Zurückwechseln in die App „resize“, oft ohne echte Änderung.
+		// Die Zeichenfläche neu anzulegen löscht sie – dann blitzt kurz der Hintergrund auf. Nur bei echter Änderung.
+		const changed = ncw !== cw || nch !== ch || ndpr !== dpr;
+		if (!changed && !pendingIntro) return;
+		dpr = ndpr;
+		cw = ncw;
+		ch = nch;
+		if (changed) {
+			for (const c of [cvB, cvT]) {
+				c.width = Math.round(cw * dpr);
+				c.height = Math.round(ch * dpr);
+			}
+			flatBase = geoNaturalEarth1().fitWidth(cw * 0.98, { type: 'Sphere' }).scale();
 		}
-		flatBase = geoNaturalEarth1().fitWidth(cw * 0.98, { type: 'Sphere' }).scale();
 		if (pendingIntro) {
 			const pi = pendingIntro;
 			pendingIntro = null;
 			intro(pi.delay, pi.ms);
 		} else if (!introDone) startPose();
 		markDirty(true);
+		// sofort neu zeichnen, damit nie ein leerer Frame zu sehen ist
+		if (changed && ctxB && !destroyed) {
+			drawBase(!!(fly || interacting || inertia));
+			drawTop();
+			baseDirty = topDirty = false;
+		}
 	}
 	function introTarget() {
 		const sv = o.getStartView();
@@ -323,6 +341,31 @@ export function createWorldMap(o: MapOptions) {
 			if (view.k >= fineK() && fineState !== 'ready') loadFine();
 		}, 150);
 	}
+	/** Maßstab in der Bildmitte (Pixel für ein halbes Grad, Nord-Süd und Ost-West gemittelt) */
+	function localScale() {
+		const P = curProj(),
+			c: [number, number] = [view.lon, clamp(view.lat, -80, 80)];
+		const p = P(c),
+			n = P([c[0], c[1] + 0.5]),
+			e = P([c[0] + 0.5, c[1]]);
+		if (!p || !n || !e) return 0;
+		return Math.sqrt(Math.hypot(n[0] - p[0], n[1] - p[1]) * Math.hypot(e[0] - p[0], e[1] - p[1]));
+	}
+	/** aktuelles Bild merken und in den nächsten Frames weich über dem neuen ausblenden */
+	function snapshotFade(ts = performance.now(), ms = FADE_MS) {
+		if (reduce() || !cw || !ch) return;
+		fadeCv ??= document.createElement('canvas');
+		if (fadeCv.width !== cvB.width || fadeCv.height !== cvB.height) {
+			fadeCv.width = cvB.width;
+			fadeCv.height = cvB.height;
+		}
+		const fc = fadeCv.getContext('2d');
+		if (!fc) return;
+		fc.clearRect(0, 0, fadeCv.width, fadeCv.height);
+		fc.drawImage(cvB, 0, 0);
+		fadeT0 = ts;
+		fadeMs = ms;
+	}
 	function frame(ts: number) {
 		drawQueued = false;
 		if (destroyed) return;
@@ -357,19 +400,9 @@ export function createWorldMap(o: MapOptions) {
 
 		if (baseDirty) {
 			// erster ruhiger Frame nach Bewegung: altes Bild merken und darüber ausblenden
-			if (!moving && lastDrawMoving && !fly && !reduce() && cw && ch) {
-				fadeCv ??= document.createElement('canvas');
-				if (fadeCv.width !== cvB.width || fadeCv.height !== cvB.height) {
-					fadeCv.width = cvB.width;
-					fadeCv.height = cvB.height;
-				}
-				const fc = fadeCv.getContext('2d');
-				if (fc) {
-					fc.clearRect(0, 0, fadeCv.width, fadeCv.height);
-					fc.drawImage(cvB, 0, 0);
-					fadeT0 = ts;
-				}
-			}
+			if (!moving && lastDrawMoving && !fly) snapshotFade(ts);
+			// bewegt sich die Karte wieder, darf kein altes Bild darüber stehen bleiben
+			if (moving) fadeT0 = 0;
 			lastDrawMoving = moving;
 			const t0 = performance.now();
 			drawBase(moving);
@@ -391,7 +424,7 @@ export function createWorldMap(o: MapOptions) {
 			baseDirty = false;
 			topDirty = true;
 		}
-		const animTop = (fadeT0 && ts - fadeT0 < FADE_MS) || (hl && ts - hl.t0 < HL_MS);
+		const animTop = (fadeT0 && ts - fadeT0 < fadeMs) || (hl && ts - hl.t0 < HL_MS);
 		if (topDirty || animTop) {
 			drawTop(ts);
 			topDirty = false;
@@ -594,7 +627,7 @@ export function createWorldMap(o: MapOptions) {
 		c.textBaseline = 'middle';
 		c.textAlign = 'left';
 		c.lineJoin = 'round';
-		const taken: [number, number, number, number][] = [];
+		const taken: [number, number, number, number][] = o.getAvoid?.() ?? [];
 		for (const l of list) {
 			const t = nameOf(l.id),
 				w = c.measureText(t).width;
@@ -631,7 +664,7 @@ export function createWorldMap(o: MapOptions) {
 		c.setTransform(1, 0, 0, 1, 0, 0);
 		c.clearRect(0, 0, cv.width, cv.height);
 		if (fadeT0 && fadeCv) {
-			const a = 1 - (now - fadeT0) / FADE_MS;
+			const a = 1 - (now - fadeT0) / fadeMs;
 			if (a > 0) {
 				c.globalAlpha = a * a;
 				c.drawImage(fadeCv, 0, 0);
@@ -873,6 +906,10 @@ export function createWorldMap(o: MapOptions) {
 	// Touch auf dem inaktiven Globus: nicht ziehen (die Seite scrollt), nur einen Tipp erkennen
 	let tapOnly: { id: number; x: number; y: number; t: number; moved: number } | null = null;
 	const passiveTouch = (e: PointerEvent) => e.pointerType === 'touch' && !o.isFull() && !o.isActive();
+	// Wer die Seite gerade scrollt und zum Anhalten auf den Globus tippt, will ihn nicht aktivieren
+	let lastScroll = 0;
+	const onScroll = () => (lastScroll = performance.now());
+	window.addEventListener('scroll', onScroll, { passive: true });
 	const onDown = (e: PointerEvent) => {
 		if (passiveTouch(e)) {
 			tapOnly = ptrs.size === 0 && !tapOnly ? { id: e.pointerId, x: e.clientX, y: e.clientY, t: performance.now(), moved: 0 } : null;
@@ -893,6 +930,7 @@ export function createWorldMap(o: MapOptions) {
 			gest.moved = 99;
 		}
 		interacting = true;
+		fadeT0 = 0;
 		markDirty(false);
 	};
 	const onMove = (e: PointerEvent) => {
@@ -945,7 +983,7 @@ export function createWorldMap(o: MapOptions) {
 		if (tapOnly && tapOnly.id === e.pointerId) {
 			const t = tapOnly;
 			tapOnly = null;
-			if (t.moved < 14 && performance.now() - t.t < 500) {
+			if (t.moved < 14 && performance.now() - t.t < 500 && t.t - lastScroll > 350 && lastScroll < t.t) {
 				o.onActivate();
 				tap(e.clientX, e.clientY, true);
 			}
@@ -974,8 +1012,12 @@ export function createWorldMap(o: MapOptions) {
 	const ro = window.ResizeObserver ? new ResizeObserver(() => resize()) : null;
 	ro?.observe(cvB);
 	const onVis = () => {
-		if (!document.hidden) markDirty(true);
+		if (document.hidden) return;
+		lastTs = 0; // sonst „springt“ ein laufendes Drehen um die Zeit im Hintergrund
+		requestDraw();
 	};
+	// falls der Browser die Zeichenfläche im Hintergrund verworfen hat
+	cvB.addEventListener('contextrestored', () => markDirty(true));
 	window.addEventListener('resize', resize);
 	document.addEventListener('visibilitychange', onVis);
 	sync();
@@ -1024,9 +1066,16 @@ export function createWorldMap(o: MapOptions) {
 		setMode(m: MapMode) {
 			if (m === view.mode) return;
 			cancelMotion();
+			// gleicher Maßstab in der Bildmitte: dort gemessen, wie groß ein halbes Grad in beiden Ansichten ist
+			const s0 = localScale(),
+				k0 = view.k;
+			snapshotFade(performance.now(), 380);
 			view.mode = m;
 			view.k = 1;
-			if (m === 'flat') view.lat = clampFlatLat(view.lat, 1);
+			const s1 = localScale();
+			const [a, b] = kRange();
+			view.k = clamp(s0 && s1 ? s0 / s1 : k0, a, b);
+			if (m === 'flat') view.lat = clampFlatLat(view.lat, view.k);
 			saveMapPrefs();
 			sync();
 			markDirty(true);
@@ -1044,6 +1093,7 @@ export function createWorldMap(o: MapOptions) {
 			clearTimeout(prewarmT);
 				ro?.disconnect();
 			window.removeEventListener('resize', resize);
+			window.removeEventListener('scroll', onScroll);
 			document.removeEventListener('visibilitychange', onVis);
 			cv.removeEventListener('pointerdown', onDown);
 			cv.removeEventListener('pointermove', onMove);

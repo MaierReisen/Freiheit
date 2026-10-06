@@ -220,11 +220,13 @@ async function pull() {
 		supabase.from('user_settings').select('*').maybeSingle()
 	]);
 	if (!st.error && st.data && uid === user && !queue.some((o) => o.t === 'settings')) {
-		atlas.settings = {
+		const next = {
 			...atlas.settings,
 			homeContinent: isContinent(st.data.home_continent) ? st.data.home_continent : 'EU',
 			countryScope: isScope(st.data.country_scope) ? st.data.country_scope : atlas.settings.countryScope
 		};
+		// nur bei echten Änderungen setzen (sonst wird alles neu aufgebaut und gezeichnet → Ruckler)
+		if (JSON.stringify(next) !== JSON.stringify(atlas.settings)) atlas.settings = next;
 		writeJson(settingsKey(user), atlas.settings);
 	}
 	if (c.error || w.error || m.error) {
@@ -245,12 +247,14 @@ async function pull() {
 		}
 		return;
 	}
-	atlas.data = {
+	const next: AtlasData = {
 		schemaVersion: 1,
 		countries: c.data.map((r) => ({ code: r.code, name: r.name || nameOf(r.code), visits: [], position: r.position })),
 		wishlist: w.data.map((r) => ({ code: r.code, name: r.name || nameOf(r.code) })),
 		milestones: m.data.map((r) => ({ year: r.year, count: r.count }))
 	};
+	// nur bei echten Änderungen ersetzen (z. B. von einem anderen Gerät): sonst kein Neuaufbau von Liste und Globus
+	if (JSON.stringify(next) !== JSON.stringify(atlas.data)) atlas.data = next;
 	persist();
 }
 
@@ -299,7 +303,8 @@ export const pendingChanges = () => queue.length;
 if (typeof window !== 'undefined') {
 	window.addEventListener('online', () => flush());
 	document.addEventListener('visibilitychange', () => {
-		if (document.visibilityState === 'visible' && uid) pull();
+		// kurz nach dem Zurückwechseln abgleichen, nicht mitten im Wechsel (der soll flüssig bleiben)
+		if (document.visibilityState === 'visible' && uid) setTimeout(() => document.visibilityState === 'visible' && uid && pull(), 700);
 	});
 }
 

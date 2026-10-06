@@ -40,6 +40,15 @@
 			getSelected: () => ui.selected,
 			isVisible: () => ui.full || ui.tab === 'home',
 			isFull: () => ui.full,
+			getAvoid: () => {
+				const r = cvT.getBoundingClientRect();
+				return [...box.querySelectorAll<HTMLElement>('.mseg, .mbtn, .map-hint, .map-panel')]
+					.filter((el) => el.offsetParent)
+					.map((el) => {
+						const b = el.getBoundingClientRect();
+						return [b.left - r.left - 4, b.top - r.top - 4, b.right - r.left + 4, b.bottom - r.top + 4] as [number, number, number, number];
+					});
+			},
 			isActive: () => ui.mapActive,
 			onActivate: () => (ui.mapActive = true),
 			getStartView: () => CONT_VIEW[atlas.settings.homeContinent],
