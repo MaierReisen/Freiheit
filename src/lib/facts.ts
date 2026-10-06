@@ -308,3 +308,23 @@ export function fmtDaylight(h: number) {
 	const m = Math.round(h * 60);
 	return `${Math.floor(m / 60)} Std.${m % 60 ? ` ${m % 60} Min.` : ''} Tageslicht`;
 }
+
+/* Saisonale Highlights je Land (von Hand zusammengestellt und geprüft, siehe data/highlights.json):
+   c: Art (tier, meer, bluete, laub, natur, fest), t: Titel, r: Ort/Region, m: Monate (0–11),
+   v: Termin wechselt je nach Jahr (Mondkalender u. Ä.), d: fester Termin als Text */
+export interface Highlight {
+	c: 'tier' | 'meer' | 'bluete' | 'laub' | 'natur' | 'fest';
+	t: string;
+	r?: string;
+	m: number[];
+	v?: 1;
+	d?: string;
+}
+let hlCache: Record<string, Highlight[]> | null = null;
+let hlLoading: Promise<Record<string, Highlight[]>> | null = null;
+export const highlightsNow = (code: string) => (hlCache ? (hlCache[code] ?? []) : undefined);
+export function loadHighlights() {
+	if (hlCache) return Promise.resolve(hlCache);
+	hlLoading ??= import('./data/highlights.json').then((m) => (hlCache = m.default as unknown as Record<string, Highlight[]>));
+	return hlLoading;
+}

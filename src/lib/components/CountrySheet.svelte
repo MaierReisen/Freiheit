@@ -3,7 +3,7 @@
 	import { SCOPES, inScope } from '$lib/scope';
 	import { contOf, flag, nameOf } from '$lib/countries';
 	import { closeSheet, hooks, openCountry, reduceMotion, setSheetDetent, ui } from '$lib/app.svelte';
-	import { compareArea, currencies, factsNow, loadClimate, loadEntry, fmtArea, fmtAreaShort, fmtDensity, fmtHeight, fmtPop, languages, loadFacts, localTime, type Facts } from '$lib/facts';
+	import { compareArea, currencies, factsNow, loadClimate, loadEntry, loadHighlights, fmtArea, fmtAreaShort, fmtDensity, fmtHeight, fmtPop, languages, loadFacts, localTime, type Facts } from '$lib/facts';
 	import { fmtMoney, fmtRateDate, getRates, type Rates } from '$lib/rates';
 	import CountryShape from './CountryShape.svelte';
 	import { INFO } from '$lib/map/geo';
@@ -35,7 +35,7 @@
 	$effect(() => {
 		if (facts) return;
 		// Einreise und Klima gleich mitladen: alle Kacheln erscheinen zusammen, nichts springt nachträglich
-		Promise.all([loadFacts(), loadEntry(), loadClimate()]).then(([all]) => (facts = all[code] ?? {}));
+		Promise.all([loadFacts(), loadEntry(), loadClimate(), loadHighlights()]).then(([all]) => (facts = all[code] ?? {}));
 	});
 	let now = $state(new Date());
 	$effect(() => {
