@@ -675,6 +675,7 @@ export function createWorldMap(o: MapOptions) {
 		markDirty(false);
 	}
 
+	let avoidCache: { t: number; r: [number, number, number, number][] } | null = null;
 	/** Namen der Zwergstaaten neben dem Punkt; bereiste zuerst, überlappende werden weggelassen */
 	function drawMicroLabels(c: CanvasRenderingContext2D, list: { id: string; x: number; y: number; been: boolean }[]) {
 		list.sort((a, b) => Number(b.been) - Number(a.been) || INFO[b.id].area - INFO[a.id].area);
@@ -682,7 +683,10 @@ export function createWorldMap(o: MapOptions) {
 		c.textBaseline = 'middle';
 		c.textAlign = 'left';
 		c.lineJoin = 'round';
-		const taken: [number, number, number, number][] = o.getAvoid?.() ?? [];
+		// Bedienelemente nicht in jedem Bild neu ausmessen (Layout-Abfragen kosten Zeit)
+		const now = performance.now();
+		if (!avoidCache || now - avoidCache.t > 500) avoidCache = { t: now, r: o.getAvoid?.() ?? [] };
+		const taken: [number, number, number, number][] = [...avoidCache.r];
 		for (const l of list) {
 			const t = nameOf(l.id),
 				w = c.measureText(t).width;
@@ -756,11 +760,15 @@ export function createWorldMap(o: MapOptions) {
 		for (const f of features) {
 			const isSel = f.id === selected,
 				been = visited.has(f.id),
-				// unbereiste nur, wenn sie in der gewählten Länderliste zählen (keine Färöer, Jersey … als Extra-Punkte)
-				micro = microIds.has(f.id) && (been || o.isCounted(f.id));
-			if (!been && !isSel && !(micro && showMicro)) continue;
-			const i = INFO[f.id],
-				sz = i.size * ppd;
+				i = INFO[f.id],
+				sz = i.size * ppd,
+				// Zwergstaat (für Umriss): echte Kleinststaaten
+				micro = microIds.has(f.id) && (been || o.isCounted(f.id)),
+				// Punkt für jedes zählende Land, das auf dem Bildschirm zu klein zum Erkennen ist – überall gleich
+				// (auch Inselstaaten wie Fidschi oder Vanuatu, die auf dem Papier größer, aber zersplittert sind)
+				tiny = showMicro && sz < 13 && o.isCounted(f.id);
+			if (!been && !isSel && !tiny && !micro) continue;
+			if (!been && !isSel && !tiny && sz < 36 && !showMicro) continue;
 			if (!onFront(i.c)) continue;
 			if (sz >= 36) {
 				if (micro) (outlined ??= []).push(f.id); // große Darstellung: nur noch Umriss
@@ -797,14 +805,14 @@ export function createWorldMap(o: MapOptions) {
 						c.strokeStyle = PAL.visited;
 						c.stroke();
 					}
-				} else if (micro) {
-					// deutlich erkennbar auch über hellem/bereistem Land: heller Kern mit dunklem Rand
+				} else if (tiny) {
+					// unbereist: in der Landfarbe wie große unbereiste Länder, mit hellem Rand (sichtbar über Meer und Land)
 					c.beginPath();
 					c.arc(p[0], p[1], 3.8, 0, TAU);
-					c.fillStyle = 'rgba(255,255,255,.92)';
+					c.fillStyle = PAL.land;
 					c.fill();
-					c.lineWidth = 1.6;
-					c.strokeStyle = 'rgba(7,20,31,.85)';
+					c.lineWidth = 1.5;
+					c.strokeStyle = 'rgba(225,240,246,.9)';
 					c.stroke();
 				}
 				if (isSel) {
@@ -816,7 +824,7 @@ export function createWorldMap(o: MapOptions) {
 				}
 				c.globalAlpha = 1;
 			}
-			if (micro && ppd >= LABEL_PPD && !isSel && hl?.code !== f.id) labels.push({ id: f.id, x: p[0], y: p[1], been });
+			if ((micro || tiny) && sz < 14 && ppd >= LABEL_PPD && !isSel && hl?.code !== f.id) labels.push({ id: f.id, x: p[0], y: p[1], been });
 		}
 		// kleine Formen umranden (bereist türkis, sonst hell), damit Vatikan & Co. nicht im Nachbarland verschwinden
 		if (outlined) {
@@ -925,7 +933,7 @@ export function createWorldMap(o: MapOptions) {
 		for (const f of features) {
 			const i = INFO[f.id],
 				sz = i.size * ppd;
-			if (sz >= (smallIds.has(f.id) ? 13 : 7) || !onFront(i.c)) continue; // nur Länder, die als Punkt gezeigt werden
+			if (sz >= 13 || !onFront(i.c)) continue; // nur Länder, die (noch) als Punkt gezeigt werden
 			const p = P(i.c);
 			if (!p) continue;
 			const dd = Math.hypot(p[0] - x, p[1] - y);
@@ -936,7 +944,7 @@ export function createWorldMap(o: MapOptions) {
 		}
 		const hit = at(x, y);
 		if (hit && smallIds.has(hit)) return hit;
-		const dotShown = (id: string) => o.getVisited().has(id) || o.getSelected() === id || (microIds.has(id) && o.isCounted(id) && ppd >= MICRO_PPD);
+		const dotShown = (id: string) => o.getVisited().has(id) || o.getSelected() === id || (o.isCounted(id) && ppd >= MICRO_PPD);
 		if (near && (!hit || (dotShown(near) && nearD <= r * 0.85))) return near;
 		if (hit) return hit;
 		// knapp neben einem Land: Ringe um den Tipp absuchen
@@ -978,6 +986,8 @@ export function createWorldMap(o: MapOptions) {
 		lt: number;
 		vx: number;
 		vy: number;
+		/** letzte Positionen mit echtem Zeitstempel (für den Schwung beim Loslassen) */
+		trail: { t: number; x: number; y: number }[];
 		pinch: boolean;
 		freeLat: boolean;
 		touch: boolean;
@@ -1005,7 +1015,7 @@ export function createWorldMap(o: MapOptions) {
 		cancelMotion();
 		ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
 		const now = performance.now();
-		if (ptrs.size === 1) gest = { t0: now, moved: 0, lt: now, vx: 0, vy: 0, pinch: false, freeLat: true, touch: e.pointerType === 'touch', x0: e.clientX, y0: e.clientY, dist: 0 }; // Touch erreicht das nur im Vollbild oder aktiviert
+		if (ptrs.size === 1) gest = { t0: now, moved: 0, lt: now, vx: 0, vy: 0, trail: [{ t: e.timeStamp, x: e.clientX, y: e.clientY }], pinch: false, freeLat: true, touch: e.pointerType === 'touch', x0: e.clientX, y0: e.clientY, dist: 0 }; // Touch erreicht das nur im Vollbild oder aktiviert
 		else if (ptrs.size === 2 && gest) {
 			const [a, b] = [...ptrs.values()];
 			gest.pinch = true;
@@ -1040,13 +1050,33 @@ export function createWorldMap(o: MapOptions) {
 		gest.dist = Math.max(gest.dist, Math.hypot(e.clientX - gest.x0, e.clientY - gest.y0));
 		if (gest.dist < (gest.touch ? 8 : 4) && gest.moved < 40) return; // kleines Wackeln beim Tippen dreht nicht
 		dragBy(dx, dy, gest.freeLat);
-		const now = performance.now(),
-			dt = Math.max(1, now - gest.lt);
-		gest.vx = 0.75 * gest.vx + (0.25 * dx) / dt;
-		gest.vy = 0.75 * gest.vy + (0.25 * dy) / dt;
-		gest.lt = now;
+		// Spur mit den echten Zeitstempeln der Berührung (nicht dem Verarbeitungszeitpunkt): kommen Bewegungen
+		// gebündelt an, weil das Gerät kurz beschäftigt war, täuschten winzige Abstände sonst riesigen Schwung vor
+		const tr = gest.trail;
+		tr.push({ t: e.timeStamp, x: e.clientX, y: e.clientY });
+		while (tr.length > 2 && e.timeStamp - tr[0].t > 100) tr.shift();
+		gest.lt = e.timeStamp;
 		markDirty(true);
 	};
+	/** Schwung beim Loslassen: mittlere Geschwindigkeit der letzten ~80 ms, nach oben begrenzt; keiner, wenn der
+	    Finger vor dem Loslassen schon stand */
+	function releaseVelocity(trail: { t: number; x: number; y: number }[], tUp: number): [number, number] | null {
+		const last = trail[trail.length - 1];
+		if (!last || tUp - last.t > 60) return null;
+		const first = trail.find((p) => last.t - p.t <= 80) ?? trail[0];
+		const dt = last.t - first.t;
+		if (dt < 16) return null;
+		let vx = (last.x - first.x) / dt,
+			vy = (last.y - first.y) / dt;
+		const sp = Math.hypot(vx, vy);
+		if (sp < 0.08) return null;
+		const MAX = 2.2; // px/ms
+		if (sp > MAX) {
+			vx *= MAX / sp;
+			vy *= MAX / sp;
+		}
+		return [vx, vy];
+	}
 	function endPtr(e: PointerEvent, cancelled: boolean) {
 		if (!ptrs.has(e.pointerId)) return;
 		const g = gest;
@@ -1059,8 +1089,10 @@ export function createWorldMap(o: MapOptions) {
 				if (first) o.onActivate();
 				tap(e.clientX, e.clientY, touch, first);
 			}
-			else if (g && !cancelled && !reduce() && !g.pinch && Math.hypot(g.vx, g.vy) > 0.05 && performance.now() - g.lt < 80)
-				inertia = { vx: g.vx, vy: g.vy, freeLat: g.freeLat };
+			else if (g && !cancelled && !reduce() && !g.pinch) {
+				const v = releaseVelocity(g.trail, e.timeStamp);
+				if (v) inertia = { vx: v[0], vy: v[1], freeLat: g.freeLat };
+			}
 			const changed = g && (g.dist >= 4 || g.pinch);
 			gest = null;
 			if (changed) scheduleSettle();
