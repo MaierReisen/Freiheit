@@ -1,11 +1,14 @@
 <script lang="ts">
 	import { onMount, untrack } from 'svelte';
 	import { REDUCE } from '$lib/app.svelte';
+	import { atlas } from '$lib/atlas.svelte';
 
-	/* Logo-Motiv als Streifen unter der Länderzahl: kurze Startbahn auf dem Horizont, große Sonne, Flugkurve.
+	/* Logo-Motiv als Streifen unter der Länderzahl: Horizont, große Sonne, Flugkurve.
 	   Das Flugzeug steht so weit auf der Kurve, wie Länder bereist sind (ab dem ersten Land in der Luft),
-	   und ist vor der Sonne eine dunkle Silhouette. Beim neuen Land: Schub nach vorn, das neue Stück der Spur
-	   leuchtet auf, „+0,5 %“ steigt auf, der Prozentwert (mit Nachkommastelle) zählt hoch. */
+	   und ist vor der Sonne eine dunkle Silhouette.
+	   - App-Start (und nach längerer Pause): Rollen, Abheben, Flug bis zum erreichten Punkt
+	   - eigenes neues Land: Anschub nur nach vorn, Nachbrenner-Leuchten, Flügelwackeln, Welle, Funken, „+x %“
+	   - alle anderen Änderungen (Laden aus dem Konto, Entfernen, Länderliste, Import): ruhig an die neue Stelle */
 
 	let { progress }: { progress: number } = $props();
 
@@ -15,35 +18,44 @@
 	const fmt = (v: number) => v.toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
 	let w = $state(0);
+	let host: HTMLDivElement;
+	let pctEl = $state<HTMLDivElement | null>(null);
+	// Hindernisse im Streifen (relativ zu ihm): Unterkante des „+ Land“-Buttons, Prozentwert rechts unten
+	let btnBottom = $state(-Infinity);
+	let pctBox = $state({ left: Infinity, top: Infinity });
+	const CLEAR = 26; // Abstand der Kurve zu Button und Prozentwert (halbe Flugzeuggröße plus Luft)
 	let pathEl = $state<SVGPathElement | null>(null);
 	let len = $state(0);
 	let shown = $state(0); // angezeigter Anteil der Kurve (animiert)
 	let shownPct = $state(0); // angezeigter Prozentwert (animiert)
-	let boost = $state<{ from: number; to: number; key: number; label: string } | null>(null);
+	let wiggle = $state(0); // zusätzliche Neigung beim Flügelwackeln (Grad)
+	let boost = $state<{ from: number; key: number; label: string } | null>(null);
 	let boostAlpha = $state(0);
-	let boostReach = $state(0); // weitester Punkt des Vorstoßes (für den Leuchtstreifen)
 	let anim = 0;
 	let startT: ReturnType<typeof setTimeout> | undefined;
 	let boostT: ReturnType<typeof setTimeout> | undefined;
+	let settleT: ReturnType<typeof setTimeout> | undefined;
 
 	// Geometrie: Räder auf dem Horizont, Sonne mittig-links (rechts unten bleibt Platz für den Prozentwert)
 	const yG = H - 9;
 	const sun = $derived({ cx: w * 0.46, r: Math.min(76, Math.max(54, w * 0.21)) });
 	const LIFT = 0.07; // Anteil der Kurve bis zum Abheben (kurze Startbahn)
-	const geo = $derived.by(() => {
+	const d = $derived.by(() => {
 		const x0 = w * 0.03,
 			xr = w * 0.12, // Abheben
-			p1 = { x: w * 0.44, y: H - sun.r * 0.84 }, // vor der Sonne
 			ex = w - 6,
-			ey = 20; // Reiseflughöhe
-		const c2 = { x: w * 0.32, y: H - sun.r * 0.42 };
-		const k = 1.25,
-			c3 = { x: p1.x + (p1.x - c2.x) * k, y: p1.y + (p1.y - c2.y) * k };
-		return {
-			x0,
-			xr,
-			d: `M${x0} ${yG} L${xr} ${yG} C${xr + w * 0.09} ${yG} ${c2.x} ${c2.y} ${p1.x} ${p1.y} C${c3.x} ${c3.y} ${w * 0.8} ${ey} ${ex} ${ey}`
+			ey = Math.max(20, btnBottom + CLEAR); // Reiseflughöhe, unterhalb des „+ Land“-Buttons
+		// Scheitel des Steigflugs: rechts neben der Sonnenmitte, aber links vom Prozentwert und hoch genug darüber
+		const p1 = {
+			x: Math.min(w * 0.6, pctBox.left - CLEAR),
+			y: Math.min(H - sun.r * 0.84, pctBox.top - CLEAR)
 		};
+		// zweiter Teil gleichmäßig in die Reiseflughöhe, ohne Überschwingen nach oben
+		const c3 = { x: p1.x + (ex - p1.x) * 0.4, y: ey + (p1.y - ey) * 0.3 },
+			c4 = { x: ex - (ex - p1.x) * 0.25, y: ey };
+		// erster Teil tangential anschließend (keine Knicke)
+		const c2 = { x: p1.x - (c3.x - p1.x) * 0.8, y: p1.y - (c3.y - p1.y) * 0.8 };
+		return `M${x0} ${yG} L${xr} ${yG} C${xr + w * 0.09} ${yG} ${c2.x} ${c2.y} ${p1.x} ${p1.y} C${c3.x} ${c3.y} ${c4.x} ${c4.y} ${ex} ${ey}`;
 	});
 
 	// Anteil der Kurve: 0 Länder = Anfang der Startbahn; ab dem ersten Land in der Luft, danach Wurzel
@@ -57,72 +69,94 @@
 		const a = pathEl.getPointAtLength(at),
 			q = pathEl.getPointAtLength(Math.min(len, at + 3)),
 			r = pathEl.getPointAtLength(Math.max(0, at - 3));
-		return { x: a.x, y: a.y, deg: (Math.atan2(q.y - r.y, q.x - r.x) * 180) / Math.PI };
+		return { x: a.x, y: a.y, deg: (Math.atan2(q.y - r.y, q.x - r.x) * 180) / Math.PI + wiggle };
 	});
 
 	$effect(() => {
-		void geo.d;
+		void d;
 		if (pathEl) len = pathEl.getTotalLength();
 	});
 
 	const easeInOut = (k: number) => (k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2);
-	const SURGE = 0.07; // Vorstoß beim neuen Land (Anteil der Kurve), unabhängig davon, wie klein der Fortschritt ist
+	const easeOutQuart = (k: number) => 1 - Math.pow(1 - k, 4); // kräftiger Anschub, weiches Ausgleiten
 
-	/** Flug von `from` zum aktuellen Stand; mit Schub (neues Land) schießt das Flugzeug sichtbar vor und gleitet zurück */
+	/** Flug von `from` zum aktuellen Stand. Mit `boost` (eigenes neues Land): nur vorwärts, mit Flügelwackeln */
 	function fly(from: number, fromPct: number, opts: { delay?: number; boost?: boolean } = {}) {
 		cancelAnimationFrame(anim);
 		clearTimeout(startT);
+		clearTimeout(settleT);
+		wiggle = 0;
 		const to = target,
 			toPct = p * 100;
-		if (REDUCE) {
+		const settle = () => {
+			cancelAnimationFrame(anim);
 			shown = to;
 			shownPct = toPct;
-			return;
-		}
+			wiggle = 0;
+		};
+		if (REDUCE) return settle();
 		shown = from;
 		shownPct = fromPct;
+		const ms = opts.boost ? 1000 : 1100 + Math.abs(to - from) * 1500;
+		// Absicherung: läuft keine Animation (App im Hintergrund, Browser drosselt), steht das Flugzeug
+		// spätestens nach der geplanten Flugdauer trotzdem an der richtigen Stelle
+		settleT = setTimeout(settle, (opts.delay ?? 0) + ms + 400);
 		startT = setTimeout(() => {
 			const t0 = performance.now(),
-				ms = opts.boost ? 1300 : 1100 + Math.abs(to - from) * 1500,
-				surge = opts.boost ? Math.min(SURGE, 1 - to) : 0;
+				ease = opts.boost ? easeOutQuart : easeInOut;
 			const step = (t: number) => {
 				const k = Math.min(1, (t - t0) / ms);
-				// Schub: schnell nach vorn (Spitze bei ~30 %), dann weich zurück auf den neuen Platz
-				const bump = surge ? surge * Math.pow(Math.sin(Math.PI * Math.pow(k, 0.6)), 2) : 0;
-				shown = from + (to - from) * easeInOut(k) + bump;
-				if (boost) boostReach = Math.max(boostReach, shown);
+				shown = from + (to - from) * ease(k);
 				shownPct = fromPct + (toPct - fromPct) * easeInOut(k);
+				wiggle = opts.boost ? 9 * Math.sin(k * Math.PI * 4) * (1 - k) : 0;
 				if (k < 1) anim = requestAnimationFrame(step);
 			};
 			anim = requestAnimationFrame(step);
 		}, opts.delay ?? 0);
 	}
 
-	// Stand geändert: bei mehr Ländern Schub mit leuchtender Spur und „+x %“, sonst einfach hinfliegen
+	// Stand geändert. Feier nur, wenn gerade selbst ein Land hinzugefügt wurde (nicht beim Laden aus dem Konto)
 	let started = false;
 	let lastP = 0;
 	$effect(() => {
 		const now = p;
-		void target;
 		// nur auf den Stand reagieren, nicht auf die laufende Animation
 		untrack(() => {
-			if (!started) return;
+			if (!started || now === lastP) return;
 			const prev = lastP;
 			lastP = now;
-			if (now > prev && !REDUCE) {
-				const from = shown;
+			const ownAdd = now > prev && Date.now() - atlas.lastAddedAt < 2000;
+			if (ownAdd && !REDUCE) {
 				clearTimeout(boostT);
-				boost = { from, to: target, key: (boost?.key ?? 0) + 1, label: `+${fmt((now - prev) * 100)} %` };
-				boostReach = from;
+				// Nachbrenner: auch ein Stück der Spur hinter dem Flugzeug leuchtet mit
+				boost = { from: Math.max(0, shown - 0.06), key: (boost?.key ?? 0) + 1, label: `+${fmt((now - prev) * 100)} %` };
 				boostAlpha = 1;
-				fly(from, shownPct, { boost: true });
-				boostT = setTimeout(() => (boostAlpha = 0), 1000); // Leuchten geht in die normale Spur über
-			} else if (now !== prev) fly(shown, shownPct);
+				fly(shown, shownPct, { boost: true });
+				boostT = setTimeout(() => (boostAlpha = 0), 1100); // Leuchten geht in die normale Spur über
+			} else fly(shown, shownPct);
 		});
 	});
 
+	function measure() {
+		const box = host?.getBoundingClientRect();
+		if (!box) return;
+		const btn = host.parentElement?.querySelector('.hero-add')?.getBoundingClientRect();
+		btnBottom = btn && btn.right > box.left + box.width * 0.5 ? btn.bottom - box.top : -Infinity;
+		const pr = pctEl?.getBoundingClientRect();
+		pctBox = pr ? { left: pr.left - box.left, top: pr.top - box.top } : { left: Infinity, top: Infinity };
+	}
+
+	// Prozentwert wird erst nach der ersten Breitenmessung gezeichnet: dann neu vermessen
+	$effect(() => {
+		if (pctEl && w) untrack(measure);
+	});
+
 	onMount(() => {
-		// Beim Start immer: Rollen auf der Startbahn, Abheben und Flug bis zum erreichten Punkt
+		measure();
+		const ro = new ResizeObserver(measure);
+		ro.observe(host);
+		host.parentElement?.querySelectorAll('.hero-add, .count').forEach((el) => ro.observe(el));
+		// Beim Start immer: Rollen, Abheben und Flug bis zum erreichten Punkt
 		started = true;
 		lastP = p;
 		fly(0, 0, { delay: 350 });
@@ -135,14 +169,16 @@
 		document.addEventListener('visibilitychange', onVis);
 		return () => {
 			document.removeEventListener('visibilitychange', onVis);
+			ro.disconnect();
 			cancelAnimationFrame(anim);
 			clearTimeout(startT);
 			clearTimeout(boostT);
+			clearTimeout(settleT);
 		};
 	});
 </script>
 
-<div class="flight" bind:clientWidth={w} aria-hidden="true">
+<div class="flight" bind:clientWidth={w} bind:this={host} aria-hidden="true">
 	{#if w}
 		<svg width={w} height={H} viewBox="0 0 {w} {H}">
 			<defs>
@@ -155,17 +191,15 @@
 			<!-- Sonne als Halbkreis über dem Horizont, mit weichem Lichtschein -->
 			<path d="M{sun.cx - sun.r - 26} {H} a{sun.r + 26} {sun.r + 26} 0 0 1 {2 * (sun.r + 26)} 0z" fill="url(#glow-{uid})" />
 			<path class="flight-sun" d="M{sun.cx - sun.r} {H} a{sun.r} {sun.r} 0 0 1 {2 * sun.r} 0z" />
-			<!-- Startbahn: Mittellinie auf dem Horizont -->
-			<line class="flight-runway" x1={geo.x0 - 4} y1={H - 3} x2={geo.xr + w * 0.04} y2={H - 3} />
-			<path class="flight-rest" d={geo.d} />
-			<path class="flight-done" d={geo.d} bind:this={pathEl} stroke-dasharray="{len * shown} {len + 10}" />
+			<path class="flight-rest" {d} />
+			<path class="flight-done" {d} bind:this={pathEl} stroke-dasharray="{len * shown} {len + 10}" />
 			{#if boost && len}
-				<!-- neues Stück der Spur leuchtet kurz sonnengelb auf -->
+				<!-- Nachbrenner: Spur hinter dem Flugzeug und das neue Stück leuchten kurz sonnengelb -->
 				<path
 					class="flight-boost"
-					d={geo.d}
+					{d}
 					style="opacity:{boostAlpha}"
-					stroke-dasharray="0 {len * boost.from} {Math.max(0, len * (boostReach - boost.from))} {len * 2}"
+					stroke-dasharray="0 {len * boost.from} {Math.max(0, len * (shown - boost.from))} {len * 2}"
 				/>
 			{/if}
 			{#if plane}
@@ -190,6 +224,6 @@
 				</span>
 			{/key}
 		{/if}
-		<div class="flight-pct"><b>{fmt(shownPct)} %</b><span>der Welt</span></div>
+		<div class="flight-pct" bind:this={pctEl}><b>{fmt(shownPct)} %</b><span>der Welt</span></div>
 	{/if}
 </div>

@@ -285,12 +285,11 @@ button.cont{border:0;font:inherit;font-size:14px;color:inherit}
 /* Startseite: Logo-Motiv als Streifen unter der Zahl – Startbahn, Sonne, Flugkurve; das Flugzeug fliegt so weit,
    wie Länder bereist sind, und ist vor der Sonne eine dunkle Silhouette */
 .hero{padding-bottom:0}
-.flight{position:relative;height:150px;margin-top:10px}
+.flight{position:relative;height:150px;margin-top:-40px;pointer-events:none} /* rückt unter den Text: links oben ist der Streifen leer */
 .flight svg{position:absolute;left:0;top:0;overflow:visible}
 .flight-sun{fill:var(--sun)}
 .flight-glow-in{stop-color:var(--sun);stop-opacity:.32}
 .flight-glow-out{stop-color:var(--sun);stop-opacity:0}
-.flight-runway{stroke:var(--ink);stroke-opacity:.35;stroke-width:2;stroke-dasharray:10 8}
 .flight-rest{fill:none;stroke:var(--ink);stroke-opacity:.4;stroke-width:2.6;stroke-linecap:round;stroke-dasharray:.1 7}
 .flight-done{fill:none;stroke:var(--primary);stroke-width:3;stroke-linecap:round}
 .flight-plane{fill:var(--ink)}
@@ -298,7 +297,7 @@ button.cont{border:0;font:inherit;font-size:14px;color:inherit}
 .flight-boost{fill:none;stroke:var(--sun);stroke-width:5;stroke-linecap:round;transition:opacity 1.1s ease;filter:drop-shadow(0 0 4px var(--sun))}
 .flight-plus{position:absolute;pointer-events:none;font-family:var(--display);font-weight:800;font-size:14px;color:var(--primary);white-space:nowrap;animation:plusUp 1.6s cubic-bezier(.2,.8,.2,1) .25s both}
 @keyframes plusUp{0%{opacity:0;transform:translate(-50%,-14px) scale(.6)}20%{opacity:1;transform:translate(-50%,-26px) scale(1.12)}70%{opacity:1;transform:translate(-50%,-44px) scale(1)}100%{opacity:0;transform:translate(-50%,-58px) scale(.95)}}
-.flight-pct{position:absolute;right:0;bottom:12px;display:flex;flex-direction:column;align-items:flex-end;line-height:1}
+.flight-pct{position:absolute;right:0;bottom:12px;min-width:108px;display:flex;flex-direction:column;align-items:flex-end;line-height:1} /* feste Mindestbreite: Kurve weicht immer gleich aus */
 .flight-pct b{font-family:var(--display);font-weight:800;font-size:26px;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
 .flight-pct span{margin-top:4px;font-size:13px;font-weight:600;color:var(--muted)}
 /* Welle und Funken beim neuen Land */
