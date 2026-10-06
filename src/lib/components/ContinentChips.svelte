@@ -29,7 +29,7 @@
 
 <div class="continents" {id}>
 	{#each shown as k (k)}
-		<button type="button" class="cont" data-cont={k} aria-pressed={k === active} title={k === home ? 'Startregion' : undefined} onclick={() => onClick(k)}
+		<button type="button" class="cont" class:fresh={ui.unlock.key > 0 && ui.unlock.cont === CONT_NAMES[k]} data-cont={k} aria-pressed={k === active} title={k === home ? 'Startregion' : undefined} onclick={() => onClick(k)}
 			><b>{counts[k] || 0}</b>{CONT_NAMES[k]}{#if k === home}<span class="sr-only"> (Startregion)</span>{/if}</button
 		>
 	{/each}

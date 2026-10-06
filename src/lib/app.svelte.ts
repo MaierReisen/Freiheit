@@ -80,6 +80,8 @@ export const ui = $state({
 	focusContinent: null as string | null,
 	/** gemeinsame Start-Animation (Globus, Zähler, Flugkurve): Zeitpunkte in performance.now() */
 	intro: { key: 0, start: 0, end: 0 },
+	/** neuer Kontinent freigeschaltet: Feier-Karte (key zählt hoch) */
+	unlock: { key: 0, cont: '', n: 0 },
 	toastMsg: '',
 	toastShow: false
 });

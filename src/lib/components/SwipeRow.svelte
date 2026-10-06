@@ -8,16 +8,19 @@
 	import { reduceMotion } from '$lib/app.svelte';
 
 	/* Listenzeile mit „Wischen nach links zum Löschen“ nach iOS-Vorbild:
-	   Wischen legt den roten „Löschen“-Knopf frei, erst ein Tipp darauf löscht.
+	   Wischen legt den roten „Löschen“-Knopf frei; gelöscht wird erst per Tipp darauf
+	   oder durch erneutes Wischen nach links an der schon offenen Zeile (Knopf wächst, „scharf“).
 	   Tipp auf die Zeile, woanders hin oder Scrollen schließt sie wieder. */
 
 	let { children, ondelete, label = 'Löschen' }: { children: Snippet; ondelete: () => void; label?: string } = $props();
 
-	const W = 88; // Breite des Löschen-Knopfs
+	const W = 92; // Breite des Löschen-Knopfs
+	const ARM = 70; // so weit über den Knopf hinaus wischen, bis Loslassen löscht
 	const id = Symbol();
 	let li: HTMLLIElement;
 	let x = $state(0);
 	let anim = $state(false); // weiches Einrasten statt Folgen des Fingers
+	let armed = $state(false); // zweites Wischen weit genug: Loslassen löscht
 	let removing = $state(false);
 	let g: { x0: number; y0: number; sx: number; dir: 'h' | 'v' | null; lx: number; lt: number; vx: number } | null = null;
 	let swallowClick = false;
@@ -75,10 +78,15 @@
 		g.lx = e.clientX;
 		g.lt = e.timeStamp;
 		let nx = g.sx + dx;
-		// Gummiband: nach rechts kaum, über den Knopf hinaus gebremst (kein Löschen durch Durchwischen)
+		// Gummiband: nach rechts kaum. Aus geschlossener Zeile über den Knopf hinaus stark gebremst
+		// (erstes Wischen löscht nie), aus offener Zeile leicht gebremst – weit genug = scharf
+		const fromOpen = g.sx < 0;
 		if (nx > 0) nx *= 0.15;
-		else if (nx < -W) nx = -W + (nx + W) * 0.3;
+		else if (nx < -W) nx = -W + (nx + W) * (fromOpen ? 0.85 : 0.3);
 		x = nx;
+		const arm = fromOpen && nx < -(W + ARM);
+		if (arm && !armed) navigator.vibrate?.(10);
+		armed = arm;
 	}
 	function up() {
 		if (!g) return;
@@ -86,6 +94,8 @@
 		g = null;
 		if (d.dir === 'h') {
 			swallowClick = true;
+			// zweites Wischen: weit genug gezogen oder kräftig nach links geschnippt → löschen
+			if (armed || (d.sx < 0 && d.vx < -0.6 && x < d.sx - 24)) return remove();
 			const open = d.vx < -0.35 ? true : d.vx > 0.35 ? false : x < -W / 2;
 			snap(open ? -W : 0);
 		} else if (d.dir === null && d.sx < 0) {
@@ -97,6 +107,7 @@
 	function cancel() {
 		if (!g) return;
 		g = null;
+		armed = false;
 		snap(x < -W / 2 ? -W : 0);
 	}
 	function click(e: MouseEvent) {
@@ -110,6 +121,7 @@
 		if (removing) return;
 		if (reduceMotion()) return ondelete();
 		removing = true;
+		armed = true;
 		openRow = null;
 		// Zeile gleitet hinaus und klappt zu, dann wird gelöscht
 		li.style.height = li.offsetHeight + 'px';
@@ -123,14 +135,22 @@
 </script>
 
 <li class="swipe" bind:this={li}>
-	<button
-		type="button"
-		class="swipe-del"
-		style="width:{Math.max(W, -x)}px"
-		tabindex={isOpen ? 0 : -1}
-		aria-hidden={!isOpen}
-		onclick={remove}><span style="width:{W}px">{label}</span></button
-	>
+	{#if x < 0 || removing}
+		<button
+			type="button"
+			class="swipe-del"
+			class:armed
+			style="width:{Math.max(W, -x)}px"
+			tabindex={isOpen ? 0 : -1}
+			aria-hidden={!isOpen}
+			onclick={remove}
+			><span class="swipe-pill" style="transform:scale({Math.min(1, 0.55 + (0.45 * -x) / W)});opacity:{Math.min(1, (-x / W) * 1.6)}"
+				><svg viewBox="0 0 24 24" aria-hidden="true"
+					><path d="M4 7h16M10 11v6M14 11v6M5.5 7l1 12a2 2 0 0 0 2 1.8h7a2 2 0 0 0 2-1.8l1-12M9 7V4.8A.8.8 0 0 1 9.8 4h4.4a.8.8 0 0 1 .8.8V7" /></svg
+				>{label}</span
+			></button
+		>
+	{/if}
 	<div
 		class="swipe-fg"
 		class:anim

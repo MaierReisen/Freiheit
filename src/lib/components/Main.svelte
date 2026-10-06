@@ -5,6 +5,7 @@
 	import Hero from './Hero.svelte';
 	import SettingsView from './SettingsView.svelte';
 	import Sheet from './Sheet.svelte';
+	import ContinentUnlock from './ContinentUnlock.svelte';
 	import TabBar from './TabBar.svelte';
 	import VisitedList from './VisitedList.svelte';
 	import WorldMap from './WorldMap.svelte';
@@ -87,3 +88,4 @@
 {#if TABS.length > 1}<TabBar />{/if}
 <SettingsView />
 <Sheet />
+<ContinentUnlock />

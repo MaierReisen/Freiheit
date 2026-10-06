@@ -559,11 +559,14 @@ export function createWorldMap(o: MapOptions) {
 		fly = { from, to, dl: ((to.lon - from.lon + 540) % 360) - 180, t0, ms, easeOut };
 		markDirty(true);
 	}
-	function flyToCountry(code: string, opts: { keepK?: boolean; ms?: number } = {}) {
+	/** zoom < 1: weiter herausgezoomt (Land mit Umgebung), dann auch herauszoomen statt nur hinein */
+	function flyToCountry(code: string, opts: { keepK?: boolean; ms?: number; zoom?: number } = {}) {
 		const i = INFO[code];
 		if (!i) return;
-		const target = view.mode === 'globe' ? clamp(90 / Math.max(i.size, 6), 1.3, 10) : clamp(150 / Math.max(i.size, 6), 1.5, 12);
-		flyTo({ lon: i.c[0], lat: i.c[1], k: opts.keepK ? Math.max(view.k, 1) : Math.max(target, view.k) }, opts.ms || 1000);
+		const f = opts.zoom ?? 1;
+		const target = view.mode === 'globe' ? clamp((90 * f) / Math.max(i.size, 6), 1.3, 10) : clamp((150 * f) / Math.max(i.size, 6), 1.5, 12);
+		const k = opts.keepK ? Math.max(view.k, 1) : opts.zoom ? target : Math.max(target, view.k);
+		flyTo({ lon: i.c[0], lat: i.c[1], k }, opts.ms || 1000);
 	}
 	function flyToContinent(code: string) {
 		const v = CONT_VIEW[code as ContinentCode];

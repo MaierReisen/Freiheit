@@ -115,12 +115,13 @@ const removeKey = (key: string) => {
 
 LEGACY_JUNK.forEach(removeKey);
 
-export const atlas = $state<{ data: AtlasData; sync: SyncStatus; settings: Settings; lastAddedAt: number }>({
+export const atlas = $state<{ data: AtlasData; sync: SyncStatus; settings: Settings; lastAddedAt: number; lastAddedCode: string }>({
 	data: emptyAtlas(),
 	sync: 'idle',
 	settings: defaultSettings(),
 	/** Zeitpunkt, zu dem zuletzt selbst ein Land hinzugefügt wurde (für die Feier auf der Startseite) */
-	lastAddedAt: 0
+	lastAddedAt: 0,
+	lastAddedCode: ''
 });
 
 let uid: string | null = null;
@@ -308,6 +309,7 @@ export function addCountry(code: string) {
 	if (s.countries.some((c) => c.code === code)) return;
 	const wasWish = s.wishlist.some((w) => w.code === code);
 	const position = Math.max(-1, ...s.countries.map((c, i) => c.position ?? i)) + 1;
+	atlas.lastAddedCode = code;
 	atlas.lastAddedAt = Date.now();
 	atlas.data = {
 		...s,

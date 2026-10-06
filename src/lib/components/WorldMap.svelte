@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 	import { atlas, isCounted, visitedSet } from '$lib/atlas.svelte';
 	import { reduceMotion, closeSheet, hooks, openCountry, openPicker, setFull, ui } from '$lib/app.svelte';
-	import { CONT_VIEW } from '$lib/countries';
+	import { CONT, CONT_VIEW } from '$lib/countries';
 	import { createWorldMap, type MapSync, type WorldMap } from '$lib/map/engine';
 	import ContinentChips from './ContinentChips.svelte';
 
@@ -89,6 +89,15 @@
 		if (!it.key || !map) return;
 		const now = performance.now();
 		map.intro(Math.max(0, it.start - now), Math.max(200, it.end - Math.max(now, it.start)));
+	});
+	// Neues Land selbst hinzugefügt: Globus fliegt hin, Kontinent-Leiste wechselt auf dessen Kontinent
+	$effect(() => {
+		const at = atlas.lastAddedAt,
+			code = atlas.lastAddedCode;
+		if (!at || !map || Date.now() - at > 2000) return;
+		const k = CONT[code];
+		if (k && CONT_VIEW[k]) ui.focusContinent = k;
+		map.flyToCountry(code, { ms: 1300, zoom: 0.3 });
 	});
 	// Vollbild an/aus: Größe neu bestimmen
 	$effect(() => {
