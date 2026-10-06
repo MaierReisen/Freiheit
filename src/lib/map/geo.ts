@@ -279,7 +279,7 @@ export const ALL = [...new Set(features.map((f) => f.id))].sort((a, b) => nameOf
 
 /** Form eines Landes für Vorschaubilder: alle Teile nahe am Hauptgebiet (weit Entferntes wie Alaska, Hawaii oder
     Französisch-Guayana bleibt weg, damit das Land groß genug erscheint) – plus die Nachbarschaft als Umgebung. */
-export function shapeOf(id: string): { shape: GeoJSON.Feature; around: GeoJSON.Feature; c: [number, number] } | null {
+export function shapeOf(id: string): { shape: GeoJSON.Feature; around: GeoJSON.Feature; aroundIds: string[]; c: [number, number] } | null {
 	const i = INFO[id];
 	// kleine Länder mit den feinen Daten (sofern schon geladen), sonst wären Singapur & Co. nur grobe Vielecke
 	const lod = (i && i.size < 8 && LODS.fine) || getLod('full');
@@ -304,6 +304,7 @@ export function shapeOf(id: string): { shape: GeoJSON.Feature; around: GeoJSON.F
 	return {
 		shape: { type: 'Feature', properties: {}, geometry: geom },
 		around: { type: 'Feature', properties: {}, geometry: { type: 'MultiPolygon', coordinates: others.map((p) => p.g.coordinates) } },
+		aroundIds: others.map((p) => p.id), // je Teil das Land (z. B. für bereiste Nachbarn in Türkis)
 		c: parts.length ? (geoCentroid({ type: 'MultiPolygon', coordinates: parts.map((p) => p.g.coordinates) }) as [number, number]) : i.c
 	};
 }

@@ -1032,17 +1032,18 @@ export function createWorldMap(o: MapOptions) {
 		k0?: number;
 	} | null = null;
 	// Touch auf dem inaktiven Globus: nicht ziehen (die Seite scrollt), nur einen Tipp erkennen
-	let tapOnly: { id: number; x: number; y: number; t: number; moved: number } | null = null;
+	let tapOnly: { id: number; x: number; y: number; t: number; moved: number; lx: number; ly: number } | null = null;
 	const passiveTouch = (e: PointerEvent) => e.pointerType === 'touch' && !o.isFull() && !o.isActive();
 	// Wer die Seite gerade scrollt und zum Anhalten auf den Globus tippt, will ihn nicht aktivieren
 	let lastScroll = 0;
 	let holdTimer: ReturnType<typeof setTimeout> | undefined;
 	const HOLD_MS = 450;
+	let holdDrag = false; // Finger hält nach langem Drücken noch: Seite darf nicht scrollen
 	const onScroll = () => (lastScroll = performance.now());
 	window.addEventListener('scroll', onScroll, { passive: true });
 	const onDown = (e: PointerEvent) => {
 		if (passiveTouch(e)) {
-			tapOnly = ptrs.size === 0 && !tapOnly ? { id: e.pointerId, x: e.clientX, y: e.clientY, t: performance.now(), moved: 0 } : null;
+			tapOnly = ptrs.size === 0 && !tapOnly ? { id: e.pointerId, x: e.clientX, y: e.clientY, t: performance.now(), moved: 0, lx: e.clientX, ly: e.clientY } : null;
 			// langes Drücken aktiviert Globus/Karte, ohne ein Land zu öffnen
 			clearTimeout(holdTimer);
 			const t = tapOnly;
@@ -1052,6 +1053,17 @@ export function createWorldMap(o: MapOptions) {
 					tapOnly = null;
 					o.onActivate();
 					navigator.vibrate?.(8);
+					// derselbe Finger dreht/verschiebt gleich weiter (ohne loszulassen); Loslassen ohne Bewegung öffnet kein Land
+					try {
+						cv.setPointerCapture(t.id);
+					} catch {}
+					cancelMotion();
+					ptrs.set(t.id, { x: t.lx, y: t.ly });
+					const now = performance.now();
+					gest = { t0: -1e9, moved: 0, lt: now, vx: 0, vy: 0, trail: [], pinch: false, freeLat: true, touch: true, x0: t.lx, y0: t.ly, dist: 0 };
+					holdDrag = true;
+					interacting = true;
+					markDirty(false);
 				}, HOLD_MS);
 			return;
 		}
@@ -1076,6 +1088,8 @@ export function createWorldMap(o: MapOptions) {
 	const onMove = (e: PointerEvent) => {
 		if (tapOnly && tapOnly.id === e.pointerId) {
 			tapOnly.moved = Math.max(tapOnly.moved, Math.hypot(e.clientX - tapOnly.x, e.clientY - tapOnly.y));
+			tapOnly.lx = e.clientX;
+			tapOnly.ly = e.clientY;
 			return;
 		}
 		const p = ptrs.get(e.pointerId);
@@ -1129,6 +1143,7 @@ export function createWorldMap(o: MapOptions) {
 		ptrs.delete(e.pointerId);
 		if (ptrs.size === 0) {
 			interacting = false;
+			holdDrag = false;
 			const touch = e.pointerType === 'touch';
 			const still = g && !cancelled && !g.pinch && g.dist < (touch ? 14 : 8);
 			const first = !o.isFull() && !o.isActive();
@@ -1183,6 +1198,11 @@ export function createWorldMap(o: MapOptions) {
 		if (e.cancelable) e.preventDefault();
 	};
 	cv.addEventListener('touchend', onTouchEnd, { passive: false });
+	// nach langem Drücken: Bewegung des Fingers dreht die Karte statt die Seite zu scrollen
+	const onTouchMove = (e: TouchEvent) => {
+		if (holdDrag && e.cancelable) e.preventDefault();
+	};
+	cv.addEventListener('touchmove', onTouchMove, { passive: false });
 	cv.addEventListener('wheel', onWheel, { passive: false });
 
 	const ro = window.ResizeObserver ? new ResizeObserver(() => resize()) : null;
@@ -1278,6 +1298,7 @@ export function createWorldMap(o: MapOptions) {
 			cv.removeEventListener('pointerup', onUp);
 			cv.removeEventListener('pointercancel', onCancel);
 			cv.removeEventListener('touchend', onTouchEnd);
+			cv.removeEventListener('touchmove', onTouchMove);
 			cv.removeEventListener('wheel', onWheel);
 		}
 	};

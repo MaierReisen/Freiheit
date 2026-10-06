@@ -85,15 +85,20 @@
 		});
 		map = m;
 		if (import.meta.env.DEV) (window as unknown as { __freiheitMap: WorldMap }).__freiheitMap = m;
-		// Tipp außerhalb des Globus beendet den aktiven Modus (Sheet und Abdunklung zählen dazu)
-		const onOutside = (e: PointerEvent) => {
-			if (!ui.mapActive) return;
+		// Tippen oder Scrollen außerhalb des Globus beendet den aktiven Modus, hebt die Länderauswahl auf und schließt
+		// die kompakte Länderkarte (Sheet und Abdunklung zählen nicht als „außerhalb“; die volle Seite schließt per Abdeckung)
+		const onOutside = (e: Event) => {
 			const t = e.target as Element | null;
 			if (t && (box.contains(t) || t.closest('.sheet, .scrim'))) return;
+			const peekOpen = ui.sheetOpen && ui.sheetView?.kind === 'country' && ui.sheetDetent === 'peek';
+			if (!ui.mapActive && !peekOpen && !ui.selected) return;
+			if (ui.sheetOpen && !peekOpen) return;
 			ui.mapActive = false;
-			if (!ui.sheetOpen) ui.selected = null; // nur markiertes Land (ohne Detailseite) wieder abwählen
+			if (peekOpen) closeSheet();
+			ui.selected = null;
 		};
 		document.addEventListener('pointerdown', onOutside, true);
+		document.addEventListener('wheel', onOutside, { capture: true, passive: true });
 		hooks.map = {
 			resize: m.resize,
 			flyToCountry: m.flyToCountry,
@@ -102,6 +107,7 @@
 		};
 		return () => {
 			document.removeEventListener('pointerdown', onOutside, true);
+			document.removeEventListener('wheel', onOutside, true);
 			ui.mapActive = false;
 			m.destroy();
 			hooks.map = null;

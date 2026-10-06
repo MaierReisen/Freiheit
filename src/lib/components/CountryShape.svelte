@@ -2,6 +2,7 @@
 	import { geoContains, geoDistance, geoGraticule10, geoInterpolate, geoOrthographic, geoPath } from 'd3-geo';
 	import { shapeOf } from '$lib/map/geo';
 	import { fmtHeight, loadWater, type Facts, type Water } from '$lib/facts';
+	import { visitedSet } from '$lib/atlas.svelte';
 
 	/* Kartenausschnitt des Landes im Stil des Globus: Land hervorgehoben (bereist türkis, sonst hell), Nachbarn gedämpft,
 	   dazu die wichtigsten Flüsse und Seen (Natural Earth), Hauptstadt und höchster Berg mit Beschriftung */
@@ -14,6 +15,14 @@
 		H = 210;
 
 	let water = $state<Water | null>(null);
+	const visited = $derived(visitedSet());
+	// Nachbarschaft getrennt nach bereist (türkis) und nicht bereist (Landfarbe) – wie auf dem Globus
+	const aroundSplit = $derived.by(() => {
+		if (!base) return { been: '', rest: '' };
+		const g = base.s.around.geometry as GeoJSON.MultiPolygon;
+		const pick = (v: boolean) => ({ type: 'MultiPolygon' as const, coordinates: g.coordinates.filter((_, k) => visited.has(base.s.aroundIds[k]) === v) });
+		return { been: base.path(pick(true)) ?? '', rest: base.path(pick(false)) ?? '' };
+	});
 	$effect(() => {
 		loadWater().then((w) => (water = w));
 	});
@@ -40,7 +49,7 @@
 		const path = geoPath(P);
 		// Sichtweite in Bogenmaß (für das Vorsortieren der Gewässer)
 		const reach = Math.hypot(W, H) / 2 / P.scale() + 0.02;
-		return { P, path, s, reach, land: path(s.shape) ?? '', around: path(s.around) ?? '', grat: path(geoGraticule10()) ?? '' };
+		return { P, path, s, reach, land: path(s.shape) ?? '', grat: path(geoGraticule10()) ?? '' };
 	});
 
 	/** Linienzug weich zeichnen (Catmull-Rom als Bézier) – Flüsse und Seeufer wirken so natürlicher */
@@ -273,9 +282,14 @@
 		</defs>
 		<rect width={W} height={H} fill="url(#cs-sea)" />
 		<path d={base.grat} fill="none" stroke="rgba(255,255,255,.07)" stroke-width=".6" />
-		<path d={base.around} fill="#4B6F82" stroke="#0D2A3D" stroke-width=".7" stroke-linejoin="round" />
-		<path d={base.land} fill={been ? '#34D1BF' : '#F6C445'} opacity=".5" filter="url(#cs-glow)" />
-		<path d={base.land} fill={been ? '#34D1BF' : '#DCE9EE'} stroke={been ? '#A0F5E8' : '#FFFFFF'} stroke-width="1.2" stroke-linejoin="round" />
+		<!-- Farben wie auf dem Globus: Länder in Landfarbe, bereist türkis; das Land selbst hell umrandet (wie ausgewählt),
+		     die Nachbarn etwas zurückgenommen -->
+		<g opacity=".62" stroke="#0D2A3D" stroke-width=".7" stroke-linejoin="round">
+			<path d={aroundSplit.rest} fill="#4B6F82" />
+			<path d={aroundSplit.been} fill="#34D1BF" />
+		</g>
+		<path d={base.land} fill={been ? '#34D1BF' : '#9ED3E6'} opacity={been ? 0.5 : 0.28} filter="url(#cs-glow)" />
+		<path d={base.land} fill={been ? '#34D1BF' : '#4B6F82'} stroke={been ? '#A0F5E8' : '#FFFFFF'} stroke-width="1.4" stroke-linejoin="round" />
 		{#if layers}
 			<!-- Gewässer außerhalb des Landes gedämpft, im Land kräftig -->
 			{#each [false, true] as inLand (inLand)}
