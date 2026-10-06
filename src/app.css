@@ -383,5 +383,7 @@ button.cont{border:0;font:inherit;font-size:14px;color:inherit}
 @keyframes contFresh{0%{transform:scale(.6);box-shadow:0 0 0 0 var(--sun)}30%{transform:scale(1.08);box-shadow:0 0 0 4px var(--sun)}100%{transform:none;box-shadow:0 0 0 0 transparent}}
 [data-motion="reduce"] .cont.fresh{animation:none}
 
-/* Langes Drücken auf Globus/Karte: nichts markieren, keine Lupe und kein Kontextmenü (iOS/Android) */
-.map-box{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+/* App-Gefühl: langes Drücken markiert nirgends Text und zeigt keine Lupe/Link-Vorschau (iOS/Android).
+   Eingabefelder bleiben markierbar (Suche, E-Mail, Code: kopieren und einfügen). */
+html{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+input,textarea,[contenteditable="true"]{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
