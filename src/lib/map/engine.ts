@@ -67,7 +67,17 @@ const PAL = {
 
 const MOVE_STEPS = [3, 6, 10];
 // Schwellen als Maßstab (Bildschirmpixel pro Grad), damit Globus und flache Karte gleich reagieren
-const MICRO_PPD = 4.4; // ab hier alle Zwergstaaten als Punkt (darunter nur bereiste) – etwa Kontinent-Ansicht
+/** Sichtbarkeit eines Landes: seine Fläche auf dem Bildschirm in px² (bei jedem Zoom, Globus und Karte gleich).
+    Unter DOT_FULL wird es als voller Punkt gezeigt, bis DOT_NONE weich in die echte Form übergeblendet. */
+const DOT_FULL = 20,
+	DOT_NONE = 60,
+	SMALL_SR = 0.0008; // nur kleine Länder (bis ~32.000 km²) werden zum Punkt – sonst wäre Mitteleuropa weit draußen ein Punktehaufen
+const pxArea = (id: string, ppd: number) => INFO[id].area * (ppd * 57.2958) ** 2;
+const dotAlpha = (id: string, ppd: number) => {
+	if (INFO[id].area >= SMALL_SR) return 0;
+	const a = pxArea(id, ppd);
+	return a < DOT_FULL ? 1 : a < DOT_NONE ? (DOT_NONE - a) / (DOT_NONE - DOT_FULL) : 0;
+};
 const LABEL_PPD = 14; // Namen erst bei regionalem Zoom (etwa doppelte Europa-Startansicht), sonst wirkt die Karte überladen
 // echte Zwergstaaten (unter etwa 4.000 km²: Vatikan, Monaco, Malta, Singapur, Karibik- und Pazifikinseln …)
 const microIds = new Set(features.filter((f) => INFO[f.id].area < 0.0001).map((f) => f.id));
@@ -378,7 +388,8 @@ export function createWorldMap(o: MapOptions) {
 	function settle() {
 		if (destroyed || !cw || !ch) return;
 		if (fly || inertia || interacting) return scheduleSettle(200); // noch in Bewegung: später erneut
-		const wide = view.mode === 'globe' ? view.k < 1.15 : view.k < 1.4;
+		// mehrere Kontinente im Bild: mehr als ~110 Längengrade sichtbar (Globus und Karte gleich)
+		const wide = cw / pxPerDeg() > 110;
 		let code: string | null = null;
 		if (!wide) {
 			const cx = cw / 2,
@@ -754,7 +765,6 @@ export function createWorldMap(o: MapOptions) {
 		// - solange die Form klein ist (unter ~36 px), mit Umriss, damit sie sich vom Nachbarland abhebt
 		// - erst bei regionalem Zoom (LABEL_PPD) mit Namen (ohne Überlappung, bereiste zuerst)
 		const ppd = pxPerDeg();
-		const showMicro = ppd >= MICRO_PPD;
 		const labels: { id: string; x: number; y: number; been: boolean }[] = [];
 		let outlined: string[] | null = null;
 		for (const f of features) {
@@ -764,11 +774,11 @@ export function createWorldMap(o: MapOptions) {
 				sz = i.size * ppd,
 				// Zwergstaat (für Umriss): echte Kleinststaaten
 				micro = microIds.has(f.id) && (been || o.isCounted(f.id)),
-				// Punkt für jedes zählende Land, das auf dem Bildschirm zu klein zum Erkennen ist – überall gleich
-				// (auch Inselstaaten wie Fidschi oder Vanuatu, die auf dem Papier größer, aber zersplittert sind)
-				tiny = showMicro && sz < 13 && o.isCounted(f.id);
+				// Punkt für jedes Land, dessen Fläche auf dem Bildschirm zu klein zum Erkennen ist – bei jedem Zoom,
+				// auf Globus und Karte gleich (unbereiste nur, wenn sie in der gewählten Länderliste zählen)
+				dotA = dotAlpha(f.id, ppd),
+				tiny = dotA > 0 && o.isCounted(f.id);
 			if (!been && !isSel && !tiny && !micro) continue;
-			if (!been && !isSel && !tiny && sz < 36 && !showMicro) continue;
 			if (!onFront(i.c)) continue;
 			if (sz >= 36) {
 				if (micro) (outlined ??= []).push(f.id); // große Darstellung: nur noch Umriss
@@ -776,7 +786,6 @@ export function createWorldMap(o: MapOptions) {
 			}
 			const p = P(i.c);
 			if (!p || p[0] < -20 || p[1] < -20 || p[0] > cw + 20 || p[1] > ch + 20) continue;
-			const dotA = sz < 7 ? 1 : sz < 13 ? (13 - sz) / 6 : 0;
 			if (micro && sz >= 5) (outlined ??= []).push(f.id);
 			if (dotA > 0) {
 				const counted = o.isCounted(f.id);
@@ -824,7 +833,7 @@ export function createWorldMap(o: MapOptions) {
 				}
 				c.globalAlpha = 1;
 			}
-			if ((micro || tiny) && sz < 14 && ppd >= LABEL_PPD && !isSel && hl?.code !== f.id) labels.push({ id: f.id, x: p[0], y: p[1], been });
+			if ((micro || tiny) && dotA > 0 && ppd >= LABEL_PPD && !isSel && hl?.code !== f.id) labels.push({ id: f.id, x: p[0], y: p[1], been });
 		}
 		// kleine Formen umranden (bereist türkis, sonst hell), damit Vatikan & Co. nicht im Nachbarland verschwinden
 		if (outlined) {
@@ -933,7 +942,7 @@ export function createWorldMap(o: MapOptions) {
 		for (const f of features) {
 			const i = INFO[f.id],
 				sz = i.size * ppd;
-			if (sz >= 13 || !onFront(i.c)) continue; // nur Länder, die (noch) als Punkt gezeigt werden
+			if (dotAlpha(f.id, ppd) <= 0 || !onFront(i.c)) continue; // nur Länder, die (noch) als Punkt gezeigt werden
 			const p = P(i.c);
 			if (!p) continue;
 			const dd = Math.hypot(p[0] - x, p[1] - y);
@@ -944,7 +953,7 @@ export function createWorldMap(o: MapOptions) {
 		}
 		const hit = at(x, y);
 		if (hit && smallIds.has(hit)) return hit;
-		const dotShown = (id: string) => o.getVisited().has(id) || o.getSelected() === id || (o.isCounted(id) && ppd >= MICRO_PPD);
+		const dotShown = (id: string) => o.getVisited().has(id) || o.getSelected() === id || o.isCounted(id);
 		if (near && (!hit || (dotShown(near) && nearD <= r * 0.85))) return near;
 		if (hit) return hit;
 		// knapp neben einem Land: Ringe um den Tipp absuchen
