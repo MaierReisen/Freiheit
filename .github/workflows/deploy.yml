@@ -17,6 +17,8 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    # Hängende Läufe (z. B. bei GitHub-Störungen) brechen ab, statt stundenlang zu blockieren
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
 
@@ -42,9 +44,13 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - id: deployment
         uses: actions/deploy-pages@v5
+        with:
+          # Wartezeit auf die Veröffentlichung begrenzen (Standard: 10 Minuten)
+          timeout: 300000
