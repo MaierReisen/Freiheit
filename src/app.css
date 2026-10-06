@@ -318,7 +318,7 @@ button.cont{border:0;font:inherit;font-size:14px;color:inherit}
 .visited h2{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
 .h-count{font-family:var(--text);font-size:14px;font-weight:600;color:var(--muted);letter-spacing:0}
 .list-sub .h-count{font-size:13px}
-.sort-seg{margin:14px 0 12px}
+.sort-seg{margin:14px 0 12px}.sort-seg button{white-space:nowrap}
 .visited .search{margin-top:0}
 .visited .list-sub:first-of-type{margin-top:18px}
 
@@ -328,3 +328,21 @@ button.cont{border:0;font:inherit;font-size:14px;color:inherit}
 .map-box.active::after{opacity:1}
 .map-box.active .map-hint{color:#34D1BF;font-weight:600}
 }
+
+/* Länderliste: Wischen nach links zum Löschen (iOS-Vorbild) */
+.list li.swipe{position:relative;overflow:hidden}
+.list li.swipe.collapsing{transition:height .26s ease}
+.swipe-fg{position:relative;z-index:1;background:var(--bg);touch-action:pan-y;will-change:transform}
+.swipe-fg.anim{transition:transform .3s cubic-bezier(.2,.9,.3,1)}
+.list li .swipe-del{position:absolute;top:0;right:0;bottom:1px;z-index:0;display:flex;justify-content:flex-end;align-items:center;padding:0;border:0;background:#E5484D;color:#fff;font-weight:600;font-size:15px}
+.swipe-del span{text-align:center}
+
+/* Neues Land: alte Zahl rollt nach oben weg, neue rollt nach (kurzes Nachfedern) mit Sonnen-Glanz */
+.count-in{display:inline-block}
+.count-in.bump{animation:countIn .62s cubic-bezier(.2,1.5,.4,1) both,countShine 1.1s .12s ease-out both;background:linear-gradient(100deg,var(--ink) 38%,var(--sun) 50%,var(--ink) 62%) 0 0/300% 100% no-repeat;-webkit-background-clip:text;background-clip:text;color:transparent}
+.count-out{position:absolute;left:0;top:0;pointer-events:none;animation:countOut .42s cubic-bezier(.4,0,.6,1) both}
+@keyframes countIn{0%{opacity:0;transform:translateY(.32em) scale(.94)}100%{opacity:1;transform:none}}
+@keyframes countOut{0%{opacity:1;transform:none;filter:blur(0)}100%{opacity:0;transform:translateY(-.32em) scale(.96);filter:blur(3px)}}
+@keyframes countShine{0%{background-position:100% 0}100%{background-position:0 0}}
+[data-motion="reduce"] .count-in.bump,[data-motion="reduce"] .count-out{animation:none}
+[data-motion="reduce"] .count-out{display:none}

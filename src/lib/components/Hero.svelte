@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { atlas, countedCountries } from '$lib/atlas.svelte';
 	import { scopeTotal } from '$lib/scope';
 	import { contOf } from '$lib/countries';
@@ -39,6 +40,20 @@
 	});
 	const shownN = $derived(t >= 1 ? n : Math.round(easeOutCubic(t) * n));
 	const shownCont = $derived(t >= 1 ? continents : Math.round(easeOutCubic(t) * continents));
+
+	// Selbst hinzugefügtes Land: alte Zahl rollt weg, neue rollt mit Glanz nach (nicht beim Laden/Sync)
+	let bump = $state({ key: 0, from: 0 });
+	let prevN = -1;
+	$effect(() => {
+		const now = n;
+		untrack(() => {
+			const before = prevN;
+			prevN = now;
+			if (before < 0 || now <= before || t < 1 || reduceMotion() || Date.now() - atlas.lastAddedAt > 2000) return;
+			bump = { key: bump.key + 1, from: before };
+			navigator.vibrate?.(12);
+		});
+	});
 </script>
 
 <section class="hero" aria-live="polite">
@@ -50,7 +65,12 @@
 			aria-label="{n} von {total} Ländern bereist, {pct} Prozent. Zur Länderliste"
 			onclick={() => hooks.places?.open(false)}
 		>
-			<span class="count-wrap"><span class="count" class:d3={n >= 100} id="count" bind:this={countEl}>{shownN}</span></span>
+			<span class="count-wrap"><span class="count" class:d3={n >= 100} id="count" bind:this={countEl}
+					>{#if bump.key}{#key bump.key}<span class="count-out" aria-hidden="true">{bump.from}</span>{/key}{/if}{#key bump.key}<span
+							class="count-in"
+							class:bump={bump.key > 0}>{shownN}</span
+						>{/key}</span
+				></span>
 			<span class="count-meta">
 				<span class="count-label" id="countLabel">{shownN === 1 ? 'Land bereist' : 'Länder bereist'}</span>
 				<span class="count-sub" id="countSub">von {total}{continents ? ` · auf ${shownCont} Kontinent${shownCont === 1 ? '' : 'en'}` : ''}</span>

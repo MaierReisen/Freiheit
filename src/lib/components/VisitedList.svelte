@@ -1,12 +1,14 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { atlas, countedCountries, isCounted, type CountryEntry } from '$lib/atlas.svelte';
+	import { atlas, countedCountries, isCounted, removeCountry, type CountryEntry } from '$lib/atlas.svelte';
 	import { CONT, CONT_NAMES, contOf, flag } from '$lib/countries';
 	import { SCOPES, scopeTotal } from '$lib/scope';
 	import { reduceMotion, hooks, openCountry } from '$lib/app.svelte';
 	import Timeline from './Timeline.svelte';
+	import SwipeRow from './SwipeRow.svelte';
 
-	/* Liste der bereisten Länder unter dem Globus, sortierbar. Gebiete, die nicht zählen, stehen darunter. */
+	/* Liste der bereisten Länder unter dem Globus, sortierbar. Gebiete, die nicht zählen, stehen darunter.
+	   Wischen nach links legt „Löschen“ frei (wie in iOS). */
 
 	type Sort = 'nr' | 'az' | 'cont' | 'new';
 	const SORTS: { id: Sort; label: string }[] = [
@@ -73,11 +75,11 @@
 </script>
 
 {#snippet row(c: CountryEntry & { nr?: number })}
-	<li>
+	<SwipeRow ondelete={() => removeCountry(c.code)}>
 		<button data-code={c.code} onclick={() => openCountry(c.code)}
 			><span class="nr">{c.nr ?? ''}</span><span class="flag">{flag(c.code)}</span><span class="nm">{c.name}</span><span class="ct">{contOf(c.code)}</span></button
 		>
-	</li>
+	</SwipeRow>
 {/snippet}
 
 <section class="visited" id="laender" bind:this={section} aria-labelledby="visitedTitle">
