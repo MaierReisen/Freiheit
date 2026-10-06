@@ -1,6 +1,6 @@
 import { geoContains, geoDistance, geoGraticule10, geoNaturalEarth1, geoOrthographic, geoPath, type GeoProjection } from 'd3-geo';
 import { CONT_VIEW, nameOf, type ContinentCode } from '../countries';
-import { FC, INFO, features, fetchFineLod, fineLod, getLod, lodReady, smallIds, wrapLon, type Lod } from './geo';
+import { FC, FINE_W, INFO, SIMP_W, features, fetchFineLod, fineLod, getLod, lodReady, smallIds, wrapLon, type Lod } from './geo';
 
 /* Weltkarte auf zwei Canvas-Ebenen: Globus (orthografisch) und flache Karte (Natural Earth).
    cvB: Karte (ändert sich selten), cvT: Punkte kleiner Länder und Beschriftung. */
@@ -110,7 +110,8 @@ export function createWorldMap(o: MapOptions) {
 		fadeT0 = 0,
 		lastDrawMoving = false;
 	const FADE_MS = 260;
-	let fadeMs = FADE_MS;
+	let fadeMs = FADE_MS,
+		fadeMode: MapMode = 'globe';
 	let fineState: FineState = 'idle',
 		fineTry = 0;
 	let cw = 0,
@@ -170,9 +171,7 @@ export function createWorldMap(o: MapOptions) {
 		try {
 			await fetchFineLod();
 			fineState = 'ready';
-			// ausgedünnte Bewegungsstufen der feinen Daten im Leerlauf bauen (nicht mitten in einer Geste)
-			const later = (f: () => void) => (window.requestIdleCallback ? window.requestIdleCallback(f, { timeout: 3000 }) : setTimeout(f, 200));
-			later(() => !destroyed && getLod('f' + MOVE_STEPS[stepIdx]) && later(() => !destroyed && MOVE_STEPS.forEach((s) => getLod('f' + s))));
+			// die feinen Stufen ('w…') werden bei Bedarf im Leerlauf gebaut (pickLodName)
 		} catch {
 			fineState = 'failed';
 			fineTry = Date.now();
@@ -324,14 +323,35 @@ export function createWorldMap(o: MapOptions) {
 		drawQueued = true;
 		requestAnimationFrame(frame);
 	}
+	/** Detailstufe nach Bildschirmfehler: die gröbste, deren Abweichung unter ~0,4 px bleibt – in Bewegung dieselbe
+	    wie in Ruhe (nichts springt um). Nur auf langsamen Geräten wird in Bewegung eine gröbere genommen. */
+	const MOVE_ERR = [1, 3, 9];
+	const building = new Set<string>();
 	function pickLodName(moving: boolean) {
-		if (moving) {
-			// bei starkem Zoom auch in Bewegung die (ausgedünnten) feinen Daten, damit beim Loslassen nichts Neues auftaucht
-			const f = fineState === 'ready' && view.k >= fineK() ? 'f' + MOVE_STEPS[stepIdx] : '';
-			return f && lodReady(f) ? f : 's' + MOVE_STEPS[stepIdx];
+		const ppd = pxPerDeg(),
+			need = (0.35 * (moving ? MOVE_ERR[stepIdx] : 1)) / (ppd * ppd);
+		const fine = fineState === 'ready' && !!fineLod() && view.k >= fineK();
+		const W = fine ? FINE_W : SIMP_W;
+		let name = fine ? 'fine' : 'full';
+		for (let i = 0; i < W.length; i++)
+			if (W[i] <= need) {
+				name = (fine ? 'w' : 'v') + i;
+				break;
+			}
+		if (name === 'full' || name === 'fine' || lodReady(name)) return name;
+		// Stufe noch nicht gebaut: im Leerlauf bauen, bis dahin Rückfall (in Bewegung grob, in Ruhe die volle Stufe)
+		if (!building.has(name)) {
+			building.add(name);
+			idle(() => {
+				if (destroyed) return;
+				getLod(name);
+				building.delete(name);
+				markDirty(true);
+			});
 		}
-		return fineState === 'ready' && fineLod() && view.k >= fineK() ? 'fine' : 'full';
+		return moving ? (fine && lodReady('f' + MOVE_STEPS[stepIdx]) ? 'f' + MOVE_STEPS[stepIdx] : 's' + MOVE_STEPS[stepIdx]) : fine ? 'fine' : 'full';
 	}
+	const idle = (f: () => void) => (window.requestIdleCallback ? window.requestIdleCallback(f, { timeout: 1200 }) : setTimeout(f, 60));
 	function scheduleRefine() {
 		clearTimeout(refineT);
 		refineT = setTimeout(() => {
@@ -365,6 +385,7 @@ export function createWorldMap(o: MapOptions) {
 		fc.drawImage(cvB, 0, 0);
 		fadeT0 = ts;
 		fadeMs = ms;
+		fadeMode = view.mode;
 	}
 	function frame(ts: number) {
 		drawQueued = false;
@@ -459,10 +480,10 @@ export function createWorldMap(o: MapOptions) {
 		const globe = view.mode === 'globe';
 		c.setTransform(dpr, 0, 0, dpr, 0, 0);
 		c.clearRect(0, 0, cw, ch);
-		const P = curProj(moving ? 0 : 0.6),
-			path = geoPath(P, c);
-		// Gitternetz und Grenzen kosten kaum Zeit: immer in voller Glättung, sonst sind sie in Bewegung eckig und springen danach rund
-		const pathQ = moving ? geoPath(curProj(0.6), c) : path;
+		// immer dieselbe Glättung: das Bild in Bewegung und in Ruhe ist damit gleich (kein Umspringen nach dem Loslassen)
+		const P = curProj(0.6),
+			path = geoPath(P, c),
+			pathQ = path;
 		const lod: Lod = getLod(pickLodName(moving)) || getLod('full')!;
 		const ci = cullInfo();
 		const visited = o.getVisited(),
@@ -499,9 +520,9 @@ export function createWorldMap(o: MapOptions) {
 		pathQ(GRAT);
 		c.stroke();
 
-		// Beim Bewegen: Inseln unter ~1 Pixel weglassen (unsichtbar)
+		// Inseln unter ~0,6 Pixel weglassen (unsichtbar) – in Bewegung und in Ruhe gleich, damit nach dem Loslassen nichts auftaucht
 		const pxPerDeg = ((baseScale() * view.k) / 57.2958) * (globe ? 1 : 0.87),
-			minDeg = moving ? 1 / pxPerDeg : 0;
+			minDeg = 0.6 / pxPerDeg;
 		const seenIds: Record<string, boolean> = {},
 			base: GeoJSON.Polygon[] = [],
 			vis: GeoJSON.Polygon[] = [],
@@ -634,10 +655,10 @@ export function createWorldMap(o: MapOptions) {
 			// rechts vom Punkt, sonst links, darüber oder darunter – je nachdem, wo Platz ist
 			let pos: [number, number] | null = null;
 			for (const [x, y] of [
-				[l.x + 7, l.y],
-				[l.x - 7 - w, l.y],
-				[l.x - w / 2, l.y - 13],
-				[l.x - w / 2, l.y + 13]
+				[l.x + 9, l.y],
+				[l.x - 9 - w, l.y],
+				[l.x - w / 2, l.y - 15],
+				[l.x - w / 2, l.y + 15]
 			] as [number, number][]) {
 				const box: [number, number, number, number] = [x - 2, y - 8, x + w + 2, y + 8];
 				if (box[0] < 4 || box[2] > cw - 4 || box[1] < 4 || box[3] > ch - 4) continue;
@@ -666,9 +687,20 @@ export function createWorldMap(o: MapOptions) {
 		if (fadeT0 && fadeCv) {
 			const a = 1 - (now - fadeT0) / fadeMs;
 			if (a > 0) {
+				c.save();
+				// Nur die Kugel bzw. Kartenfläche überblenden: der halbtransparente Lichtschein drumherum würde sich sonst
+				// mit dem neuen Bild addieren und kurz weiß aufleuchten
+				if (fadeMode === view.mode) {
+					c.setTransform(dpr, 0, 0, dpr, 0, 0);
+					c.beginPath();
+					if (view.mode === 'globe') c.arc(cw / 2, ch / 2, Math.max(0, curProj().scale() - 1), 0, TAU);
+					else geoPath(curProj(), c)({ type: 'Sphere' });
+					c.clip();
+					c.setTransform(1, 0, 0, 1, 0, 0);
+				}
 				c.globalAlpha = a * a;
 				c.drawImage(fadeCv, 0, 0);
-				c.globalAlpha = 1;
+				c.restore();
 			}
 		}
 		c.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -708,30 +740,37 @@ export function createWorldMap(o: MapOptions) {
 				const counted = o.isCounted(f.id);
 				c.globalAlpha = dotA;
 				if (been) {
-					const g = c.createRadialGradient(p[0], p[1], 0, p[0], p[1], 9);
-					g.addColorStop(0, counted ? 'rgba(52,209,191,.55)' : 'rgba(52,209,191,.3)');
+					const g = c.createRadialGradient(p[0], p[1], 0, p[0], p[1], 11);
+					g.addColorStop(0, counted ? 'rgba(52,209,191,.6)' : 'rgba(52,209,191,.32)');
 					g.addColorStop(1, 'rgba(52,209,191,0)');
 					c.fillStyle = g;
 					c.beginPath();
-					c.arc(p[0], p[1], 9, 0, TAU);
+					c.arc(p[0], p[1], 11, 0, TAU);
 					c.fill();
 					c.beginPath();
-					c.arc(p[0], p[1], 3, 0, TAU);
+					c.arc(p[0], p[1], 4.2, 0, TAU);
+					c.lineWidth = 1.6;
+					c.strokeStyle = 'rgba(7,20,31,.85)';
+					c.stroke();
 					if (counted) {
 						c.fillStyle = PAL.visited;
 						c.fill();
+						c.lineWidth = 1.2;
+						c.strokeStyle = 'rgba(255,255,255,.9)';
+						c.stroke();
 					} else {
-						c.lineWidth = 1.5;
+						c.lineWidth = 2;
 						c.strokeStyle = PAL.visited;
 						c.stroke();
 					}
 				} else if (micro) {
+					// deutlich erkennbar auch über hellem/bereistem Land: heller Kern mit dunklem Rand
 					c.beginPath();
-					c.arc(p[0], p[1], 2.6, 0, TAU);
-					c.fillStyle = 'rgba(255,255,255,.16)';
+					c.arc(p[0], p[1], 3.8, 0, TAU);
+					c.fillStyle = 'rgba(255,255,255,.92)';
 					c.fill();
-					c.lineWidth = 1.2;
-					c.strokeStyle = 'rgba(255,255,255,.6)';
+					c.lineWidth = 1.6;
+					c.strokeStyle = 'rgba(7,20,31,.85)';
 					c.stroke();
 				}
 				if (isSel) {
@@ -863,7 +902,7 @@ export function createWorldMap(o: MapOptions) {
 		const hit = at(x, y);
 		if (hit && smallIds.has(hit)) return hit;
 		const dotShown = (id: string) => o.getVisited().has(id) || o.getSelected() === id || (microIds.has(id) && o.isCounted(id) && view.k >= MICRO_K);
-		if (near && (!hit || (nearD <= 4 && dotShown(near)))) return near;
+		if (near && (!hit || (dotShown(near) && nearD <= r * 0.85))) return near;
 		if (hit) return hit;
 		// knapp neben einem Land: Ringe um den Tipp absuchen
 		for (const rr of [r * 0.5, r])
@@ -1026,7 +1065,7 @@ export function createWorldMap(o: MapOptions) {
 	// Detailstufen im Leerlauf vorbereiten, damit das erste Ziehen nicht ruckelt
 	let prewarmT: ReturnType<typeof setTimeout> | undefined;
 	(function prewarm() {
-		const names = ['full', 's6', 's10', 's3'];
+		const names = ['v1', 'v2', 'v3', 'full', 'v0', 'v4', 's3', 'v5', 'v6'];
 		let i = 0;
 		const later = (f: () => void) => (window.requestIdleCallback ? window.requestIdleCallback(f, { timeout: 1500 }) : setTimeout(f, 80));
 		const next = () => {

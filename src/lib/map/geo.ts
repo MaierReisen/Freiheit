@@ -1,5 +1,6 @@
 import { geoArea, geoBounds, geoCentroid, geoDistance } from 'd3-geo';
 import { feature, mesh } from 'topojson-client';
+import { presimplify, simplify } from 'topojson-simplify';
 import WORLD_JSON from '../data/world-50m.topo.json';
 import ISO_NUMERIC from '../data/iso-numeric.json';
 import { nameOf } from '../countries';
@@ -196,10 +197,33 @@ function decimateFeatures(feats: CountryFeature[], step: number): CountryFeature
 	});
 }
 
+/* --- Formerhaltende Stufen (Visvalingam): Schwelle = Fläche des kleinsten bleibenden Dreiecks in Grad².
+   Anders als „jeden n-ten Punkt behalten“ bleiben Buchten, Kaps und Grenzverläufe erhalten – die Formen werden
+   nicht zackig. Die Karte wählt je Zoom die gröbste Stufe, deren Fehler auf dem Bildschirm unter ~0,4 px bleibt. --- */
+export const SIMP_W = [0.1, 0.03, 0.01, 0.003, 0.001, 0.0003, 0.0001]; // 50m-Daten: 'v0' … 'v6'
+export const FINE_W = [0.0003, 0.0001, 0.00003, 0.00001, 0.000003, 0.000001]; // 10m-Daten: 'w0' … 'w5'
+let PRE: Topology | null = null,
+	PRE_FINE: Topology | null = null;
+function simpLod(pre: Topology, w: number): Lod {
+	const lod = makeLod(simplify(pre, w));
+	// sehr kleine Ringe können beim Vereinfachen die Umlaufrichtung verlieren; d3 würde dann „alles außer der Insel“ füllen
+	for (const pg of lod.polys) if (geoArea(pg.g) > 2 * Math.PI) pg.g = { type: 'Polygon', coordinates: pg.g.coordinates.map((r) => [...r].reverse()) };
+	return lod;
+}
+
 const LODS: Record<string, Lod> = {};
 let FINE_TOPO: Topology | null = null;
 export function getLod(name: string): Lod | null {
 	if (LODS[name]) return LODS[name];
+	if (/^v\d$/.test(name)) {
+		PRE ??= presimplify(WORLD);
+		return (LODS[name] = simpLod(PRE, SIMP_W[Number(name[1])]));
+	}
+	if (/^w\d$/.test(name)) {
+		if (!FINE_TOPO) return null;
+		PRE_FINE ??= presimplify(FINE_TOPO);
+		return (LODS[name] = simpLod(PRE_FINE, FINE_W[Number(name[1])]));
+	}
 	// 'f3', 'f6' …: ausgedünnte Fassung der feinen Daten für die Bewegung bei starkem Zoom (erst nach dem Laden)
 	if (/^f\d+$/.test(name)) {
 		const base = LODS.fine;
