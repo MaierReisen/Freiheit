@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { TABS, closeSettings, closeSheet, goTab, hooks, initFromHash, onHashChange, setFull, ui } from '$lib/app.svelte';
+	import { TABS, closeSettings, closeSheet, goTab, hooks, initFromHash, onHashChange, setFull, startIntro, ui } from '$lib/app.svelte';
 	import ContinentChips from './ContinentChips.svelte';
 	import Hero from './Hero.svelte';
 	import SettingsView from './SettingsView.svelte';
@@ -46,8 +46,17 @@
 
 	onMount(() => {
 		initFromHash();
+		// Start-Animation: Globus, Länderzahl, Kontinente, Flugkurve und Prozent enden gleichzeitig
+		startIntro();
+		let hiddenAt = 0;
+		const onVis = () => {
+			if (document.hidden) hiddenAt = Date.now();
+			else if (hiddenAt && Date.now() - hiddenAt > 60000) startIntro(); // nach längerer Pause erneut
+		};
+		document.addEventListener('visibilitychange', onVis);
 		// Beim Abmelden: offene Ansichten schließen
 		return () => {
+			document.removeEventListener('visibilitychange', onVis);
 			closeSheet();
 			if (ui.settingsOpen) closeSettings(true);
 			ui.focusContinent = null;

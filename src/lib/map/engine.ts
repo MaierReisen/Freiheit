@@ -93,7 +93,15 @@ export function createWorldMap(o: MapOptions) {
 		drawQueued = false,
 		introDone = false,
 		destroyed = false;
-	let fly: { from: { lon: number; lat: number; k: number }; to: { lon: number; lat: number; k: number }; dl: number; t0: number; ms: number } | null = null;
+	let fly: {
+		from: { lon: number; lat: number; k: number };
+		to: { lon: number; lat: number; k: number };
+		dl: number;
+		t0: number;
+		ms: number;
+		easeOut?: boolean;
+	} | null = null;
+	let pendingIntro: { delay: number; ms: number } | null = null;
 	let inertia: { vx: number; vy: number; freeLat: boolean } | null = null;
 	let baseDirty = true,
 		topDirty = true,
@@ -208,16 +216,24 @@ export function createWorldMap(o: MapOptions) {
 			c.height = Math.round(ch * dpr);
 		}
 		flatBase = geoNaturalEarth1().fitWidth(cw * 0.98, { type: 'Sphere' }).scale();
-		if (!introDone) intro();
+		if (pendingIntro) {
+			const pi = pendingIntro;
+			pendingIntro = null;
+			intro(pi.delay, pi.ms);
+		} else if (!introDone) startPose();
 		markDirty(true);
 	}
-	function intro() {
-		introDone = true;
+	function introTarget() {
 		const sv = o.getStartView();
 		const target = sv
 			? { lon: sv.c[0], lat: sv.c[1], k: view.mode === 'flat' ? sv.k * 1.4 : sv.k }
 			: { lon: 10, lat: 41, k: 1 };
 		target.lat = view.mode === 'flat' ? clampFlatLat(target.lat, target.k) : clamp(target.lat, -85, 85);
+		return target;
+	}
+	/** Ausgangslage vor dem Einflug: weit herausgezoomt und gedreht (bei reduzierter Bewegung gleich am Ziel) */
+	function startPose() {
+		const target = introTarget();
 		if (REDUCE) {
 			Object.assign(view, target);
 			return;
@@ -225,7 +241,20 @@ export function createWorldMap(o: MapOptions) {
 		view.lon = wrapLon(target.lon + 80);
 		view.lat = target.lat;
 		view.k = 0.82;
-		flyTo(target, 1500);
+	}
+	/** Einflug auf die Startregion: beginnt nach `delay` ms und endet nach weiteren `ms` (schnell, dann langsamer) */
+	function intro(delay = 0, ms = 1500) {
+		if (!cw || !ch) {
+			pendingIntro = { delay, ms };
+			return;
+		}
+		introDone = true;
+		cancelMotion();
+		startPose();
+		markDirty(true);
+		if (REDUCE) return;
+		// fester Startzeitpunkt (nicht per Zeitgeber): endet exakt gleichzeitig mit Zählern und Flugkurve
+		flyTo(introTarget(), ms, true, performance.now() + delay);
 	}
 
 	/* --- Zeichenschleife: Karte nur bei Änderungen neu --- */
@@ -259,8 +288,8 @@ export function createWorldMap(o: MapOptions) {
 		lastTs = ts;
 		let moving = false;
 		if (fly) {
-			const p = Math.min(1, (ts - fly.t0) / fly.ms),
-				e = p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
+			const p = Math.max(0, Math.min(1, (ts - fly.t0) / fly.ms)),
+				e = fly.easeOut ? 1 - Math.pow(1 - p, 3) : p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
 			view.lon = wrapLon(fly.from.lon + fly.dl * e);
 			view.lat = fly.from.lat + (fly.to.lat - fly.from.lat) * e;
 			view.k = fly.from.k * Math.pow(fly.to.k / fly.from.k, e);
@@ -513,7 +542,7 @@ export function createWorldMap(o: MapOptions) {
 		fly = null;
 		inertia = null;
 	}
-	function flyTo(t: { lon?: number; lat?: number; k?: number }, ms = 900) {
+	function flyTo(t: { lon?: number; lat?: number; k?: number }, ms = 900, easeOut = false, t0 = performance.now()) {
 		const to = { lon: t.lon !== undefined ? t.lon : view.lon, lat: t.lat !== undefined ? t.lat : view.lat, k: t.k !== undefined ? t.k : view.k };
 		const [a, b] = kRange();
 		to.k = clamp(to.k, a, b);
@@ -527,7 +556,7 @@ export function createWorldMap(o: MapOptions) {
 		}
 		const from = { lon: view.lon, lat: view.lat, k: view.k };
 		inertia = null;
-		fly = { from, to, dl: ((to.lon - from.lon + 540) % 360) - 180, t0: performance.now(), ms };
+		fly = { from, to, dl: ((to.lon - from.lon + 540) % 360) - 180, t0, ms, easeOut };
 		markDirty(true);
 	}
 	function flyToCountry(code: string, opts: { keepK?: boolean; ms?: number } = {}) {
@@ -755,6 +784,7 @@ export function createWorldMap(o: MapOptions) {
 		},
 		markDirty,
 		resize,
+		intro,
 		flyToCountry,
 		flyToContinent,
 		zoomBy(m: number) {
@@ -782,7 +812,7 @@ export function createWorldMap(o: MapOptions) {
 			destroyed = true;
 			clearTimeout(refineT);
 			clearTimeout(prewarmT);
-			ro?.disconnect();
+				ro?.disconnect();
 			window.removeEventListener('resize', resize);
 			document.removeEventListener('visibilitychange', onVis);
 			cv.removeEventListener('pointerdown', onDown);

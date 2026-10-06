@@ -27,6 +27,8 @@ export const ui = $state({
 	mapActive: false,
 	/** Kontinent, auf den die Karte zuletzt per Chip geflogen ist (null = Startregion); nur Ansicht, wird nicht gespeichert */
 	focusContinent: null as string | null,
+	/** gemeinsame Start-Animation (Globus, Zähler, Flugkurve): Zeitpunkte in performance.now() */
+	intro: { key: 0, start: 0, end: 0 },
 	toastMsg: '',
 	toastShow: false
 });
@@ -44,6 +46,23 @@ export interface PlacesHooks {
 export const hooks: { map: MapHooks | null; places: PlacesHooks | null } = { map: null, places: null };
 /** Zähler auf der Startseite: Ausgangspunkt der Öffnen-/Schließen-Animation der Übersicht */
 export const dom: { count: HTMLElement | null } = { count: null };
+
+/* ---------- Start-Animation ---------- */
+const INTRO_DELAY = 300;
+export const INTRO_MS = 1900;
+/** schnell beginnen, zum Ende langsamer */
+export const easeOutCubic = (k: number) => 1 - Math.pow(1 - k, 3);
+/** Startsignal beim Öffnen der App (und nach längerer Pause): alle Animationen enden gleichzeitig */
+export function startIntro() {
+	const start = performance.now() + INTRO_DELAY;
+	ui.intro = { key: ui.intro.key + 1, start, end: start + INTRO_MS };
+}
+/** Fortschritt 0..1 der laufenden Start-Animation (1 = fertig bzw. keine aktiv) */
+export function introProgress(now = performance.now()) {
+	const it = ui.intro;
+	if (!it.key || REDUCE) return 1;
+	return Math.max(0, Math.min(1, (now - it.start) / (it.end - it.start)));
+}
 
 /* ---------- Toast ---------- */
 let tt: ReturnType<typeof setTimeout> | undefined;

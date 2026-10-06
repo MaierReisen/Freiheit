@@ -48,7 +48,7 @@ button{cursor:pointer}
 
 /* hero: number rising over the horizon */
 .hero{position:relative;margin-top:26px;padding-bottom:16px;border-bottom:2px solid var(--ink);overflow:hidden}
-.count{position:relative;font-family:var(--display);font-weight:800;font-size:clamp(96px,32vw,168px);line-height:.85;letter-spacing:-.05em}
+.count{position:relative;font-family:var(--display);font-weight:800;font-variant-numeric:tabular-nums;font-size:clamp(96px,32vw,168px);line-height:.85;letter-spacing:-.05em}
 .hero-text{position:relative;display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-top:6px}
 .count-label{font-size:19px;font-weight:600}
 .count-sub{color:var(--muted);font-size:14px}

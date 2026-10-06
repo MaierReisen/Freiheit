@@ -1,12 +1,13 @@
 <script lang="ts">
 	import { onMount, untrack } from 'svelte';
-	import { REDUCE } from '$lib/app.svelte';
+	import { REDUCE, easeOutCubic, introProgress, ui } from '$lib/app.svelte';
 	import { atlas } from '$lib/atlas.svelte';
 
 	/* Logo-Motiv als Streifen unter der Länderzahl: Horizont, große Sonne, Flugkurve.
 	   Das Flugzeug steht so weit auf der Kurve, wie Länder bereist sind (ab dem ersten Land in der Luft),
 	   und ist vor der Sonne eine dunkle Silhouette.
-	   - App-Start (und nach längerer Pause): Rollen, Abheben, Flug bis zum erreichten Punkt
+	   - App-Start (und nach längerer Pause): Rollen, Abheben, Flug bis zum erreichten Punkt –
+	     auf der gemeinsamen Zeitachse (ui.intro), endet gleichzeitig mit Globus und Zählern
 	   - eigenes neues Land: Anschub nur nach vorn, Nachbrenner-Leuchten, Flügelwackeln, Welle, Funken, „+x %“
 	   - alle anderen Änderungen (Laden aus dem Konto, Entfernen, Länderliste, Import): ruhig an die neue Stelle */
 
@@ -32,7 +33,6 @@
 	let boost = $state<{ from: number; key: number; label: string } | null>(null);
 	let boostAlpha = $state(0);
 	let anim = 0;
-	let startT: ReturnType<typeof setTimeout> | undefined;
 	let boostT: ReturnType<typeof setTimeout> | undefined;
 	let settleT: ReturnType<typeof setTimeout> | undefined;
 
@@ -81,9 +81,8 @@
 	const easeOutQuart = (k: number) => 1 - Math.pow(1 - k, 4); // kräftiger Anschub, weiches Ausgleiten
 
 	/** Flug von `from` zum aktuellen Stand. Mit `boost` (eigenes neues Land): nur vorwärts, mit Flügelwackeln */
-	function fly(from: number, fromPct: number, opts: { delay?: number; boost?: boolean } = {}) {
+	function fly(from: number, fromPct: number, opts: { delay?: number; ms?: number; boost?: boolean; intro?: boolean } = {}) {
 		cancelAnimationFrame(anim);
-		clearTimeout(startT);
 		clearTimeout(settleT);
 		wiggle = 0;
 		const to = target,
@@ -97,22 +96,21 @@
 		if (REDUCE) return settle();
 		shown = from;
 		shownPct = fromPct;
-		const ms = opts.boost ? 1000 : 1100 + Math.abs(to - from) * 1500;
+		const ms = opts.ms ?? (opts.boost ? 1000 : 1100 + Math.abs(to - from) * 1500);
 		// Absicherung: läuft keine Animation (App im Hintergrund, Browser drosselt), steht das Flugzeug
 		// spätestens nach der geplanten Flugdauer trotzdem an der richtigen Stelle
 		settleT = setTimeout(settle, (opts.delay ?? 0) + ms + 400);
-		startT = setTimeout(() => {
-			const t0 = performance.now(),
-				ease = opts.boost ? easeOutQuart : easeInOut;
-			const step = (t: number) => {
-				const k = Math.min(1, (t - t0) / ms);
-				shown = from + (to - from) * ease(k);
-				shownPct = fromPct + (toPct - fromPct) * easeInOut(k);
-				wiggle = opts.boost ? 9 * Math.sin(k * Math.PI * 4) * (1 - k) : 0;
-				if (k < 1) anim = requestAnimationFrame(step);
-			};
-			anim = requestAnimationFrame(step);
-		}, opts.delay ?? 0);
+		// fester Startzeitpunkt statt Zeitgeber: endet exakt gleichzeitig mit Globus und Zählern
+		const t0 = performance.now() + (opts.delay ?? 0),
+			ease = opts.boost ? easeOutQuart : opts.intro ? easeOutCubic : easeInOut;
+		const step = (t: number) => {
+			const k = Math.max(0, Math.min(1, (t - t0) / ms));
+			shown = from + (to - from) * ease(k);
+			shownPct = fromPct + (toPct - fromPct) * (opts.intro ? easeOutCubic(k) : easeInOut(k));
+			wiggle = opts.boost ? 9 * Math.sin(k * Math.PI * 4) * (1 - k) : 0;
+			if (k < 1) anim = requestAnimationFrame(step);
+		};
+		anim = requestAnimationFrame(step);
 	}
 
 	// Stand geändert. Feier nur, wenn gerade selbst ein Land hinzugefügt wurde (nicht beim Laden aus dem Konto)
@@ -126,7 +124,11 @@
 			const prev = lastP;
 			lastP = now;
 			const ownAdd = now > prev && Date.now() - atlas.lastAddedAt < 2000;
-			if (ownAdd && !REDUCE) {
+			const introLeft = introProgress() < 1 ? ui.intro.end - performance.now() : 0;
+			if (introLeft > 0 && !ownAdd) {
+				// während der Start-Animation nachgeladen: Ziel anpassen, aber gleichzeitig mit allem anderen ankommen
+				fly(shown, shownPct, { ms: introLeft, intro: true });
+			} else if (ownAdd && !REDUCE) {
 				clearTimeout(boostT);
 				// Nachbrenner: auch ein Stück der Spur hinter dem Flugzeug leuchtet mit
 				boost = { from: Math.max(0, shown - 0.06), key: (boost?.key ?? 0) + 1, label: `+${fmt((now - prev) * 100)} %` };
@@ -151,28 +153,27 @@
 		if (pctEl && w) untrack(measure);
 	});
 
+	// Start-Animation: vom Anfang der Startbahn bis zum Stand, gleichzeitig mit Globus und Zählern
+	$effect(() => {
+		const it = ui.intro;
+		if (!it.key) return;
+		untrack(() => {
+			const now = performance.now();
+			fly(0, 0, { delay: Math.max(0, it.start - now), ms: Math.max(200, it.end - Math.max(now, it.start)), intro: true });
+		});
+	});
+
 	onMount(() => {
+		started = true;
+		lastP = p;
 		measure();
 		const ro = new ResizeObserver(measure);
 		ro.observe(host);
 		host.parentElement?.querySelectorAll('.hero-add, .count').forEach((el) => ro.observe(el));
-		// Beim Start immer: Rollen, Abheben und Flug bis zum erreichten Punkt
-		started = true;
-		lastP = p;
-		fly(0, 0, { delay: 350 });
-		// Nach längerer Pause (App wieder geöffnet) erneut starten
-		let hiddenAt = 0;
-		const onVis = () => {
-			if (document.hidden) hiddenAt = Date.now();
-			else if (hiddenAt && Date.now() - hiddenAt > 60000) fly(0, 0, { delay: 350 });
-		};
-		document.addEventListener('visibilitychange', onVis);
 		return () => {
-			document.removeEventListener('visibilitychange', onVis);
 			ro.disconnect();
 			cancelAnimationFrame(anim);
-			clearTimeout(startT);
-			clearTimeout(boostT);
+				clearTimeout(boostT);
 			clearTimeout(settleT);
 		};
 	});

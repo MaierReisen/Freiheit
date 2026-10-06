@@ -2,7 +2,7 @@
 	import { atlas, countedCountries } from '$lib/atlas.svelte';
 	import { scopeTotal } from '$lib/scope';
 	import { contOf } from '$lib/countries';
-	import { dom, hooks, openPicker } from '$lib/app.svelte';
+	import { REDUCE, dom, easeOutCubic, hooks, introProgress, openPicker, ui } from '$lib/app.svelte';
 	import HeroFlight from './HeroFlight.svelte';
 
 	let countEl: HTMLSpanElement;
@@ -17,6 +17,28 @@
 	const total = $derived(scopeTotal(atlas.settings.countryScope));
 	const pct = $derived(total ? Math.round((n / total) * 100) : 0);
 	const continents = $derived(new Set(counted.map((c) => contOf(c.code) || 'Sonstige')).size);
+
+	// Start-Animation: Länderzahl und Kontinente zählen hoch (schnell, dann langsamer) und enden
+	// gleichzeitig mit Globus und Flugkurve. Nachgeladene Länder werden unterwegs mitgezählt.
+	let t = $state(REDUCE ? 1 : 0);
+	$effect(() => {
+		const it = ui.intro;
+		if (!it.key) return;
+		let raf = 0;
+		const step = () => {
+			t = introProgress();
+			if (t < 1) raf = requestAnimationFrame(step);
+		};
+		step();
+		// Absicherung, falls keine Animationsbilder kommen (App im Hintergrund)
+		const done = setTimeout(() => (t = 1), Math.max(0, it.end - performance.now()) + 300);
+		return () => {
+			cancelAnimationFrame(raf);
+			clearTimeout(done);
+		};
+	});
+	const shownN = $derived(t >= 1 ? n : Math.round(easeOutCubic(t) * n));
+	const shownCont = $derived(t >= 1 ? continents : Math.round(easeOutCubic(t) * continents));
 </script>
 
 <section class="hero" aria-live="polite">
@@ -28,10 +50,10 @@
 			aria-label="{n} von {total} Ländern bereist, {pct} Prozent. Zur Länderliste"
 			onclick={() => hooks.places?.open(false)}
 		>
-			<span class="count-wrap"><span class="count" class:d3={n >= 100} id="count" bind:this={countEl}>{n}</span></span>
+			<span class="count-wrap"><span class="count" class:d3={n >= 100} id="count" bind:this={countEl}>{shownN}</span></span>
 			<span class="count-meta">
-				<span class="count-label" id="countLabel">{n === 1 ? 'Land bereist' : 'Länder bereist'}</span>
-				<span class="count-sub" id="countSub">von {total}{continents ? ` · auf ${continents} Kontinent${continents === 1 ? '' : 'en'}` : ''}</span>
+				<span class="count-label" id="countLabel">{shownN === 1 ? 'Land bereist' : 'Länder bereist'}</span>
+				<span class="count-sub" id="countSub">von {total}{continents ? ` · auf ${shownCont} Kontinent${shownCont === 1 ? '' : 'en'}` : ''}</span>
 			</span>
 		</button>
 		<button type="button" class="hero-add" id="heroAdd" aria-label="Land hinzufügen" onclick={() => openPicker('visited')}

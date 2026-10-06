@@ -83,6 +83,13 @@
 		void ui.selected;
 		map?.markDirty(true);
 	});
+	// Start-Animation: Einflug auf die Startregion, endet gleichzeitig mit Zählern und Flugkurve
+	$effect(() => {
+		const it = ui.intro;
+		if (!it.key || !map) return;
+		const now = performance.now();
+		map.intro(Math.max(0, it.start - now), Math.max(200, it.end - Math.max(now, it.start)));
+	});
 	// Vollbild an/aus: Größe neu bestimmen
 	$effect(() => {
 		void ui.full;
