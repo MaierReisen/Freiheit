@@ -18,17 +18,15 @@
 	// Touch-Geräte: Globus erst nach einem Tipp drehbar, sonst scrollt die Seite (siehe engine.ts)
 	const coarse = typeof window !== 'undefined' && !!window.matchMedia?.('(pointer: coarse)').matches;
 	const hint = $derived(
-		s.fineState === 'loading'
-			? 'Feine Details werden geladen …'
-			: ui.full
-				? 'Ziehen, zoomen, tippen'
-				: ui.mapActive
-					? 'Aktiv · außerhalb tippen zum Beenden'
-					: coarse
-						? 'Tippen zum Drehen'
-						: s.mode === 'globe'
-							? 'Ziehen zum Drehen'
-							: 'Tippe auf ein Land'
+		ui.full
+			? 'Ziehen, zoomen, tippen'
+			: ui.mapActive
+				? 'Aktiv · außerhalb tippen zum Beenden'
+				: coarse
+					? 'Tippen zum Drehen'
+					: s.mode === 'globe'
+						? 'Ziehen zum Drehen'
+						: 'Tippe auf ein Land'
 	);
 
 	onMount(() => {
@@ -98,6 +96,7 @@
 		const k = CONT[code];
 		if (k && CONT_VIEW[k]) ui.focusContinent = k;
 		map.flyToCountry(code, { ms: 1300, zoom: 0.3 });
+		map.highlight(code, reduceMotion() ? 0 : 950); // leuchtet auf, wenn der Globus ankommt
 	});
 	// Vollbild an/aus: Größe neu bestimmen
 	$effect(() => {

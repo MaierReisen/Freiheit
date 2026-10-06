@@ -39,11 +39,13 @@
 		if (openRow !== id && !g && !removing && x !== 0) snap(0);
 	});
 
-	// offen: Tipp außerhalb der Zeile oder Scrollen schließt sie
+	// offen: Tipp außerhalb der Zeile oder spürbares Scrollen schließt sie (kleines Mitrutschen nicht)
 	$effect(() => {
 		if (!isOpen) return;
+		const y0 = window.scrollY;
 		const close = (e: Event) => {
 			if (e.type === 'pointerdown' && li.contains(e.target as Node)) return;
+			if (e.type === 'scroll' && Math.abs(window.scrollY - y0) < 24) return;
 			snap(0);
 		};
 		document.addEventListener('pointerdown', close, true);
@@ -64,12 +66,13 @@
 		const dx = e.clientX - g.x0,
 			dy = e.clientY - g.y0;
 		if (!g.dir) {
-			if (Math.abs(dx) > 8 && Math.abs(dx) > Math.abs(dy) * 1.2) {
+			// großzügig: schon leicht schräg nach links zählt als Wischen (Daumen bewegt sich nie ganz waagerecht)
+			if (Math.abs(dx) > 6 && Math.abs(dx) > Math.abs(dy) * 0.9) {
 				g.dir = 'h';
 				anim = false;
 				openRow = id;
 				(e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
-			} else if (Math.abs(dy) > 8) g.dir = 'v';
+			} else if (Math.abs(dy) > 12) g.dir = 'v';
 			else return;
 		}
 		if (g.dir !== 'h') return;

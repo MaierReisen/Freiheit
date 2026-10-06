@@ -82,6 +82,14 @@ export function createWorldMap(o: MapOptions) {
 	let stepIdx = 1,
 		emaMove = 8,
 		calmFrames = 0;
+	// Neu hinzugefügtes Land kurz hervorheben (Sonnen-Leuchten, Sonar-Ringe, Name)
+	let hl: { code: string; t0: number; polys: GeoJSON.Polygon[] } | null = null;
+	const HL_MS = 2800;
+	// weicher Übergang von der groben (Bewegung) zur feinen Darstellung statt sichtbarem Umspringen
+	let fadeCv: HTMLCanvasElement | null = null,
+		fadeT0 = 0,
+		lastDrawMoving = false;
+	const FADE_MS = 260;
 	let fineState: FineState = 'idle',
 		fineTry = 0;
 	let cw = 0,
@@ -294,8 +302,10 @@ export function createWorldMap(o: MapOptions) {
 			view.lat = fly.from.lat + (fly.to.lat - fly.from.lat) * e;
 			view.k = fly.from.k * Math.pow(fly.to.k / fly.from.k, e);
 			if (p >= 1) fly = null;
-			moving = true;
+			// Auslauf (langsam): schon in Endqualität, sofern das Gerät schnell genug ist
+			moving = !(p > 0.72 && stepIdx < MOVE_STEPS.length - 1);
 			baseDirty = true;
+			if (!moving && fly) requestDraw();
 		} else if (inertia) {
 			dragBy(inertia.vx * dt, inertia.vy * dt, inertia.freeLat);
 			const f = Math.pow(0.94, dt / 16);
@@ -312,6 +322,21 @@ export function createWorldMap(o: MapOptions) {
 		if (interacting) moving = true;
 
 		if (baseDirty) {
+			// erster ruhiger Frame nach Bewegung: altes Bild merken und darüber ausblenden
+			if (!moving && lastDrawMoving && !fly && !reduce() && cw && ch) {
+				fadeCv ??= document.createElement('canvas');
+				if (fadeCv.width !== cvB.width || fadeCv.height !== cvB.height) {
+					fadeCv.width = cvB.width;
+					fadeCv.height = cvB.height;
+				}
+				const fc = fadeCv.getContext('2d');
+				if (fc) {
+					fc.clearRect(0, 0, fadeCv.width, fadeCv.height);
+					fc.drawImage(cvB, 0, 0);
+					fadeT0 = ts;
+				}
+			}
+			lastDrawMoving = moving;
 			const t0 = performance.now();
 			drawBase(moving);
 			const ms = performance.now() - t0;
@@ -332,11 +357,16 @@ export function createWorldMap(o: MapOptions) {
 			baseDirty = false;
 			topDirty = true;
 		}
-		if (topDirty) {
-			drawTop();
+		const animTop = (fadeT0 && ts - fadeT0 < FADE_MS) || (hl && ts - hl.t0 < HL_MS);
+		if (topDirty || animTop) {
+			drawTop(ts);
 			topDirty = false;
 		}
-		if (moving) requestDraw();
+		if (!animTop) {
+			fadeT0 = 0;
+			if (hl && ts - hl.t0 >= HL_MS) hl = null;
+		}
+		if (moving || animTop) requestDraw();
 	}
 
 	function pill(c: CanvasRenderingContext2D, text: string, x: number, y: number, color?: string) {
@@ -461,12 +491,74 @@ export function createWorldMap(o: MapOptions) {
 		}
 	}
 
-	function drawTop() {
+	function drawHighlight(c: CanvasRenderingContext2D, P: GeoProjection, t: number) {
+		if (!hl || t >= 1) return;
+		const i = INFO[hl.code];
+		// Leuchten: schnell an, dann weich aus (zweimal kurz nachpulsend)
+		const env = t < 0.12 ? t / 0.12 : Math.pow(1 - (t - 0.12) / 0.88, 1.6);
+		const pulse = 0.82 + 0.18 * Math.cos(t * Math.PI * 6);
+		const path = geoPath(P, c);
+		c.save();
+		c.beginPath();
+		for (const g of hl.polys) path(g);
+		c.globalAlpha = env * pulse * 0.85;
+		c.fillStyle = PAL.wish;
+		c.shadowColor = PAL.wish;
+		c.shadowBlur = 18;
+		c.fill();
+		c.shadowBlur = 0;
+		c.globalAlpha = env;
+		c.lineWidth = 1.6;
+		c.strokeStyle = '#FFF4CC';
+		c.lineJoin = 'round';
+		c.stroke();
+		c.restore();
+		if (!i || !onFront(i.c)) return;
+		const p = P(i.c);
+		if (!p) return;
+		// zwei Sonar-Ringe vom Mittelpunkt aus
+		if (!reduce()) {
+			const R0 = Math.max(10, Math.min(60, i.size * pxPerDeg() * 0.5));
+			for (const d of [0, 0.22]) {
+				const k = (t - d) / 0.55;
+				if (k <= 0 || k >= 1) continue;
+				c.beginPath();
+				c.arc(p[0], p[1], R0 + k * 70, 0, TAU);
+				c.lineWidth = 2.5 * (1 - k) + 0.5;
+				c.strokeStyle = `rgba(246,196,69,${0.75 * (1 - k)})`;
+				c.stroke();
+			}
+		}
+		// Name des neuen Landes
+		c.globalAlpha = Math.min(1, env * 1.4);
+		pill(c, nameOf(hl.code), p[0], p[1] - (i.size * pxPerDeg() < 7 ? 14 : 10), PAL.wish);
+		c.globalAlpha = 1;
+	}
+
+	/** Neu hinzugefügtes Land hervorheben, beginnend nach `delay` ms (z. B. wenn der Flug ankommt) */
+	function highlight(code: string, delay = 0) {
+		const lod = getLod('full');
+		if (!lod || !INFO[code]) return;
+		hl = { code, t0: performance.now() + delay, polys: lod.polys.filter((pg) => pg.id === code).map((pg) => pg.g) };
+		markDirty(false);
+	}
+
+	function drawTop(now = performance.now()) {
 		const c = ctxT;
 		if (!c || !cw || !ch) return;
+		c.setTransform(1, 0, 0, 1, 0, 0);
+		c.clearRect(0, 0, cv.width, cv.height);
+		if (fadeT0 && fadeCv) {
+			const a = 1 - (now - fadeT0) / FADE_MS;
+			if (a > 0) {
+				c.globalAlpha = a * a;
+				c.drawImage(fadeCv, 0, 0);
+				c.globalAlpha = 1;
+			}
+		}
 		c.setTransform(dpr, 0, 0, dpr, 0, 0);
-		c.clearRect(0, 0, cw, ch);
 		const P = curProj();
+		if (hl && now >= hl.t0) drawHighlight(c, P, (now - hl.t0) / HL_MS);
 		const visited = o.getVisited(),
 			wish = o.getWish(),
 			selected = o.getSelected();
@@ -510,7 +602,7 @@ export function createWorldMap(o: MapOptions) {
 				c.stroke();
 			}
 		}
-		if (selected && INFO[selected]) {
+		if (selected && INFO[selected] && hl?.code !== selected) {
 			const ctr = INFO[selected].c;
 			if (onFront(ctr)) {
 				const p = P(ctr);
@@ -767,7 +859,12 @@ export function createWorldMap(o: MapOptions) {
 		let i = 0;
 		const later = (f: () => void) => (window.requestIdleCallback ? window.requestIdleCallback(f, { timeout: 1500 }) : setTimeout(f, 80));
 		const next = () => {
-			if (i >= names.length || destroyed) return;
+			if (destroyed) return;
+			if (i >= names.length) {
+				// danach die feinen Grenzen für starken Zoom im Hintergrund holen (werden vom Service Worker zwischengespeichert)
+				prewarmT = setTimeout(() => later(() => !destroyed && loadFine()), 4000);
+				return;
+			}
 			try {
 				getLod(names[i++]);
 			} catch {}
@@ -788,6 +885,7 @@ export function createWorldMap(o: MapOptions) {
 		markDirty,
 		resize,
 		intro,
+		highlight,
 		flyToCountry,
 		flyToContinent,
 		zoomBy(m: number) {
