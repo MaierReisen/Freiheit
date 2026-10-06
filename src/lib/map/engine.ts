@@ -35,6 +35,8 @@ export interface MapOptions {
 	/** Startregion: Mittelpunkt und Zoom, auf die die Karte beim Start fliegt */
 	getStartView(): { c: [number, number]; k: number } | null | undefined;
 	onTapCountry(code: string): void;
+	/** erster Tipp auf die (noch nicht aktive) Karte: Land nur hervorheben, keine Detailseite */
+	onFocusCountry(code: string): void;
 	onTapEmpty(): void;
 	/** Modus, Drehen oder Ladezustand haben sich geändert */
 	onSync(s: MapSync): void;
@@ -913,16 +915,26 @@ export function createWorldMap(o: MapOptions) {
 			}
 		return null;
 	}
-	function tap(cx: number, cy: number, touch = false) {
+	/** focusOnly (erster Tipp, der die Karte aktiviert): nur auf das Land bzw. die Stelle schwenken, keine Detailseite */
+	function tap(cx: number, cy: number, touch = false, focusOnly = false) {
 		const r = cv.getBoundingClientRect(),
-			hit = pick(cx - r.left, cy - r.top, touch ? 16 : 8);
+			x = cx - r.left,
+			y = cy - r.top,
+			hit = pick(x, y, touch ? 16 : 8);
 		if (!hit) {
 			o.onTapEmpty();
+			if (focusOnly) {
+				// Meer o. Ä.: die angetippte Stelle in die Mitte holen
+				const g = curProj().invert?.([x, y]);
+				if (g && !isNaN(g[0]) && !isNaN(g[1]) && (view.mode !== 'globe' || geoDistance(g, [view.lon, view.lat]) < Math.PI / 2))
+					flyTo({ lon: g[0], lat: g[1] }, 600);
+			}
 			markDirty(false);
 			return;
 		}
 		flyToCountry(hit, { keepK: true, ms: 650 });
-		o.onTapCountry(hit);
+		if (focusOnly) o.onFocusCountry(hit);
+		else o.onTapCountry(hit);
 	}
 
 	/* --- Zeiger: Ziehen, Pinch, Tippen, Schwung --- */
@@ -1009,7 +1021,11 @@ export function createWorldMap(o: MapOptions) {
 		if (ptrs.size === 0) {
 			interacting = false;
 			const touch = e.pointerType === 'touch';
-			if (g && !cancelled && !g.pinch && g.dist < (touch ? 14 : 8) && performance.now() - g.t0 < 500) tap(e.clientX, e.clientY, touch);
+			if (g && !cancelled && !g.pinch && g.dist < (touch ? 14 : 8) && performance.now() - g.t0 < 500) {
+				const first = !o.isFull() && !o.isActive();
+				if (first) o.onActivate();
+				tap(e.clientX, e.clientY, touch, first);
+			}
 			else if (g && !cancelled && !reduce() && !g.pinch && Math.hypot(g.vx, g.vy) > 0.05 && performance.now() - g.lt < 80)
 				inertia = { vx: g.vx, vy: g.vy, freeLat: g.freeLat };
 			const changed = g && (g.dist >= 4 || g.pinch);
@@ -1024,7 +1040,7 @@ export function createWorldMap(o: MapOptions) {
 			tapOnly = null;
 			if (t.moved < 14 && performance.now() - t.t < 500 && t.t - lastScroll > 350 && lastScroll < t.t) {
 				o.onActivate();
-				tap(e.clientX, e.clientY, true);
+				tap(e.clientX, e.clientY, true, true);
 			}
 			return;
 		}

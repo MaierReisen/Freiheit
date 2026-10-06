@@ -53,6 +53,8 @@
 			onActivate: () => (ui.mapActive = true),
 			getStartView: () => CONT_VIEW[atlas.settings.homeContinent],
 			onTapCountry: openCountry,
+			// erster Tipp: Land nur markieren (Umriss + Name), Detailseite erst beim nächsten Tipp
+			onFocusCountry: (code) => (ui.selected = code),
 			onTapEmpty: () => {
 				if (ui.selected) closeSheet();
 			},
@@ -66,6 +68,7 @@
 			const t = e.target as Element | null;
 			if (t && (box.contains(t) || t.closest('.sheet, .scrim'))) return;
 			ui.mapActive = false;
+			if (!ui.sheetOpen) ui.selected = null; // nur markiertes Land (ohne Detailseite) wieder abwählen
 		};
 		document.addEventListener('pointerdown', onOutside, true);
 		hooks.map = {
