@@ -394,9 +394,12 @@ input,textarea,[contenteditable="true"]{-webkit-user-select:text;user-select:tex
 .sheet.country .grab{margin-bottom:12px}
 .cs-peek{flex:none}
 .cs-head{display:flex;align-items:center;gap:12px}
+.sheet.peek .cs-title{cursor:pointer}
 .cs-flag{font-size:40px;line-height:1;filter:drop-shadow(0 2px 3px rgba(0,0,0,.18))}
 .cs-title{flex:1;min-width:0}
-.sheet .cs-title h3{font-size:24px;line-height:1.1;overflow-wrap:anywhere}
+.sheet .cs-title h3{font-size:24px;line-height:1.1;overflow-wrap:break-word;hyphens:auto;-webkit-hyphens:auto}
+.sheet .cs-title h3.long{font-size:21px}
+.sheet .cs-title h3.xlong{font-size:19px}
 .cs-sub{color:var(--muted);font-size:14px;margin-top:3px}
 .cs-more{flex:none;width:40px;height:40px;border:0;border-radius:50%;background:var(--chip);color:var(--ink);display:grid;place-items:center}
 .cs-more svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
@@ -405,9 +408,9 @@ input,textarea,[contenteditable="true"]{-webkit-user-select:text;user-select:tex
 .cs-badge.been{background:color-mix(in srgb,var(--primary) 16%,transparent);color:var(--primary)}
 .cs-badge svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
 .cs-why{color:var(--muted);font-size:13px}
-.cs-mark{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;margin-top:14px;padding:15px 18px;border:0;border-radius:16px;background:var(--primary);color:var(--on-primary);font-size:17px;font-weight:700;box-shadow:0 8px 20px -10px color-mix(in srgb,var(--primary) 80%,transparent);transition:transform .15s}
-.cs-mark svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round}
-.cs-mark:active,.cs-mark.busy{transform:scale(.97)}
+.cs-mark{flex:none;display:inline-flex;align-items:center;gap:5px;height:38px;padding:0 15px 0 11px;border:0;border-radius:999px;background:var(--primary);color:var(--on-primary);font-size:15px;font-weight:700;box-shadow:0 6px 16px -8px color-mix(in srgb,var(--primary) 85%,transparent);transition:transform .15s}
+.cs-mark svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2.8;stroke-linecap:round}
+.cs-mark:active,.cs-mark.busy{transform:scale(.92)}
 .cs-quick{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,.88fr) minmax(0,1.12fr);gap:8px;margin-top:14px}
 .cs-quick > div{display:flex;flex-direction:column;gap:2px;padding:11px 11px 10px;border-radius:16px;background:var(--chip);min-width:0}
 .cs-quick svg{width:19px;height:19px;fill:none;stroke:var(--primary);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;margin-bottom:3px}

@@ -103,33 +103,41 @@
 <div class="cs-peek" bind:this={peekEl}>
 	<div class="cs-head">
 		<span class="cs-flag" aria-hidden="true">{flag(code)}</span>
-		<div class="cs-title">
-			<h3 id="sheetTitle">{name}</h3>
+		<!-- in der kompakten Stufe öffnet ein Tipp auf den Namen die volle Seite -->
+		<div
+			class="cs-title"
+			role="button"
+			tabindex="-1"
+			onclick={() => ui.sheetDetent === 'peek' && setSheetDetent('full')}
+			onkeydown={(e) => e.key === 'Enter' && ui.sheetDetent === 'peek' && setSheetDetent('full')}
+		>
+			<h3 id="sheetTitle" class:long={name.length > 13} class:xlong={name.length > 20}>{name}</h3>
 			<div class="cs-sub">{contOf(code)}{facts?.cap?.length ? ` · ${facts.cap[0]}` : ''}</div>
 		</div>
-		{#if ui.sheetDetent === 'peek'}
+		{#if !been}
+			<button type="button" class="cs-mark" class:busy disabled={busy} onclick={markVisited} aria-label="Als bereist markieren"
+				><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>Bereist</button
+			>
+		{/if}
+		{#if ui.sheetDetent === 'peek' && been}
 			<button type="button" class="cs-more" aria-label="Alle Fakten anzeigen" onclick={() => setSheetDetent('full')}
 				><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 15l6-6 6 6" /></svg></button
 			>
 		{/if}
 	</div>
 
-	<div class="cs-status">
-		{#if been}
-			<span class="cs-badge been"
-				><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>Bereist{counted ? ` · Land Nr. ${nr}` : ''}</span
-			>
-		{:else}
-			<span class="cs-badge">Noch nicht bereist</span>
-		{/if}
-		{#if why}<span class="cs-why">{why}</span>{/if}
-	</div>
-
-	{#if !been}
-		<button type="button" class="cs-mark" class:busy disabled={busy} onclick={markVisited}
-			><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>Als bereist markieren</button
-		>
+	<!-- unbereist: der Knopf „Bereist“ neben dem Namen sagt genug – nur ein Hinweis, falls das Land nicht zählt -->
+	{#if been || why}
+		<div class="cs-status">
+			{#if been}
+				<span class="cs-badge been"
+					><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>Bereist{counted ? ` · Land Nr. ${nr}` : ''}</span
+				>
+			{/if}
+			{#if why}<span class="cs-why">{why}</span>{/if}
+		</div>
 	{/if}
+
 
 	{#if facts && (facts.cap?.length || facts.pop || facts.area)}
 		<div class="cs-quick">
