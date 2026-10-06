@@ -1,7 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" fill="#0A2030"/>
-  <path d="M156 340a100 100 0 0 1 200 0z" fill="#F6C445"/>
-  <rect x="76" y="336" width="360" height="14" rx="7" fill="#34D1BF"/>
-  <path d="M96 300C150 150 290 98 372 116" fill="none" stroke="#FFFFFF" stroke-width="10" stroke-linecap="round" stroke-dasharray="2 24"/>
-  <path transform="translate(410 126) rotate(14) scale(1.25)" fill="#FFFFFF" d="M34 0c0-3-4-5-8-5H10L-6-28h-9l8 23H-18l-7-9h-7l4 14-4 14h7l7-9H-7l-8 23h9L10 5h16c4 0 8-2 8-5z"/>
+<defs><radialGradient id="g" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(246 356) scale(194)"><stop offset="0.773" stop-color="#F6C445" stop-opacity=".35"/><stop offset="1" stop-color="#F6C445" stop-opacity="0"/></radialGradient></defs>
+<rect width="512" height="512" fill="#0A2030"/>
+<path d="M52 356a194 194 0 0 1 388 0z" fill="url(#g)"/>
+<path d="M96 356a150 150 0 0 1 300 0z" fill="#F6C445"/>
+<rect x="66" y="356" width="380" height="12" rx="6" fill="#3CC4B4" opacity=".9"/>
+<path d="M140.0 356.0C195.0 356.0 237.9 334.2 285.3 295.7" fill="none" stroke="#3CC4B4" stroke-width="13" stroke-linecap="round"/>
+<path d="M285.3 295.7C324.1 264.1 366.0 221.3 420.0 170.0" fill="none" stroke="#FFFFFF" stroke-opacity=".75" stroke-width="10" stroke-linecap="round" stroke-dasharray=".1 24"/>
+<path transform="translate(285.3 295.7) rotate(-39.1) scale(1.7)" fill="#0A2030" d="M34 0c0-3-4-5-8-5H10L-6-28h-9l8 23H-18l-7-9h-7l4 14-4 14h7l7-9H-7l-8 23h9L10 5h16c4 0 8-2 8-5z"/>
 </svg>
