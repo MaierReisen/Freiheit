@@ -64,7 +64,8 @@ const PAL = {
 };
 
 const MOVE_STEPS = [3, 6, 10];
-const MICRO_K = 1.6; // ab diesem Zoom alle Zwergstaaten als Punkt mit Namen (darunter nur bereiste)
+const MICRO_K = 1.6; // ab diesem Zoom alle Zwergstaaten als Punkt (darunter nur bereiste)
+const LABEL_K = 5; // Namen erst bei regionalem Zoom (etwa doppelte Europa-Startansicht), sonst wirkt die Karte überladen
 // echte Zwergstaaten (unter etwa 4.000 km²: Vatikan, Monaco, Malta, Singapur, Karibik- und Pazifikinseln …)
 const microIds = new Set(features.filter((f) => INFO[f.id].area < 0.0001).map((f) => f.id));
 // Teilflächen je Land und Detailstufe (für Umrisse, ohne jedes Mal alle Flächen zu durchsuchen)
@@ -716,7 +717,7 @@ export function createWorldMap(o: MapOptions) {
 		// - unter ~7 px als Punkt (bereist: leuchtend türkis, sonst dezenter heller Ring), der beim Hineinzoomen
 		//   weich in die echte Form übergeht (bis ~13 px)
 		// - solange die Form klein ist (unter ~36 px), mit Umriss, damit sie sich vom Nachbarland abhebt
-		// - ab regionalem Zoom mit Namen (ohne Überlappung, bereiste zuerst)
+		// - erst bei regionalem Zoom (LABEL_K) mit Namen (ohne Überlappung, bereiste zuerst)
 		const ppd = pxPerDeg();
 		const showMicro = view.k >= MICRO_K;
 		const labels: { id: string; x: number; y: number; been: boolean }[] = [];
@@ -784,7 +785,7 @@ export function createWorldMap(o: MapOptions) {
 				}
 				c.globalAlpha = 1;
 			}
-			if (micro && showMicro && !isSel && hl?.code !== f.id) labels.push({ id: f.id, x: p[0], y: p[1], been });
+			if (micro && view.k >= LABEL_K && !isSel && hl?.code !== f.id) labels.push({ id: f.id, x: p[0], y: p[1], been });
 		}
 		// kleine Formen umranden (bereist türkis, sonst hell), damit Vatikan & Co. nicht im Nachbarland verschwinden
 		if (outlined) {
