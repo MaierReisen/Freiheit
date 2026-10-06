@@ -40,6 +40,8 @@ export interface MapOptions {
 	onTapEmpty(): void;
 	/** Modus, Drehen oder Ladezustand haben sich geändert */
 	onSync(s: MapSync): void;
+	/** Karte kommt zur Ruhe: Land in der Bildmitte (bzw. nächstes Land), null wenn mehrere Kontinente zu sehen sind */
+	onSettle?(code: string | null): void;
 }
 
 const TAU = Math.PI * 2;
@@ -64,8 +66,9 @@ const PAL = {
 };
 
 const MOVE_STEPS = [3, 6, 10];
-const MICRO_K = 1.6; // ab diesem Zoom alle Zwergstaaten als Punkt (darunter nur bereiste)
-const LABEL_K = 5; // Namen erst bei regionalem Zoom (etwa doppelte Europa-Startansicht), sonst wirkt die Karte überladen
+// Schwellen als Maßstab (Bildschirmpixel pro Grad), damit Globus und flache Karte gleich reagieren
+const MICRO_PPD = 4.4; // ab hier alle Zwergstaaten als Punkt (darunter nur bereiste) – etwa Kontinent-Ansicht
+const LABEL_PPD = 14; // Namen erst bei regionalem Zoom (etwa doppelte Europa-Startansicht), sonst wirkt die Karte überladen
 // echte Zwergstaaten (unter etwa 4.000 km²: Vatikan, Monaco, Malta, Singapur, Karibik- und Pazifikinseln …)
 const microIds = new Set(features.filter((f) => INFO[f.id].area < 0.0001).map((f) => f.id));
 // Teilflächen je Land und Detailstufe (für Umrisse, ohne jedes Mal alle Flächen zu durchsuchen)
@@ -363,6 +366,34 @@ export function createWorldMap(o: MapOptions) {
 			requestDraw();
 			if (view.k >= fineK() && fineState !== 'ready') loadFine();
 		}, 150);
+	}
+	let settleT: ReturnType<typeof setTimeout> | undefined;
+	/** nach jeder Bewegung (Ziehen, Flug, Zoom, Moduswechsel) aufrufen: meldet die Bildmitte, sobald die Karte ruht */
+	function scheduleSettle(ms = 250) {
+		clearTimeout(settleT);
+		settleT = setTimeout(settle, ms);
+	}
+	/** Land in der Bildmitte, sonst das nächstgelegene in Ringen darum; null, wenn so weit herausgezoomt,
+	    dass mehrere Kontinente zu sehen sind */
+	function settle() {
+		if (destroyed || !cw || !ch) return;
+		if (fly || inertia || interacting) return scheduleSettle(200); // noch in Bewegung: später erneut
+		const wide = view.mode === 'globe' ? view.k < 1.15 : view.k < 1.4;
+		let code: string | null = null;
+		if (!wide) {
+			const cx = cw / 2,
+				cy = ch / 2,
+				m = Math.min(cw, ch);
+			code = at(cx, cy);
+			for (const f of [0.08, 0.16, 0.26, 0.38]) {
+				if (code) break;
+				for (let k = 0; k < 16 && !code; k++) {
+					const a = (k / 16) * TAU;
+					code = at(cx + Math.cos(a) * m * f, cy + Math.sin(a) * m * f);
+				}
+			}
+		}
+		o.onSettle?.(code);
 	}
 	/** Maßstab in der Bildmitte (Pixel für ein halbes Grad, Nord-Süd und Ost-West gemittelt) */
 	function localScale() {
@@ -717,9 +748,9 @@ export function createWorldMap(o: MapOptions) {
 		// - unter ~7 px als Punkt (bereist: leuchtend türkis, sonst dezenter heller Ring), der beim Hineinzoomen
 		//   weich in die echte Form übergeht (bis ~13 px)
 		// - solange die Form klein ist (unter ~36 px), mit Umriss, damit sie sich vom Nachbarland abhebt
-		// - erst bei regionalem Zoom (LABEL_K) mit Namen (ohne Überlappung, bereiste zuerst)
+		// - erst bei regionalem Zoom (LABEL_PPD) mit Namen (ohne Überlappung, bereiste zuerst)
 		const ppd = pxPerDeg();
-		const showMicro = view.k >= MICRO_K;
+		const showMicro = ppd >= MICRO_PPD;
 		const labels: { id: string; x: number; y: number; been: boolean }[] = [];
 		let outlined: string[] | null = null;
 		for (const f of features) {
@@ -785,7 +816,7 @@ export function createWorldMap(o: MapOptions) {
 				}
 				c.globalAlpha = 1;
 			}
-			if (micro && view.k >= LABEL_K && !isSel && hl?.code !== f.id) labels.push({ id: f.id, x: p[0], y: p[1], been });
+			if (micro && ppd >= LABEL_PPD && !isSel && hl?.code !== f.id) labels.push({ id: f.id, x: p[0], y: p[1], been });
 		}
 		// kleine Formen umranden (bereist türkis, sonst hell), damit Vatikan & Co. nicht im Nachbarland verschwinden
 		if (outlined) {
@@ -839,6 +870,7 @@ export function createWorldMap(o: MapOptions) {
 		const [a, b] = kRange();
 		to.k = clamp(to.k, a, b);
 		to.lat = view.mode === 'flat' ? clampFlatLat(to.lat, to.k) : clamp(to.lat, -85, 85);
+		scheduleSettle(ms + 150);
 		if (reduce() || ms <= 0) {
 			Object.assign(view, to);
 			view.lon = wrapLon(view.lon);
@@ -904,7 +936,7 @@ export function createWorldMap(o: MapOptions) {
 		}
 		const hit = at(x, y);
 		if (hit && smallIds.has(hit)) return hit;
-		const dotShown = (id: string) => o.getVisited().has(id) || o.getSelected() === id || (microIds.has(id) && o.isCounted(id) && view.k >= MICRO_K);
+		const dotShown = (id: string) => o.getVisited().has(id) || o.getSelected() === id || (microIds.has(id) && o.isCounted(id) && ppd >= MICRO_PPD);
 		if (near && (!hit || (dotShown(near) && nearD <= r * 0.85))) return near;
 		if (hit) return hit;
 		// knapp neben einem Land: Ringe um den Tipp absuchen
@@ -1031,6 +1063,7 @@ export function createWorldMap(o: MapOptions) {
 				inertia = { vx: g.vx, vy: g.vy, freeLat: g.freeLat };
 			const changed = g && (g.dist >= 4 || g.pinch);
 			gest = null;
+			if (changed) scheduleSettle();
 			if (changed) scheduleRefine(); // scharf zeichnen erst kurz nach dem Loslassen
 			markDirty(false);
 		}
@@ -1057,6 +1090,7 @@ export function createWorldMap(o: MapOptions) {
 		cancelMotion();
 		setK(view.k * Math.exp(-e.deltaY * 0.0015));
 		markDirty(true);
+		scheduleSettle();
 		scheduleRefine();
 	};
 	cv.addEventListener('pointerdown', onDown);
@@ -1136,6 +1170,7 @@ export function createWorldMap(o: MapOptions) {
 			sync();
 			markDirty(true);
 			scheduleRefine();
+			scheduleSettle();
 		},
 		toggleSpin() {
 			view.spin = !view.spin;
@@ -1146,6 +1181,7 @@ export function createWorldMap(o: MapOptions) {
 		destroy() {
 			destroyed = true;
 			clearTimeout(refineT);
+			clearTimeout(settleT);
 			clearTimeout(prewarmT);
 				ro?.disconnect();
 			window.removeEventListener('resize', resize);

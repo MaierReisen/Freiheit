@@ -58,7 +58,12 @@
 			onTapEmpty: () => {
 				if (ui.selected) closeSheet();
 			},
-			onSync: (v) => (s = v)
+			onSync: (v) => (s = v),
+			// gedrückter Kontinent-Knopf = wo man gerade ist; weit herausgezoomt (mehrere Kontinente) keiner
+			onSettle: (code) => {
+				const k = code ? CONT[code] : undefined;
+				ui.focusContinent = k && CONT_VIEW[k] ? k : '';
+			}
 		});
 		map = m;
 		if (import.meta.env.DEV) (window as unknown as { __freiheitMap: WorldMap }).__freiheitMap = m;

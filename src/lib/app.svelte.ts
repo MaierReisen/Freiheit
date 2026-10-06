@@ -76,7 +76,7 @@ export const ui = $state({
 	settingsOpen: false,
 	/** Globus auf der Startseite per Tipp aktiviert (Touch): dann drehen, kippen, zoomen statt Seite scrollen */
 	mapActive: false,
-	/** Kontinent, auf den die Karte zuletzt per Chip geflogen ist (null = Startregion); nur Ansicht, wird nicht gespeichert */
+	/** Kontinent, auf dem die Karte gerade steht (per Chip oder Ziehen; null = Startregion, '' = mehrere Kontinente im Bild); nur Ansicht */
 	focusContinent: null as string | null,
 	/** gemeinsame Start-Animation (Globus, Zähler, Flugkurve): Zeitpunkte in performance.now() */
 	intro: { key: 0, start: 0, end: 0, resume: false },
