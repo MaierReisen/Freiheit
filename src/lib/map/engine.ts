@@ -17,7 +17,7 @@ export interface MapSync {
 export interface MapOptions {
 	cvB: HTMLCanvasElement;
 	cvT: HTMLCanvasElement;
-	reduce: boolean;
+	reduce: () => boolean;
 	getVisited(): Set<string>;
 	/** Zählt das Land in der gewählten Länderliste? Bereiste, nicht gezählte Gebiete werden schraffiert gezeichnet */
 	isCounted(code: string): boolean;
@@ -62,7 +62,7 @@ const PAL = {
 const MOVE_STEPS = [3, 6, 10]; // von fein nach grob; wird je nach Gerätegeschwindigkeit angepasst
 
 export function createWorldMap(o: MapOptions) {
-	const { cvB, cvT, reduce: REDUCE } = o;
+	const { cvB, cvT, reduce } = o;
 	const cv = cvT;
 	const ctxB = cvB.getContext ? cvB.getContext('2d') : null,
 		ctxT = cvT.getContext ? cvT.getContext('2d') : null;
@@ -234,7 +234,7 @@ export function createWorldMap(o: MapOptions) {
 	/** Ausgangslage vor dem Einflug: weit herausgezoomt und gedreht (bei reduzierter Bewegung gleich am Ziel) */
 	function startPose() {
 		const target = introTarget();
-		if (REDUCE) {
+		if (reduce()) {
 			Object.assign(view, target);
 			return;
 		}
@@ -252,7 +252,7 @@ export function createWorldMap(o: MapOptions) {
 		cancelMotion();
 		startPose();
 		markDirty(true);
-		if (REDUCE) return;
+		if (reduce()) return;
 		// fester Startzeitpunkt (nicht per Zeitgeber): endet exakt gleichzeitig mit Zählern und Flugkurve
 		flyTo(introTarget(), ms, true, performance.now() + delay);
 	}
@@ -547,7 +547,7 @@ export function createWorldMap(o: MapOptions) {
 		const [a, b] = kRange();
 		to.k = clamp(to.k, a, b);
 		to.lat = view.mode === 'flat' ? clampFlatLat(to.lat, to.k) : clamp(to.lat, -85, 85);
-		if (REDUCE || ms <= 0) {
+		if (reduce() || ms <= 0) {
 			Object.assign(view, to);
 			view.lon = wrapLon(view.lon);
 			markDirty(true);
@@ -709,7 +709,7 @@ export function createWorldMap(o: MapOptions) {
 			interacting = false;
 			const touch = e.pointerType === 'touch';
 			if (g && !cancelled && !g.pinch && g.dist < (touch ? 14 : 8) && performance.now() - g.t0 < 500) tap(e.clientX, e.clientY, touch);
-			else if (g && !cancelled && !REDUCE && !g.pinch && Math.hypot(g.vx, g.vy) > 0.05 && performance.now() - g.lt < 80)
+			else if (g && !cancelled && !reduce() && !g.pinch && Math.hypot(g.vx, g.vy) > 0.05 && performance.now() - g.lt < 80)
 				inertia = { vx: g.vx, vy: g.vy, freeLat: g.freeLat };
 			const changed = g && (g.dist >= 4 || g.pinch);
 			gest = null;

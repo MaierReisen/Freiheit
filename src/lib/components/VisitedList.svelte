@@ -3,7 +3,7 @@
 	import { atlas, countedCountries, isCounted, type CountryEntry } from '$lib/atlas.svelte';
 	import { CONT, CONT_NAMES, contOf, flag } from '$lib/countries';
 	import { SCOPES, scopeTotal } from '$lib/scope';
-	import { REDUCE, hooks, openCountry } from '$lib/app.svelte';
+	import { reduceMotion, hooks, openCountry } from '$lib/app.svelte';
 	import Timeline from './Timeline.svelte';
 
 	/* Liste der bereisten Länder unter dem Globus, sortierbar. Gebiete, die nicht zählen, stehen darunter. */
@@ -65,7 +65,7 @@
 		} catch {}
 		// Tipp auf die Länderzahl (bzw. #laender) springt zur Liste
 		hooks.places = {
-			open: () => section.scrollIntoView({ behavior: REDUCE ? 'auto' : 'smooth', block: 'start' }),
+			open: () => section.scrollIntoView({ behavior: reduceMotion() ? 'auto' : 'smooth', block: 'start' }),
 			close: () => {}
 		};
 		return () => (hooks.places = null);

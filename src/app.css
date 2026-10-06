@@ -139,7 +139,7 @@ h2{font-family:var(--display);font-size:19px;font-weight:700;margin:40px 0 14px;
 
 .toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translate(-50%,20px);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:999px;font-size:14px;opacity:0;transition:.2s;pointer-events:none;z-index:20;white-space:nowrap}
 .toast.show{opacity:1;transform:translate(-50%,0)}
-@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+[data-motion="reduce"] *{transition:none!important}
 
 /* ---------- Tabs & Struktur ---------- */
 .wrap{padding-bottom:calc(104px + env(safe-area-inset-bottom,0px))}
@@ -222,9 +222,7 @@ body.noscroll{overflow:hidden}
 .ov-add{flex:none;border:0;border-radius:999px;padding:12px 16px;background:var(--ink);color:var(--bg);font-weight:700;white-space:nowrap}
 .ov-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:0 20px calc(40px + env(safe-area-inset-bottom,0px))}
 
-@media (prefers-reduced-motion:reduce){
-  .tab.in-r,.tab.in-l{animation:none}.tabbar .ind{transition:none}
-}
+[data-motion="reduce"] .tab.in-r,[data-motion="reduce"] .tab.in-l{animation:none}[data-motion="reduce"] .tabbar .ind{transition:none}
 
 /* Weltkarte: dunkle Bühne, zwei Canvas-Ebenen */
 .map-box{position:relative;margin:16px -20px 0;height:clamp(340px,98vw,500px);background:radial-gradient(120% 90% at 50% 0%,#12374E 0%,#0A2030 52%,#07141F 100%);overflow:hidden;touch-action:auto;color:#fff;border-radius:0}
@@ -271,7 +269,7 @@ button.cont{border:0;font:inherit;font-size:14px;color:inherit}
 .set-view .ov-body{max-width:760px;width:100%;margin:0 auto}
 .wrap.solo{padding-bottom:calc(40px + env(safe-area-inset-bottom,0px))}
 .wrap.solo ~ .toast{bottom:calc(24px + env(safe-area-inset-bottom,0px))}
-@media (prefers-reduced-motion:reduce){.set-view:not([hidden]){animation:none}}
+[data-motion="reduce"] .set-view:not([hidden]){animation:none}
 
 /* Gewählter Kontinent (anfangs die Startregion): wirkt gedrückt (wie ausgewählte Chips) */
 .cont[aria-pressed="true"]{background:var(--primary);color:var(--on-primary);box-shadow:inset 0 2px 4px rgba(0,0,0,.22)}
@@ -306,7 +304,7 @@ button.cont{border:0;font:inherit;font-size:14px;color:inherit}
 .flight-burst .spark{position:absolute;left:-1.5px;top:-1.5px;width:3px;height:3px;border-radius:2px;background:var(--sun);box-shadow:0 0 6px var(--sun);opacity:0;transform:rotate(var(--a)) translateX(4px);animation:burstSpark .8s cubic-bezier(.15,.7,.3,1) .3s both}
 @keyframes burstRing{0%{opacity:.9;transform:scale(.2)}100%{opacity:0;transform:scale(1.25)}}
 @keyframes burstSpark{0%{opacity:1;transform:rotate(var(--a)) translateX(4px) scaleX(1)}60%{opacity:1;transform:rotate(var(--a)) translateX(22px) scaleX(3)}100%{opacity:0;transform:rotate(var(--a)) translateX(30px) scaleX(1)}}
-@media (prefers-reduced-motion:reduce){.flight-plus{animation:none;opacity:0}.flight-boost{transition:none}.flight-burst{display:none}}
+[data-motion="reduce"] .flight-plus{animation:none;opacity:0}[data-motion="reduce"] .flight-boost{transition:none}[data-motion="reduce"] .flight-burst{display:none}
 
 /* Länder-Übersicht: bereiste Gebiete, die nicht zählen */
 .list-sub{font-family:var(--display);font-size:15px;font-weight:700;margin:28px 0 2px}

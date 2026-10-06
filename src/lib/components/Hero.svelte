@@ -2,7 +2,7 @@
 	import { atlas, countedCountries } from '$lib/atlas.svelte';
 	import { scopeTotal } from '$lib/scope';
 	import { contOf } from '$lib/countries';
-	import { REDUCE, dom, easeOutCubic, hooks, introProgress, openPicker, ui } from '$lib/app.svelte';
+	import { reduceMotion, dom, easeOutCubic, hooks, introProgress, openPicker, ui } from '$lib/app.svelte';
 	import HeroFlight from './HeroFlight.svelte';
 
 	let countEl: HTMLSpanElement;
@@ -20,7 +20,7 @@
 
 	// Start-Animation: Länderzahl und Kontinente zählen hoch (schnell, dann langsamer) und enden
 	// gleichzeitig mit Globus und Flugkurve. Nachgeladene Länder werden unterwegs mitgezählt.
-	let t = $state(REDUCE ? 1 : 0);
+	let t = $state(reduceMotion() ? 1 : 0);
 	$effect(() => {
 		const it = ui.intro;
 		if (!it.key) return;

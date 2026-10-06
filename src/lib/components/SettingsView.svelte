@@ -3,11 +3,21 @@
 	import { SCOPES, scopeTotal, type CountryScope } from '$lib/scope';
 	import { auth, signOut } from '$lib/auth.svelte';
 	import { CONT_NAMES, CONT_VIEW, type ContinentCode } from '$lib/countries';
-	import { closeSettings, hooks, toast, ui } from '$lib/app.svelte';
+	import { closeSettings, hooks, prefs, setMotionPref, setThemePref, toast, ui, type MotionPref, type ThemePref } from '$lib/app.svelte';
 
-	/* Einstellungen: Karte (Startregion), Statistik (Was zählt als Land?), Konto (E-Mail, Sync, Abmelden), Daten (Export/Import) */
+	/* Einstellungen: Darstellung (Design, Animationen – nur dieses Gerät), Karte (Startregion), Statistik (Was zählt als Land?), Konto (E-Mail, Sync, Abmelden), Daten (Export/Import) */
 
 	const continents = Object.keys(CONT_VIEW) as ContinentCode[];
+	const THEMES: { id: ThemePref; label: string }[] = [
+		{ id: 'system', label: 'System' },
+		{ id: 'light', label: 'Hell' },
+		{ id: 'dark', label: 'Dunkel' }
+	];
+	const MOTIONS: { id: MotionPref; label: string }[] = [
+		{ id: 'system', label: 'System' },
+		{ id: 'on', label: 'An' },
+		{ id: 'off', label: 'Aus' }
+	];
 	let fileInput: HTMLInputElement;
 	let busy = $state(false);
 
@@ -61,7 +71,30 @@
 		<h1 class="set-title" id="setTitle">Einstellungen</h1>
 	</div>
 	<div class="ov-body">
-		<h2 style="margin-top:24px">Karte</h2>
+		<h2 style="margin-top:24px">Darstellung</h2>
+		<div class="card">
+			<div class="field">
+				<span class="lbl" id="themeLbl">Design<small>„System“ folgt der Einstellung deines Geräts.</small></span>
+				<div class="chips" role="group" aria-labelledby="themeLbl">
+					{#each THEMES as o (o.id)}
+						<button type="button" class="chip" aria-pressed={prefs.theme === o.id} onclick={() => setThemePref(o.id)}>{o.label}</button>
+					{/each}
+				</div>
+			</div>
+			<div class="field" style="margin-bottom:0">
+				<span class="lbl" id="motionLbl"
+					>Animationen<small>Zähler, Flugkurve und Globus beim Öffnen. Bei „Aus“ steht alles sofort am Ziel; „System“ folgt „Bewegung reduzieren“ deines Geräts.</small></span
+				>
+				<div class="chips" role="group" aria-labelledby="motionLbl">
+					{#each MOTIONS as o (o.id)}
+						<button type="button" class="chip" aria-pressed={prefs.motion === o.id} onclick={() => setMotionPref(o.id)}>{o.label}</button>
+					{/each}
+				</div>
+			</div>
+			<p class="note" style="margin-bottom:0">Gilt nur auf diesem Gerät.</p>
+		</div>
+
+		<h2>Karte</h2>
 		<div class="card">
 			<div class="field" style="margin-bottom:0">
 				<span class="lbl" id="homeContLbl">Startregion<small>Darauf zoomt der Globus beim Öffnen der App.</small></span>

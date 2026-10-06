@@ -10,8 +10,59 @@ export type Tab = (typeof TABS)[number];
 export type PickerMode = 'visited' | 'fly';
 export type SheetView = { kind: 'country'; code: string } | { kind: 'picker'; mode: PickerMode };
 
-export const REDUCE =
-	typeof window !== 'undefined' && !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+/* ---------- Darstellung: Design und Animationen (gelten nur auf diesem Gerät) ---------- */
+export type ThemePref = 'system' | 'light' | 'dark';
+export type MotionPref = 'system' | 'on' | 'off';
+const PREFS_KEY = 'freiheit-prefs';
+const THEME_BG = { light: '#EDF2F4', dark: '#0A1A23' };
+const mqReduce = typeof window !== 'undefined' && window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
+
+function loadPrefs(): { theme: ThemePref; motion: MotionPref } {
+	let p: Record<string, unknown> = {};
+	try {
+		p = JSON.parse(localStorage.getItem(PREFS_KEY) || '{}') || {};
+	} catch {}
+	return {
+		theme: p.theme === 'light' || p.theme === 'dark' ? p.theme : 'system',
+		motion: p.motion === 'on' || p.motion === 'off' ? p.motion : 'system'
+	};
+}
+export const prefs = $state(loadPrefs());
+
+/** Animationen reduzieren? Eigene Einstellung der App, sonst die des Geräts */
+export function reduceMotion() {
+	return prefs.motion === 'off' || (prefs.motion === 'system' && !!mqReduce?.matches);
+}
+
+/** Setzt data-theme / data-motion am <html> (CSS reagiert darauf) und die Farbe der Statusleiste */
+function applyPrefs() {
+	if (typeof document === 'undefined') return;
+	const r = document.documentElement;
+	if (prefs.theme === 'system') r.removeAttribute('data-theme');
+	else r.dataset.theme = prefs.theme;
+	if (reduceMotion()) r.dataset.motion = 'reduce';
+	else r.removeAttribute('data-motion');
+	document.querySelectorAll('meta[name="theme-color"]').forEach((m) => {
+		const dark = (m.getAttribute('media') || '').includes('dark');
+		m.setAttribute('content', prefs.theme === 'system' ? THEME_BG[dark ? 'dark' : 'light'] : THEME_BG[prefs.theme]);
+	});
+}
+function savePrefs() {
+	try {
+		localStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
+	} catch {}
+	applyPrefs();
+}
+export function setThemePref(t: ThemePref) {
+	prefs.theme = t;
+	savePrefs();
+}
+export function setMotionPref(m: MotionPref) {
+	prefs.motion = m;
+	savePrefs();
+}
+applyPrefs();
+mqReduce?.addEventListener?.('change', applyPrefs);
 
 export const ui = $state({
 	tab: 'home' as Tab,
@@ -60,7 +111,7 @@ export function startIntro() {
 /** Fortschritt 0..1 der laufenden Start-Animation (1 = fertig bzw. keine aktiv) */
 export function introProgress(now = performance.now()) {
 	const it = ui.intro;
-	if (!it.key || REDUCE) return 1;
+	if (!it.key || reduceMotion()) return 1;
 	return Math.max(0, Math.min(1, (now - it.start) / (it.end - it.start)));
 }
 
@@ -149,7 +200,7 @@ function showTab(t: Tab, dir: number) {
 		const el = document.getElementById('tab-' + t);
 		if (!el) return;
 		el.classList.remove('in-r', 'in-l');
-		if (dir && !REDUCE) {
+		if (dir && !reduceMotion()) {
 			void el.offsetWidth;
 			el.classList.add(dir > 0 ? 'in-r' : 'in-l');
 		}

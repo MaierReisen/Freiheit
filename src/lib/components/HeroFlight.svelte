@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount, untrack } from 'svelte';
-	import { REDUCE, easeOutCubic, introProgress, ui } from '$lib/app.svelte';
+	import { reduceMotion, easeOutCubic, introProgress, ui } from '$lib/app.svelte';
 	import { atlas } from '$lib/atlas.svelte';
 
 	/* Logo-Motiv als Streifen unter der Länderzahl: Horizont, große Sonne, Flugkurve.
@@ -93,7 +93,7 @@
 			shownPct = toPct;
 			wiggle = 0;
 		};
-		if (REDUCE) return settle();
+		if (reduceMotion()) return settle();
 		shown = from;
 		shownPct = fromPct;
 		const ms = opts.ms ?? (opts.boost ? 1000 : 1100 + Math.abs(to - from) * 1500);
@@ -128,7 +128,7 @@
 			if (introLeft > 0 && !ownAdd) {
 				// während der Start-Animation nachgeladen: Ziel anpassen, aber gleichzeitig mit allem anderen ankommen
 				fly(shown, shownPct, { ms: introLeft, intro: true });
-			} else if (ownAdd && !REDUCE) {
+			} else if (ownAdd && !reduceMotion()) {
 				clearTimeout(boostT);
 				// Nachbrenner: auch ein Stück der Spur hinter dem Flugzeug leuchtet mit
 				boost = { from: Math.max(0, shown - 0.06), key: (boost?.key ?? 0) + 1, label: `+${fmt((now - prev) * 100)} %` };

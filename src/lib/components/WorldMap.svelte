@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { atlas, isCounted, visitedSet } from '$lib/atlas.svelte';
-	import { REDUCE, closeSheet, hooks, openCountry, openPicker, setFull, ui } from '$lib/app.svelte';
+	import { reduceMotion, closeSheet, hooks, openCountry, openPicker, setFull, ui } from '$lib/app.svelte';
 	import { CONT_VIEW } from '$lib/countries';
 	import { createWorldMap, type MapSync, type WorldMap } from '$lib/map/engine';
 	import ContinentChips from './ContinentChips.svelte';
@@ -35,7 +35,7 @@
 		const m = createWorldMap({
 			cvB,
 			cvT,
-			reduce: REDUCE,
+			reduce: reduceMotion,
 			getVisited: visitedSet,
 			isCounted,
 			getWish: () => new Set<string>(), // Wunschliste vorerst ausgeblendet
@@ -65,7 +65,7 @@
 			resize: m.resize,
 			flyToCountry: m.flyToCountry,
 			flyToContinent: m.flyToContinent,
-			scrollIntoView: () => box.scrollIntoView?.({ behavior: REDUCE ? 'auto' : 'smooth', block: 'center' })
+			scrollIntoView: () => box.scrollIntoView?.({ behavior: reduceMotion() ? 'auto' : 'smooth', block: 'center' })
 		};
 		return () => {
 			document.removeEventListener('pointerdown', onOutside, true);

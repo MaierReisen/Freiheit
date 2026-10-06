@@ -11,6 +11,13 @@
 <meta name="theme-color" content="#EDF2F4" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0A1A23" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<script>
+/* Design und Animationen vor dem ersten Zeichnen setzen (kein Aufblitzen im falschen Design) */
+try{var p=JSON.parse(localStorage.getItem('freiheit-prefs')||'{}'),r=document.documentElement;
+if(p.theme==='light'||p.theme==='dark')r.setAttribute('data-theme',p.theme);
+if(p.motion==='off'||(p.motion!=='on'&&matchMedia('(prefers-reduced-motion: reduce)').matches))r.setAttribute('data-motion','reduce')}catch(e){}
+</script>
+
 <meta name="apple-mobile-web-app-title" content="Freiheit">
 <title>Freiheit by Maier Reisen</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
