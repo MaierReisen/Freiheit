@@ -19,8 +19,10 @@
 	$effect(() => {
 		if (highlightsNow(code) === undefined) loadHighlights().then((d) => (hls = d[code] ?? []));
 	});
-	const hlMonths = $derived(new Set(hls.flatMap((h) => h.m)));
-	const when = (h: Highlight) => h.d ?? monthRanges(h.m);
+	// ganzjährige Highlights setzen keine Monatspunkte und werden beim Antippen eines Monats nie ausgegraut
+	const hlMonths = $derived(new Set(hls.filter((h) => !h.y).flatMap((h) => h.m)));
+	const when = (h: Highlight) => (h.y ? 'ganzjährig' : (h.d ?? monthRanges(h.m)));
+	const whenSub = (h: Highlight) => (h.y ? (h.m.length ? `am besten ${monthRanges(h.m)}` : '') : h.v ? 'je nach Jahr' : '');
 
 	const p = $derived(places?.[pi] ?? null);
 	const best = $derived(p ? bestMonths(p[2], p[4]) : null);
@@ -127,7 +129,7 @@
 			<div class="cl-hls">
 				<span class="lbl">Highlights</span>
 				{#each hls as h (h.t + (h.r ?? ''))}
-					<div class="cl-hl" class:on={h.m.includes(sel)}>
+					<div class="cl-hl" class:on={h.y || h.m.includes(sel)}>
 						<i class="cl-hl-ic {h.c}" aria-hidden="true">
 							<svg viewBox="0 0 24 24">
 								{#if h.c === 'tier'}<circle cx="6.5" cy="10" r="1.9" /><circle cx="10" cy="5.8" r="1.9" /><circle cx="14" cy="5.8" r="1.9" /><circle cx="17.5" cy="10" r="1.9" /><path d="M12 11.5c-2.9 0-5.2 3.6-5.2 6 0 1.5 1.3 2.4 2.8 1.9l2.4-.8 2.4.8c1.5.5 2.8-.4 2.8-1.9 0-2.4-2.3-6-5.2-6z" />
@@ -139,7 +141,7 @@
 							</svg>
 						</i>
 						<div class="cl-hl-txt"><b>{h.t}</b>{#if h.r}<span>{h.r}</span>{/if}</div>
-						<span class="cl-hl-when">{when(h)}{#if h.v}<small>je nach Jahr</small>{/if}</span>
+						<span class="cl-hl-when">{when(h)}{#if whenSub(h)}<small>{whenSub(h)}</small>{/if}</span>
 					</div>
 				{/each}
 			</div>

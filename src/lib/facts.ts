@@ -311,7 +311,8 @@ export function fmtDaylight(h: number) {
 
 /* Saisonale Highlights je Land (von Hand zusammengestellt und geprüft, siehe data/highlights.json):
    c: Art (tier, meer, bluete, laub, natur, fest), t: Titel, r: Ort/Region, m: Monate (0–11),
-   v: Termin wechselt je nach Jahr (Mondkalender u. Ä.), d: fester Termin als Text */
+   v: Termin wechselt je nach Jahr (Mondkalender u. Ä.), d: fester Termin als Text,
+   y: ganzjährig möglich (m dann: besonders gute Monate, falls es sie gibt) */
 export interface Highlight {
 	c: 'tier' | 'meer' | 'bluete' | 'laub' | 'natur' | 'fest';
 	t: string;
@@ -319,6 +320,7 @@ export interface Highlight {
 	m: number[];
 	v?: 1;
 	d?: string;
+	y?: 1;
 }
 let hlCache: Record<string, Highlight[]> | null = null;
 let hlLoading: Promise<Record<string, Highlight[]>> | null = null;
