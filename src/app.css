@@ -336,9 +336,11 @@ button.cont{border:0;font:inherit;font-size:14px;color:inherit}
 .swipe-fg.anim{transition:transform .32s cubic-bezier(.2,.9,.3,1)}
 .list li .swipe-del{position:absolute;top:0;right:0;bottom:1px;z-index:0;display:flex;align-items:stretch;justify-content:flex-end;padding:6px 2px 5px 8px;border:0;background:none;color:#fff}
 .swipe-pill{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border-radius:14px;background:linear-gradient(160deg,#FF6B6E,#E5383D);box-shadow:0 6px 16px -6px rgba(229,56,61,.6),inset 0 1px 0 rgba(255,255,255,.25);font-size:12px;font-weight:700;letter-spacing:.01em;transform-origin:right center;transition:padding .22s ease,align-items .22s}
-.swipe-pill svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-.swipe-del.armed .swipe-pill{align-items:flex-start;padding-left:22px;background:linear-gradient(160deg,#FF5458,#D92B30)}
+.swipe-pill svg{width:30px;height:30px;fill:none;stroke:currentColor;stroke-width:1.9;filter:drop-shadow(0 1px 1px rgba(0,0,0,.18));stroke-linecap:round;stroke-linejoin:round}
+.swipe-del.armed .swipe-pill{align-items:flex-start;padding-left:26px;background:linear-gradient(160deg,#FF5458,#D92B30)}
 .swipe-del.armed .swipe-pill svg{animation:trashWiggle .35s ease}
+.bin-lid{transform-origin:4px 7px;transition:transform .25s cubic-bezier(.3,1.6,.5,1)}
+.swipe-del.armed .bin-lid{transform:rotate(-22deg) translateY(-1px)}
 @keyframes trashWiggle{0%,100%{transform:none}30%{transform:rotate(-14deg) scale(1.15)}65%{transform:rotate(9deg) scale(1.08)}}
 
 /* Neues Land: geänderte Ziffern rollen wie ein Zählwerk, dahinter leuchtet die Sonne auf, die Zahl federt kurz */

@@ -318,7 +318,6 @@ export function addCountry(code: string) {
 	};
 	persist();
 	enqueue({ t: 'addCountry', code, name: nameOf(code), position }, ...(wasWish ? [{ t: 'removeWish', code } as Op] : []));
-	toast(isCounted(code) ? `${nameOf(code)} hinzugefügt – Land Nr. ${countedCountries().length}` : `${nameOf(code)} hinzugefügt – zählt nicht als Land`);
 }
 export function removeCountry(code: string) {
 	atlas.data = { ...atlas.data, countries: atlas.data.countries.filter((c) => c.code !== code) };

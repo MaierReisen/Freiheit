@@ -143,11 +143,12 @@
 			style="width:{Math.max(W, -x)}px"
 			tabindex={isOpen ? 0 : -1}
 			aria-hidden={!isOpen}
+			aria-label={label}
 			onclick={remove}
 			><span class="swipe-pill" style="transform:scale({Math.min(1, 0.55 + (0.45 * -x) / W)});opacity:{Math.min(1, (-x / W) * 1.6)}"
 				><svg viewBox="0 0 24 24" aria-hidden="true"
-					><path d="M4 7h16M10 11v6M14 11v6M5.5 7l1 12a2 2 0 0 0 2 1.8h7a2 2 0 0 0 2-1.8l1-12M9 7V4.8A.8.8 0 0 1 9.8 4h4.4a.8.8 0 0 1 .8.8V7" /></svg
-				>{label}</span
+					><path class="bin-lid" d="M4 7h16M9 7V4.8A.8.8 0 0 1 9.8 4h4.4a.8.8 0 0 1 .8.8V7" /><path d="M10 11v6M14 11v6M5.5 7l1 12a2 2 0 0 0 2 1.8h7a2 2 0 0 0 2-1.8l1-12" /></svg
+				></span
 			></button
 		>
 	{/if}
