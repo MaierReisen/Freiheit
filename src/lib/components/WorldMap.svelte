@@ -29,6 +29,11 @@
 						: 'Tippe auf ein Land'
 	);
 
+	const focusContinentOf = (code: string) => {
+		const k = CONT[code];
+		if (k && CONT_VIEW[k]) ui.focusContinent = k;
+	};
+
 	onMount(() => {
 		const m = createWorldMap({
 			cvB,
@@ -52,14 +57,22 @@
 			isActive: () => ui.mapActive,
 			onActivate: () => (ui.mapActive = true),
 			getStartView: () => CONT_VIEW[atlas.settings.homeContinent],
-			onTapCountry: openCountry,
+			// angetipptes Land: Kontinent-Knopf auf dessen Kontinent
+			onTapCountry: (code) => {
+				focusContinentOf(code);
+				openCountry(code);
+			},
 			// erster Tipp: Land nur markieren (Umriss + Name), Detailseite erst beim nächsten Tipp
-			onFocusCountry: (code) => (ui.selected = code),
+			onFocusCountry: (code) => {
+				focusContinentOf(code);
+				ui.selected = code;
+			},
 			onTapEmpty: () => {
 				if (ui.selected) closeSheet();
 			},
 			onSync: (v) => (s = v),
-			// gedrückter Kontinent-Knopf = wo man gerade ist; weit herausgezoomt (mehrere Kontinente) keiner
+			// nach eigenem Ziehen/Zoomen: gedrückter Kontinent-Knopf = wo man gerade ist; mehrere Kontinente im Bild: keiner.
+			// (Nach Flügen per Kontinent-Knopf oder neuem Land bleibt der gesetzte Knopf gedrückt.)
 			onSettle: (code) => {
 				const k = code ? CONT[code] : undefined;
 				ui.focusContinent = k && CONT_VIEW[k] ? k : '';

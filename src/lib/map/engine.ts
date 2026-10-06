@@ -294,11 +294,31 @@ export function createWorldMap(o: MapOptions) {
 			baseDirty = topDirty = false;
 		}
 	}
+	/** Zoom, der auf der Karte an der Stelle c denselben Maßstab ergibt wie Globus-Zoom kG (auf dem Globus: kG selbst).
+	    So wirkt z. B. Europa auf Globus und Karte gleich groß. */
+	function toModeK(kG: number, c: [number, number]) {
+		if (view.mode === 'globe') return kG;
+		const lat = clamp(c[1], -80, 80);
+		// Globus in der Bildmitte: ein halbes Breitengrad-Grad = R·0,5°, ein halbes Längengrad-Grad zusätzlich ·cos(Breite);
+		// gemittelt wie bei der Messung der Karte darunter (sonst wäre die Karte in mittleren Breiten zu groß)
+		const bG = (Math.min(cw, ch) / 2) * 0.86,
+			want = bG * kG * ((0.5 * Math.PI) / 180) * Math.sqrt(Math.cos((lat * Math.PI) / 180));
+		const P = geoNaturalEarth1()
+			.rotate([-c[0], 0])
+			.center([0, lat])
+			.scale(flatBase)
+			.translate([cw / 2, ch / 2]);
+		const p = P([c[0], lat]),
+			n = P([c[0], lat + 0.5]),
+			e = P([c[0] + 0.5, lat]);
+		if (!p || !n || !e) return kG;
+		const have = Math.sqrt(Math.hypot(n[0] - p[0], n[1] - p[1]) * Math.hypot(e[0] - p[0], e[1] - p[1]));
+		const [a, b] = kRange();
+		return have ? clamp(want / have, a, b) : kG;
+	}
 	function introTarget() {
 		const sv = o.getStartView();
-		const target = sv
-			? { lon: sv.c[0], lat: sv.c[1], k: view.mode === 'flat' ? sv.k * 1.4 : sv.k }
-			: { lon: 10, lat: 41, k: 1 };
+		const target = sv ? { lon: sv.c[0], lat: sv.c[1], k: toModeK(sv.k, sv.c) } : { lon: 10, lat: 41, k: 1 };
 		target.lat = view.mode === 'flat' ? clampFlatLat(target.lat, target.k) : clamp(target.lat, -85, 85);
 		return target;
 	}
@@ -378,6 +398,8 @@ export function createWorldMap(o: MapOptions) {
 		}, 150);
 	}
 	let settleT: ReturnType<typeof setTimeout> | undefined;
+	/** mehrere Kontinente im Bild: mehr als ~110 Längengrade sichtbar (Globus und Karte gleich) */
+	const wideView = (ppd = pxPerDeg()) => cw / ppd > 110;
 	/** nach jeder Bewegung (Ziehen, Flug, Zoom, Moduswechsel) aufrufen: meldet die Bildmitte, sobald die Karte ruht */
 	function scheduleSettle(ms = 250) {
 		clearTimeout(settleT);
@@ -388,8 +410,7 @@ export function createWorldMap(o: MapOptions) {
 	function settle() {
 		if (destroyed || !cw || !ch) return;
 		if (fly || inertia || interacting) return scheduleSettle(200); // noch in Bewegung: später erneut
-		// mehrere Kontinente im Bild: mehr als ~110 Längengrade sichtbar (Globus und Karte gleich)
-		const wide = cw / pxPerDeg() > 110;
+		const wide = wideView();
 		let code: string | null = null;
 		if (!wide) {
 			const cx = cw / 2,
@@ -765,6 +786,7 @@ export function createWorldMap(o: MapOptions) {
 		// - solange die Form klein ist (unter ~36 px), mit Umriss, damit sie sich vom Nachbarland abhebt
 		// - erst bei regionalem Zoom (LABEL_PPD) mit Namen (ohne Überlappung, bereiste zuerst)
 		const ppd = pxPerDeg();
+		const wide = wideView(ppd);
 		const labels: { id: string; x: number; y: number; been: boolean }[] = [];
 		let outlined: string[] | null = null;
 		for (const f of features) {
@@ -777,7 +799,7 @@ export function createWorldMap(o: MapOptions) {
 				// Punkt für jedes Land, dessen Fläche auf dem Bildschirm zu klein zum Erkennen ist – bei jedem Zoom,
 				// auf Globus und Karte gleich (unbereiste nur, wenn sie in der gewählten Länderliste zählen)
 				dotA = dotAlpha(f.id, ppd),
-				tiny = dotA > 0 && o.isCounted(f.id);
+				tiny = dotA > 0 && o.isCounted(f.id) && !wide;
 			if (!been && !isSel && !tiny && !micro) continue;
 			if (!onFront(i.c)) continue;
 			if (sz >= 36) {
@@ -887,7 +909,6 @@ export function createWorldMap(o: MapOptions) {
 		const [a, b] = kRange();
 		to.k = clamp(to.k, a, b);
 		to.lat = view.mode === 'flat' ? clampFlatLat(to.lat, to.k) : clamp(to.lat, -85, 85);
-		scheduleSettle(ms + 150);
 		if (reduce() || ms <= 0) {
 			Object.assign(view, to);
 			view.lon = wrapLon(view.lon);
@@ -905,18 +926,21 @@ export function createWorldMap(o: MapOptions) {
 		const i = INFO[code];
 		if (!i) return;
 		const f = opts.zoom ?? 1;
-		let target = view.mode === 'globe' ? clamp((90 * f) / Math.max(i.size, 6), 1.3, 10) : clamp((150 * f) / Math.max(i.size, 6), 1.5, 12);
+		// Ziel zuerst als Globus-Zoom berechnen, dann in den Maßstab der aktuellen Ansicht umrechnen (Globus = Karte)
+		const bG = (Math.min(cw, ch) / 2) * 0.86;
+		let kG = clamp((90 * f) / Math.max(i.size, 6), 1.3, 10);
 		// Zwergstaaten: so nah, dass die Form gut erkennbar ist (mit Umgebung etwa 40 px, sonst 70 px breit)
-		if (smallIds.has(code)) target = Math.max(target, clamp((opts.zoom ? 40 : 70) / ((baseScale() / 57.2958) * Math.max(i.size, 0.004)), 1, K_MAX));
+		if (smallIds.has(code)) kG = Math.max(kG, clamp((opts.zoom ? 40 : 70) / ((bG / 57.2958) * Math.max(i.size, 0.004)), 1, K_MAX));
+		const target = toModeK(kG, i.c);
 		// mit Umgebung, aber große Länder (Australien, Brasilien …) nicht so weit draußen, dass es wie der ganze Kontinent wirkt
-		const minK = view.mode === 'globe' ? 1.8 : 2.2;
+		const minK = toModeK(1.8, i.c);
 		const k = opts.keepK ? Math.max(view.k, 1) : opts.zoom ? Math.max(target, minK) : Math.max(target, view.k);
 		flyTo({ lon: i.c[0], lat: i.c[1], k }, opts.ms || 1000);
 	}
 	function flyToContinent(code: string) {
 		const v = CONT_VIEW[code as ContinentCode];
 		if (!v) return;
-		flyTo({ lon: v.c[0], lat: v.c[1], k: view.mode === 'flat' ? v.k * 1.4 : v.k }, 1000);
+		flyTo({ lon: v.c[0], lat: v.c[1], k: toModeK(v.k, v.c) }, 1000);
 	}
 
 	/** Pixel pro Grad am Kartenmittelpunkt (für die Bildschirmgröße eines Landes) */
@@ -953,7 +977,7 @@ export function createWorldMap(o: MapOptions) {
 		}
 		const hit = at(x, y);
 		if (hit && smallIds.has(hit)) return hit;
-		const dotShown = (id: string) => o.getVisited().has(id) || o.getSelected() === id || o.isCounted(id);
+		const dotShown = (id: string) => o.getVisited().has(id) || o.getSelected() === id || (o.isCounted(id) && !wideView(ppd));
 		if (near && (!hit || (dotShown(near) && nearD <= r * 0.85))) return near;
 		if (hit) return hit;
 		// knapp neben einem Land: Ringe um den Tipp absuchen
@@ -978,6 +1002,7 @@ export function createWorldMap(o: MapOptions) {
 				const g = curProj().invert?.([x, y]);
 				if (g && !isNaN(g[0]) && !isNaN(g[1]) && (view.mode !== 'globe' || geoDistance(g, [view.lon, view.lat]) < Math.PI / 2))
 					flyTo({ lon: g[0], lat: g[1] }, 600);
+				scheduleSettle(800);
 			}
 			markDirty(false);
 			return;
@@ -1193,6 +1218,7 @@ export function createWorldMap(o: MapOptions) {
 		zoomBy(m: number) {
 			cancelMotion();
 			flyTo({ k: view.k * m }, 350);
+			scheduleSettle(500); // Zoomen per Knopf: danach zeigt der Kontinent-Knopf, wo man ist
 		},
 		setMode(m: MapMode) {
 			if (m === view.mode) return;
@@ -1211,7 +1237,6 @@ export function createWorldMap(o: MapOptions) {
 			sync();
 			markDirty(true);
 			scheduleRefine();
-			scheduleSettle();
 		},
 		toggleSpin() {
 			view.spin = !view.spin;
