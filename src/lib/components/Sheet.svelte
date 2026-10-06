@@ -8,6 +8,7 @@
 
 	let sheet: HTMLDivElement;
 	let scrim: HTMLDivElement;
+	let downOnScrim = false;
 	let g: { y0: number; x0: number; t0: number; ly: number; lt: number; vy: number; cy: number; sc: HTMLElement | null; on: boolean | null } | null = null;
 
 	function scroller(t: EventTarget | null): HTMLElement | null {
@@ -87,7 +88,19 @@
 	});
 </script>
 
-<div class="scrim" class:open={ui.sheetOpen} id="scrim" onclick={closeSheet} role="presentation" bind:this={scrim}></div>
+<!-- schließt nur, wenn die Berührung auch auf der Abdeckung begann (kein „Geister-Klick“ vom Antippen der Karte) -->
+<div
+	class="scrim"
+	class:open={ui.sheetOpen}
+	id="scrim"
+	onpointerdown={() => (downOnScrim = true)}
+	onclick={() => {
+		if (downOnScrim) closeSheet();
+		downOnScrim = false;
+	}}
+	role="presentation"
+	bind:this={scrim}
+></div>
 <div class="sheet" class:open={ui.sheetOpen} id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle" bind:this={sheet}>
 	{#if ui.sheetView}
 		{#key ui.sheetKey}

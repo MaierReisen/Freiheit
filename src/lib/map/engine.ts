@@ -1163,6 +1163,13 @@ export function createWorldMap(o: MapOptions) {
 	cv.addEventListener('pointermove', onMove);
 	cv.addEventListener('pointerup', onUp);
 	cv.addEventListener('pointercancel', onCancel);
+	// Nach einer Berührung schiebt der Browser einen „Klick“ an dieselbe Stelle nach – dort liegt dann aber schon das
+	// gerade geöffnete Sheet (bzw. seine Abdeckung) und würde es sofort wieder schließen oder einen Knopf auslösen.
+	// Die Karte selbst braucht keine Klicks: also unterdrücken (Scrollen der Seite passiert vorher, im touchmove).
+	const onTouchEnd = (e: TouchEvent) => {
+		if (e.cancelable) e.preventDefault();
+	};
+	cv.addEventListener('touchend', onTouchEnd, { passive: false });
 	cv.addEventListener('wheel', onWheel, { passive: false });
 
 	const ro = window.ResizeObserver ? new ResizeObserver(() => resize()) : null;
@@ -1257,6 +1264,7 @@ export function createWorldMap(o: MapOptions) {
 			cv.removeEventListener('pointermove', onMove);
 			cv.removeEventListener('pointerup', onUp);
 			cv.removeEventListener('pointercancel', onCancel);
+			cv.removeEventListener('touchend', onTouchEnd);
 			cv.removeEventListener('wheel', onWheel);
 		}
 	};
