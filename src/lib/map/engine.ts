@@ -657,7 +657,9 @@ export function createWorldMap(o: MapOptions) {
 		if (!i) return;
 		const f = opts.zoom ?? 1;
 		const target = view.mode === 'globe' ? clamp((90 * f) / Math.max(i.size, 6), 1.3, 10) : clamp((150 * f) / Math.max(i.size, 6), 1.5, 12);
-		const k = opts.keepK ? Math.max(view.k, 1) : opts.zoom ? target : Math.max(target, view.k);
+		// mit Umgebung, aber große Länder (Australien, Brasilien …) nicht so weit draußen, dass es wie der ganze Kontinent wirkt
+		const minK = view.mode === 'globe' ? 1.8 : 2.2;
+		const k = opts.keepK ? Math.max(view.k, 1) : opts.zoom ? Math.max(target, minK) : Math.max(target, view.k);
 		flyTo({ lon: i.c[0], lat: i.c[1], k }, opts.ms || 1000);
 	}
 	function flyToContinent(code: string) {

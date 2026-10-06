@@ -62,7 +62,19 @@ function mainPoly(f: CountryFeature): GeoJSON.Feature | CountryFeature {
 /** INFO: Mittelpunkt/Größe für Tippen und Hinfliegen, FC: Begrenzungskreis zum Weglassen unsichtbarer Länder */
 export const INFO: Record<string, { c: [number, number]; size: number; area: number }> = {};
 export const FC: Record<string, { c: [number, number]; r: number; wLon: number; wLat: number; cLat: number }> = {};
-features.forEach((f) => {
+// Teile mit derselben ID zusammenfassen (Australien steht zweimal in den Daten: Festland und Ashmore-/Cartierinseln),
+// sonst überschreibt das kleine Teil Mittelpunkt, Größe und Sichtbarkeitsprüfung des Festlands
+const merged = new Map<string, CountryFeature>();
+for (const f of features) {
+	const prev = merged.get(f.id);
+	if (!prev) {
+		merged.set(f.id, f);
+		continue;
+	}
+	const parts = (g: CountryGeometry) => (g.type === 'MultiPolygon' ? g.coordinates : [g.coordinates]);
+	merged.set(f.id, { ...prev, geometry: { type: 'MultiPolygon', coordinates: [...parts(prev.geometry), ...parts(f.geometry)] } });
+}
+merged.forEach((f) => {
 	const m = mainPoly(f),
 		b = geoBounds(m);
 	let dl = b[1][0] - b[0][0];
