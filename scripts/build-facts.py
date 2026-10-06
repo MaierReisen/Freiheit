@@ -55,7 +55,11 @@ for b in wd3:
     v = float(b['elev']['value'])
     if cur is None or (pref and not cur[1]) or (pref == cur[1] and v > cur[0]):
         peaks[iso][hp] = (v, pref, b.get('hpLabel', {}).get('value') or en.get(hp, ''), hp)
-PEAK_NOTE = {'NL': 'Mount Scenery (Saba, Karibik)'}  # Gipfel liegt nicht im europäischen Teil
+PEAK_NOTE = {'NL': 'Mount Scenery (Saba, Karibik)', 'AU': 'Mawson Peak (Heard-Insel)', 'ES': 'Teide (Teneriffa)',
+             'PT': 'Ponta do Pico (Azoren)', 'SH': 'Queen Mary’s Peak (Tristan da Cunha)'}  # Gipfel liegt fern vom Hauptgebiet
+# Korrekturen nach Prüfung: Macau in Wikidata mit falscher Einheit (170,6 m); Senegal ohne Lage – laut Wikipedia
+# 648 m auf dem Grenzkamm 2,7 km südöstlich von Nepen Diakha (Wikidata: „Népin Cliff“ 531 m ohne Koordinaten)
+PEAK_OVR = {'MO': (None, 171, None), 'SN': ('Nepen Diakha', 648, [-12.527, 12.356])}
 tzn = json.load(open('tzn.json'))
 def pt(wkt):
     m_ = re.match(r'Point\(([-\d.]+) ([-\d.]+)\)', wkt or '')
@@ -68,16 +72,25 @@ capPops = collections.defaultdict(lambda: collections.defaultdict(list))
 for b in json.load(open('wd8.json'))['results']['bindings']:
     try: v = float(b['pop']['value'])
     except ValueError: continue
-    capPops[b['iso']['value']][b['capLabel']['value']].append((b.get('popDate', {}).get('value', '')[:4], v, b['rank']['value'].endswith('PreferredRank')))
+    capPops[b['iso']['value']][b['capLabel']['value']].append((b.get('popDate', {}).get('value', '')[:4], v, b['rank']['value'].rsplit('#', 1)[1]))
 def cap_pop(rows):
-    # bevorzugt bzw. neuester Wert – außer er ist offensichtlich der Großraum (mehr als doppelt so hoch wie sonst üblich)
-    rows = sorted(r for r in rows if r[1] > 0)
+    # Wikidata führt je Stadt oft Zeitreihen, Teilwerte (nach Alter/Geschlecht) und den Großraum. Daher: veraltete
+    # Angaben weg, je Jahr der größte Wert, nur die letzten 15 Jahre; dann der bevorzugte bzw. neueste Wert – außer
+    # er ist mehr als doppelt so hoch wie der (untere) Median dieser Jahre (Großraum, z. B. Kuala Lumpur 9 Mio.)
+    rows = [r for r in rows if r[1] > 0 and r[2] != 'DeprecatedRank']
+    dated = [r for r in rows if r[0]]
+    if dated: rows = dated
     if not rows: return None
-    vals = sorted(r[1] for r in rows); med = vals[len(vals)//2]
-    cand = [r for r in rows if r[2]] + list(reversed(rows))
-    for y, v, _ in cand:
-        if len(rows) < 3 or v <= 2 * med: return [int(v), int(y) if y else None]
-    return [int(cand[0][1]), int(cand[0][0]) if cand[0][0] else None]
+    by_year = {}  # Jahr → (Wert, bevorzugt): bevorzugter Wert des Jahres, sonst der größte
+    for y, v, rank in rows:
+        o, pref = by_year.get(y), rank == 'PreferredRank'
+        if not o or (pref and not o[1]) or (pref == o[1] and v > o[0]): by_year[y] = (v, pref)
+    years = sorted(by_year)
+    if years[-1]: years = [y for y in years if int(y) >= int(years[-1]) - 15]
+    vals = sorted(by_year[y][0] for y in years); med = vals[(len(vals) - 1) // 2]
+    for y in [y for y in reversed(years) if by_year[y][1]] + list(reversed(years)):
+        if len(years) < 2 or by_year[y][0] <= 2 * med: return [int(by_year[y][0]), int(y) if y else None]
+    return [int(by_year[years[-1]][0]), int(years[-1]) if years[-1] else None]
 peakLL = {}
 for b in json.load(open('wd6.json'))['results']['bindings']:
     peakLL.setdefault(b['hp']['value'], pt(b['coord']['value']))
@@ -124,6 +137,10 @@ for x in m:
         if n:
             e['peak'] = [PEAK_NOTE.get(c, n), round(v)]
             if peakLL.get(hp): e['peakLL'] = peakLL[hp]
+    if c in PEAK_OVR and e.get('peak'):
+        n_, h_, ll_ = PEAK_OVR[c]
+        e['peak'] = [n_ or e['peak'][0], h_]
+        if ll_: e['peakLL'] = ll_
     if cap:
         key = CAP_WD.get(c, cap[0])
         ex = CAP_EXTRA.get(c, {})

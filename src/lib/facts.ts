@@ -158,7 +158,7 @@ function tzOffset(tz: string, d: Date) {
 		return 0;
 	}
 }
-/** Ortszeit und Unterschied zur eigenen Zeit, z. B. { time: '14:32', diff: '+1 Std' } (diff leer bei gleicher Zeit) */
+/** Ortszeit und Zeitverschiebung zu Deutschland, z. B. { time: '14:32', diff: '+5 Std' } (diff leer bei gleicher Zeit) */
 export function localTime(tz: string, d = new Date()) {
 	let time = '';
 	try {
@@ -166,7 +166,7 @@ export function localTime(tz: string, d = new Date()) {
 	} catch {
 		return null;
 	}
-	const m = tzOffset(tz, d) + d.getTimezoneOffset(); // getTimezoneOffset ist umgekehrt gepolt
+	const m = tzOffset(tz, d) - tzOffset('Europe/Berlin', d);
 	if (!m) return { time, diff: '' };
 	const h = Math.floor(Math.abs(m) / 60),
 		q = ['', '¼', '½', '¾'][Math.round((Math.abs(m) % 60) / 15) % 4];

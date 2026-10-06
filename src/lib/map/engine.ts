@@ -1036,11 +1036,23 @@ export function createWorldMap(o: MapOptions) {
 	const passiveTouch = (e: PointerEvent) => e.pointerType === 'touch' && !o.isFull() && !o.isActive();
 	// Wer die Seite gerade scrollt und zum Anhalten auf den Globus tippt, will ihn nicht aktivieren
 	let lastScroll = 0;
+	let holdTimer: ReturnType<typeof setTimeout> | undefined;
+	const HOLD_MS = 450;
 	const onScroll = () => (lastScroll = performance.now());
 	window.addEventListener('scroll', onScroll, { passive: true });
 	const onDown = (e: PointerEvent) => {
 		if (passiveTouch(e)) {
 			tapOnly = ptrs.size === 0 && !tapOnly ? { id: e.pointerId, x: e.clientX, y: e.clientY, t: performance.now(), moved: 0 } : null;
+			// langes Drücken aktiviert Globus/Karte, ohne ein Land zu öffnen
+			clearTimeout(holdTimer);
+			const t = tapOnly;
+			if (t)
+				holdTimer = setTimeout(() => {
+					if (tapOnly !== t || t.moved >= 10 || lastScroll > t.t - 350) return;
+					tapOnly = null;
+					o.onActivate();
+					navigator.vibrate?.(8);
+				}, HOLD_MS);
 			return;
 		}
 		try {
@@ -1118,11 +1130,12 @@ export function createWorldMap(o: MapOptions) {
 		if (ptrs.size === 0) {
 			interacting = false;
 			const touch = e.pointerType === 'touch';
-			if (g && !cancelled && !g.pinch && g.dist < (touch ? 14 : 8) && performance.now() - g.t0 < 500) {
-				const first = !o.isFull() && !o.isActive();
+			const still = g && !cancelled && !g.pinch && g.dist < (touch ? 14 : 8);
+			const first = !o.isFull() && !o.isActive();
+			if (still && performance.now() - g.t0 < 500) {
 				if (first) o.onActivate();
 				tap(e.clientX, e.clientY, touch, first);
-			}
+			} else if (still && first && performance.now() - g.t0 >= HOLD_MS) o.onActivate(); // langes Drücken (Maus): nur aktivieren
 			else if (g && !cancelled && !reduce() && !g.pinch) {
 				const v = releaseVelocity(g.trail, e.timeStamp);
 				if (v) inertia = { vx: v[0], vy: v[1], freeLat: g.freeLat };

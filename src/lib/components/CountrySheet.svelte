@@ -131,11 +131,36 @@
 		>
 	{/if}
 
-	{#if facts && (facts.pop || facts.area || lt)}
+	{#if facts && (facts.cap?.length || facts.pop || facts.area)}
 		<div class="cs-quick">
-			{#if facts.pop}<div><b>{fmtPop(facts.pop)}</b><span>Einwohner</span></div>{/if}
-			{#if facts.area}<div><b>{fmtAreaShort(facts.area)}</b><span>Fläche</span></div>{/if}
-			{#if lt}<div><b>{lt.time}{#if lt.diff}<small>{lt.diff}</small>{/if}</b><span>Ortszeit</span></div>{/if}
+			{#if facts.cap?.length}
+				<div>
+					<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21h18M5 21V10l7-5 7 5v11M9 21v-6h6v6" /></svg>
+					<span class="lbl">Hauptstadt</span>
+					<b>{facts.cap[0]}</b>
+					{#if lt}<span class="sub">{lt.time}{#if lt.diff}<em>{lt.diff}</em>{:else if code !== 'DE'}<em class="same">wie DE</em>{/if}</span>{/if}
+					{#if facts.capPop}<span class="sub">{fmtPop(facts.capPop[0])} Einw.{facts.capPop[1] ? ` (${facts.capPop[1]})` : ''}</span>{/if}
+					{#if facts.cap.length > 1}<span class="sub">auch {facts.cap.slice(1).join(', ')}</span>{/if}
+				</div>
+			{/if}
+			{#if facts.pop}
+				<div>
+					<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.2" /><path d="M3 20c.6-3.4 3-5.5 6-5.5s5.4 2.1 6 5.5M16 5.2a3 3 0 0 1 0 5.6M18 14.8c1.7.8 2.8 2.6 3 5.2" /></svg>
+					<span class="lbl">Einwohner</span>
+					<b class="nw">{fmtPop(facts.pop)}</b>
+					{#if facts.area}<span class="sub">{fmtDensity(facts.pop, facts.area)}</span>{/if}
+				</div>
+			{/if}
+			{#if facts.area}
+				<div>
+					<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 15v5h-5M4 4l6 6M20 20l-6-6M15 4h5v5M9 20H4v-5" /></svg>
+					<span class="lbl">Fläche</span>
+					<b class="nw">{fmtAreaShort(facts.area)}</b>
+					{#if facts.area >= 1e5}<span class="sub">{fmtArea(facts.area)}</span>{/if}
+					{#if facts.areaNote}<span class="sub">{facts.areaNote}</span>{/if}
+					{#if compareArea(code, facts.area)}<span class="sub">{compareArea(code, facts.area)}</span>{/if}
+				</div>
+			{/if}
 		</div>
 	{/if}
 </div>
@@ -145,31 +170,6 @@
 
 	{#if facts}
 		<div class="cs-grid">
-			{#if facts.cap?.length}
-				<div class="cs-tile wide">
-					<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21h18M5 21V10l7-5 7 5v11M9 21v-6h6v6" /></svg>
-					<span class="lbl">Hauptstadt</span>
-					<b>{facts.cap.join(', ')}</b>
-					{#if facts.capPop}<span class="sub">{fmtPop(facts.capPop[0])} Einwohner{facts.capPop[1] ? ` (${facts.capPop[1]})` : ''}{facts.cap.length > 1 ? ` · ${facts.cap[0]}` : ''}</span>{/if}
-				</div>
-			{/if}
-			{#if facts.pop}
-				<div class="cs-tile">
-					<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.2" /><path d="M3 20c.6-3.4 3-5.5 6-5.5s5.4 2.1 6 5.5M16 5.2a3 3 0 0 1 0 5.6M18 14.8c1.7.8 2.8 2.6 3 5.2" /></svg>
-					<span class="lbl">Einwohner</span>
-					<b>{fmtPop(facts.pop)}</b>
-					{#if facts.area}<span class="sub">{fmtDensity(facts.pop, facts.area)}</span>{/if}
-				</div>
-			{/if}
-			{#if facts.area}
-				<div class="cs-tile">
-					<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 15v5h-5M4 4l6 6M20 20l-6-6M15 4h5v5M9 20H4v-5" /></svg>
-					<span class="lbl">Fläche</span>
-					<b>{fmtArea(facts.area)}</b>
-					{#if facts.areaNote}<span class="sub">{facts.areaNote}</span>{/if}
-					{#if compareArea(code, facts.area)}<span class="sub">{compareArea(code, facts.area)}</span>{/if}
-				</div>
-			{/if}
 			{#if facts.peak}
 				<div class="cs-tile">
 					<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 20l6.5-11 4 6.5L16 12l5 8z" /><path d="M8 11.5l1.5 1.5L11 11.5" /></svg>

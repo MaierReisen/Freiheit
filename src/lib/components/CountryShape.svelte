@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { geoContains, geoDistance, geoGraticule10, geoOrthographic, geoPath, type GeoProjection } from 'd3-geo';
+	import { geoContains, geoDistance, geoGraticule10, geoInterpolate, geoOrthographic, geoPath } from 'd3-geo';
 	import { shapeOf } from '$lib/map/geo';
 	import { fmtHeight, loadWater, type Facts, type Water } from '$lib/facts';
 
@@ -21,16 +21,22 @@
 	const base = $derived.by(() => {
 		const s = shapeOf(code);
 		if (!s) return null;
-		const P = geoOrthographic()
-			.rotate([-s.c[0], -s.c[1]])
-			.clipAngle(90)
-			.fitExtent(
-				[
-					[26, 20],
-					[W - 26, H - 20]
-				],
-				s.shape
-			);
+		const ext: [[number, number], [number, number]] = [
+			[26, 20],
+			[W - 26, H - 20]
+		];
+		const fit = (o: GeoJSON.Feature | GeoJSON.FeatureCollection) =>
+			geoOrthographic()
+				.rotate([-s.c[0], -s.c[1]])
+				.clipAngle(90)
+				.fitExtent(ext, o);
+		let P = fit(s.shape);
+		// höchster Berg knapp außerhalb (z. B. auf einer Nachbarinsel): Ausschnitt erweitern, solange das Land groß bleibt
+		const pk = facts?.peakLL;
+		if (pk && !inside(P(pk) as [number, number] | null) && geoDistance(pk, s.c) < 1.2) {
+			const P2 = fit({ type: 'FeatureCollection', features: [s.shape, { type: 'Feature', properties: {}, geometry: { type: 'Point', coordinates: pk } }] });
+			if (P2.scale() >= P.scale() * 0.6) P = P2;
+		}
 		const path = geoPath(P);
 		// Sichtweite in Bogenmaß (für das Vorsortieren der Gewässer)
 		const reach = Math.hypot(W, H) / 2 / P.scale() + 0.02;
@@ -53,9 +59,9 @@
 		return closed ? d + 'Z' : d;
 	}
 
-	type Label = { x: number; y: number; t: string; cls: string; rot?: number; anchor?: 'start' | 'middle' | 'end'; split?: number };
 	const inside = (p: [number, number] | null) => !!p && p[0] >= 0 && p[0] <= W && p[1] >= 0 && p[1] <= H;
 
+	type Label = { x: number; y: number; t: string; cls: string; rot?: number; anchor?: 'start' | 'middle' | 'end'; split?: number };
 	const layers = $derived.by(() => {
 		if (!base || !water) return null;
 		const { P, path, s, reach } = base;
@@ -113,29 +119,34 @@
 		const top = (major.length >= 2 ? major : ranked).slice(0, 5);
 		const rivers = top.map((x) => ({ d: x.runs.map((r) => smooth(r)).join(''), w: x.r <= 3 ? 2.1 : x.r <= 5 ? 1.6 : 1.2 }));
 		// Beschriftung: längster zusammenhängender Abschnitt im Bild, Text entlang der Richtung dort
-		const cand: { n: string; len: number; at: [number, number]; rot: number; r: number }[] = [];
+		// mehrere mögliche Stellen (Mitte, dann weiter vorn/hinten), falls die Mitte schon belegt ist
+		const cand: { n: string; spots: { at: [number, number]; rot: number }[] }[] = [];
 		for (const x of top.slice(0, 3)) {
-			let best = { len: 0, at: [0, 0] as [number, number], rot: 0 };
+			// zusammenhängende Abschnitte im Bild, längste zuerst (Flüsse sind in den Daten oft gestückelt)
+			const segs: [number, number][][] = [];
 			for (const run of x.runs) {
 				let i0 = 0;
 				for (let i = 0; i <= run.length; i++) {
 					if (i < run.length && inside(run[i])) continue;
-					const seg = run.slice(i0, i);
+					if (i - i0 >= 3) segs.push(run.slice(i0, i));
 					i0 = i + 1;
-					if (seg.length < 3) continue;
-					let len = 0;
-					for (let k = 1; k < seg.length; k++) len += Math.hypot(seg[k][0] - seg[k - 1][0], seg[k][1] - seg[k - 1][1]);
-					if (len <= best.len) continue;
-					const mid = Math.floor(seg.length / 2),
-						a = seg[Math.max(0, mid - 2)],
-						b = seg[Math.min(seg.length - 1, mid + 2)];
+				}
+			}
+			const plen = (g: [number, number][]) => g.reduce((t, q, k) => (k ? t + Math.hypot(q[0] - g[k - 1][0], q[1] - g[k - 1][1]) : 0), 0);
+			const long = segs.map((g) => ({ g, len: plen(g) })).filter((o) => o.len > 40).sort((a, b) => b.len - a.len).slice(0, 4);
+			if (!long.length) continue;
+			const spots = long.flatMap(({ g: best }) =>
+				[0.5, 0.32, 0.68, 0.2, 0.8].map((f) => {
+					const m = Math.round((best.length - 1) * f),
+						a = best[Math.max(0, m - 2)],
+						b = best[Math.min(best.length - 1, m + 2)];
 					let rot = (Math.atan2(b[1] - a[1], b[0] - a[0]) * 180) / Math.PI;
 					if (rot > 90) rot -= 180;
 					if (rot < -90) rot += 180;
-					best = { len, at: seg[mid], rot };
-				}
-			}
-			if (best.len > 40) cand.push({ n: x.n, len: best.len, at: best.at, rot: best.rot, r: x.r });
+					return { at: best[m], rot };
+				})
+			);
+			cand.push({ n: x.n, spots });
 		}
 		// Seen
 		const lakeList: { d: string; n: string; at: [number, number]; area: number }[] = [];
@@ -166,7 +177,7 @@
 		const tw = (t: string, px: number) => t.length * px * 0.56;
 		const place = (x: number, y: number, t: string, cls: string, px: number, opts: { rot?: number; center?: boolean; split?: number } = {}) => {
 			const w = tw(t, px);
-			const gap = cls === 'lb-peak' ? 11 : 7;
+			const gap = cls === 'lb-peak' ? 9 : 7;
 			const tries: [number, number, 'start' | 'middle' | 'end'][] = opts.center
 				? [[x, y, 'middle']]
 				: [
@@ -177,12 +188,25 @@
 					];
 			for (const [tx, ty, anchor] of tries) {
 				const x0 = anchor === 'start' ? tx : anchor === 'end' ? tx - w : tx - w / 2;
-				const b: [number, number, number, number] = opts.rot ? [tx - w / 2 - 2, ty - w / 2, tx + w / 2 + 2, ty + w / 2] : [x0 - 2, ty - px, x0 + w + 2, ty + 3];
-				if (opts.rot ? b[0] >= 2 && b[2] <= W - 2 && ty > px && ty < H - 4 && !boxes.some((o) => tx > o[0] - 4 && tx < o[2] + 4 && ty > o[1] - 4 && ty < o[3] + 4) : fits(b)) {
-					boxes.push(opts.rot ? [tx - 14, ty - 8, tx + 14, ty + 8] : b);
-					labels.push({ x: tx, y: ty, t, cls, rot: opts.rot, anchor, split: opts.split });
-					return true;
+				if (opts.rot !== undefined) {
+					// gedrehte Schrift: kleine Kästchen entlang der Textlinie prüfen und belegen
+					const ca = Math.cos((opts.rot * Math.PI) / 180),
+						sa = Math.sin((opts.rot * Math.PI) / 180);
+					const segs: [number, number, number, number][] = [];
+					for (let d = -w / 2; d <= w / 2 + 0.1; d += Math.max(4, w / Math.ceil(w / 6))) {
+						const qx = tx + d * ca,
+							qy = ty + d * sa;
+						segs.push([qx - 3.5, qy - px / 2 - 1, qx + 3.5, qy + px / 2 + 1]);
+					}
+					if (!segs.every(fits)) continue;
+					boxes.push(...segs);
+				} else {
+					const b: [number, number, number, number] = [x0 - 2, ty - px, x0 + w + 2, ty + 3];
+					if (!fits(b)) continue;
+					boxes.push(b);
 				}
+				labels.push({ x: tx, y: ty, t, cls, rot: opts.rot, anchor, split: opts.split });
+				return true;
 			}
 			return false;
 		};
@@ -195,19 +219,43 @@
 				boxes.push([p![0] - 5, p![1] - 5, p![0] + 5, p![1] + 5]);
 			}
 		}
+		// höchster Berg immer zeigen: zu dicht an der Hauptstadt → leicht weggerückt; außerhalb des Ausschnitts →
+		// am Rand mit Pfeil in seine Richtung (z. B. Teide für Spanien, Denali für die USA)
+		let peakDir: number | null = null;
 		if (facts?.peakLL && facts.peak) {
-			const p = P(facts.peakLL) as [number, number] | null;
-			if (inside(p) && (!cap || Math.hypot(p![0] - cap[0], p![1] - cap[1]) > 6)) {
-				peak = p;
-				boxes.push([p![0] - 8, p![1] - 8, p![0] + 8, p![1] + 8]);
+			let p = geoDistance(facts.peakLL, c) < Math.PI / 2 - 0.02 ? (P(facts.peakLL) as [number, number] | null) : null;
+			if (p && inside(p) && p[0] > 10 && p[0] < W - 10 && p[1] > 10 && p[1] < H - 10) {
+				if (cap) {
+					const dx = p[0] - cap[0],
+						dy = p[1] - cap[1],
+						dd = Math.hypot(dx, dy);
+					if (dd < 13) p = dd < 0.5 ? [cap[0] + 9, cap[1] - 9] : [cap[0] + (dx / dd) * 13, cap[1] + (dy / dd) * 13];
+				}
+			} else {
+				const o = P(c) as [number, number],
+					q = P(geoInterpolate(c, facts.peakLL)(0.02)) as [number, number];
+				let dx = q[0] - o[0],
+					dy = q[1] - o[1];
+				const dd = Math.hypot(dx, dy) || 1;
+				dx /= dd;
+				dy /= dd;
+				const m = 13,
+					t = Math.min(dx ? Math.abs((dx > 0 ? W - m - o[0] : o[0] - m) / dx) : Infinity, dy ? Math.abs((dy > 0 ? H - m - o[1] : o[1] - m) / dy) : Infinity);
+				p = [o[0] + dx * t, o[1] + dy * t];
+				peakDir = (Math.atan2(dy, dx) * 180) / Math.PI;
 			}
+			peak = p;
+			boxes.push([p![0] - 7, p![1] - 7, p![0] + 7, p![1] + 7]);
 		}
 		if (cap && facts?.cap?.[0]) place(cap[0], cap[1], facts.cap[0], 'lb-cap', 11);
-		if (peak && facts?.peak) place(peak[0], peak[1] - 1, `${facts.peak[0]} ${fmtHeight(facts.peak[1])}`, 'lb-peak', 9.5, { split: facts.peak[0].length });
+		if (peak && facts?.peak) {
+			const n = facts.peak[0].replace(/\s*\(.*\)$/, ''); // Zusatz wie „(Teneriffa)“ steht in der Kachel
+			place(peak[0], peak[1] - 1, `${n} ${fmtHeight(facts.peak[1])}`, 'lb-peak', 8.5, { split: n.length }) || place(peak[0], peak[1] - 1, n, 'lb-peak', 8.5);
+		}
 		for (const l of lakeLabels.sort((a, b) => b.area - a.area).slice(0, 2)) place(l.at[0], l.at[1], l.n, 'lb-water', 9, { center: true });
-		for (const r of cand) place(r.at[0], r.at[1], r.n, 'lb-water', 9, { rot: r.rot, center: true });
+		for (const r of cand) r.spots.some((p) => place(p.at[0], p.at[1], r.n, 'lb-water', 9, { rot: p.rot, center: true }));
 
-		return { rivers, lakes, labels, cap, peak };
+		return { rivers, lakes, labels, cap, peak, peakDir };
 	});
 </script>
 
@@ -238,8 +286,9 @@
 			{/each}
 			{#if layers.peak}
 				<g class="cs-peak" transform="translate({layers.peak[0].toFixed(1)} {layers.peak[1].toFixed(1)})">
-					<circle r="7.5" />
-					<path d="M-4.6 2.6l3-5 1.9 3 1.1-1.5 3.2 3.5z" />
+					{#if layers.peakDir !== null}<path class="cs-peak-dir" transform="rotate({layers.peakDir.toFixed(0)})" d="M6.2 -2.6L9.6 0L6.2 2.6" />{/if}
+					<circle r="5.6" />
+					<path d="M-3.4 1.9l2.2-3.7 1.4 2.2.8-1.1 2.4 2.6z" />
 				</g>
 			{/if}
 			{#if layers.cap}
@@ -252,8 +301,8 @@
 					x={l.x}
 					y={l.y}
 					text-anchor={l.anchor ?? 'start'}
-					transform={l.rot ? `rotate(${l.rot.toFixed(1)} ${l.x} ${l.y})` : undefined}
-					dominant-baseline={l.rot ? 'middle' : undefined}
+					transform={l.rot !== undefined ? `rotate(${l.rot.toFixed(1)} ${l.x} ${l.y})` : undefined}
+					dominant-baseline={l.rot !== undefined ? 'middle' : undefined}
 					>{#if l.split}{l.t.slice(0, l.split)}<tspan class="lb-sub">{l.t.slice(l.split)}</tspan>{:else}{l.t}{/if}</text
 				>
 			{/each}
