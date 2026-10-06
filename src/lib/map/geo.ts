@@ -173,8 +173,17 @@ function decimateFeatures(feats: CountryFeature[], step: number): CountryFeature
 }
 
 const LODS: Record<string, Lod> = {};
+let FINE_TOPO: Topology | null = null;
 export function getLod(name: string): Lod | null {
 	if (LODS[name]) return LODS[name];
+	// 'f3', 'f6' …: ausgedünnte Fassung der feinen Daten für die Bewegung bei starkem Zoom (erst nach dem Laden)
+	if (/^f\d+$/.test(name)) {
+		const base = LODS.fine;
+		if (!base || !FINE_TOPO) return null;
+		const step = Number(name.slice(1));
+		const feats = decimateFeatures(base.feats, step);
+		return (LODS[name] = { feats, polys: polysOf(feats), borders: bordersOf(decimateTopology(FINE_TOPO, step)) });
+	}
 	if (name === 'full') return (LODS.full = makeLod(WORLD));
 	if (name[0] === 's') {
 		const step = Number(name.slice(1));
@@ -193,9 +202,12 @@ export async function fetchFineLod(): Promise<Lod> {
 	t.objects.countries.geometries.forEach((g: { id?: string; properties?: { name?: string } }) => {
 		g.id = NUM2A2[g.id!] || (g.properties && g.properties.name === 'Kosovo' ? 'XK' : undefined);
 	});
+	FINE_TOPO = t;
 	return (LODS.fine = makeLod(t));
 }
 export const fineLod = () => LODS.fine as Lod | undefined;
+/** Ist die Detailstufe schon gebaut? (so lässt sich vermeiden, sie mitten in einer Geste zu erzeugen) */
+export const lodReady = (name: string) => !!LODS[name];
 
 /** Alle Länder der Karte, alphabetisch nach deutschem Namen (für die Länderauswahl) */
 export const ALL = [...new Set(features.map((f) => f.id))].sort((a, b) => nameOf(a).localeCompare(nameOf(b), 'de'));

@@ -1,6 +1,6 @@
 import { geoContains, geoDistance, geoGraticule10, geoNaturalEarth1, geoOrthographic, geoPath, type GeoProjection } from 'd3-geo';
 import { CONT_VIEW, nameOf, type ContinentCode } from '../countries';
-import { FC, INFO, features, fetchFineLod, fineLod, getLod, smallIds, wrapLon, type Lod } from './geo';
+import { FC, INFO, features, fetchFineLod, fineLod, getLod, lodReady, smallIds, wrapLon, type Lod } from './geo';
 
 /* Weltkarte auf zwei Canvas-Ebenen: Globus (orthografisch) und flache Karte (Natural Earth).
    cvB: Karte (ändert sich selten), cvT: Punkte kleiner Länder und Beschriftung. */
@@ -79,7 +79,7 @@ export function createWorldMap(o: MapOptions) {
 		} catch {}
 	};
 
-	let stepIdx = 1,
+	let stepIdx = 0,
 		emaMove = 8,
 		calmFrames = 0;
 	// Neu hinzugefügtes Land kurz hervorheben (Sonnen-Leuchten, Sonar-Ringe, Name)
@@ -149,6 +149,9 @@ export function createWorldMap(o: MapOptions) {
 		try {
 			await fetchFineLod();
 			fineState = 'ready';
+			// ausgedünnte Bewegungsstufen der feinen Daten im Leerlauf bauen (nicht mitten in einer Geste)
+			const later = (f: () => void) => (window.requestIdleCallback ? window.requestIdleCallback(f, { timeout: 3000 }) : setTimeout(f, 200));
+			later(() => !destroyed && getLod('f' + MOVE_STEPS[stepIdx]) && later(() => !destroyed && MOVE_STEPS.forEach((s) => getLod('f' + s))));
 		} catch {
 			fineState = 'failed';
 			fineTry = Date.now();
@@ -277,7 +280,11 @@ export function createWorldMap(o: MapOptions) {
 		requestAnimationFrame(frame);
 	}
 	function pickLodName(moving: boolean) {
-		if (moving) return 's' + MOVE_STEPS[stepIdx];
+		if (moving) {
+			// bei starkem Zoom auch in Bewegung die (ausgedünnten) feinen Daten, damit beim Loslassen nichts Neues auftaucht
+			const f = fineState === 'ready' && view.k >= fineK() ? 'f' + MOVE_STEPS[stepIdx] : '';
+			return f && lodReady(f) ? f : 's' + MOVE_STEPS[stepIdx];
+		}
 		return fineState === 'ready' && fineLod() && view.k >= fineK() ? 'fine' : 'full';
 	}
 	function scheduleRefine() {
@@ -394,6 +401,8 @@ export function createWorldMap(o: MapOptions) {
 		c.clearRect(0, 0, cw, ch);
 		const P = curProj(moving ? 0 : 0.6),
 			path = geoPath(P, c);
+		// Gitternetz und Grenzen kosten kaum Zeit: immer in voller Glättung, sonst sind sie in Bewegung eckig und springen danach rund
+		const pathQ = moving ? geoPath(curProj(0.6), c) : path;
 		const lod: Lod = getLod(pickLodName(moving)) || getLod('full')!;
 		const ci = cullInfo();
 		const visited = o.getVisited(),
@@ -427,12 +436,12 @@ export function createWorldMap(o: MapOptions) {
 		c.strokeStyle = PAL.grat;
 		c.lineWidth = 0.6;
 		c.beginPath();
-		path(GRAT);
+		pathQ(GRAT);
 		c.stroke();
 
-		// Beim Bewegen: Inseln unter ~2 Pixel weglassen (unsichtbar), Grenzen immer in der groben Stufe
+		// Beim Bewegen: Inseln unter ~1 Pixel weglassen (unsichtbar)
 		const pxPerDeg = ((baseScale() * view.k) / 57.2958) * (globe ? 1 : 0.87),
-			minDeg = moving ? 2 / pxPerDeg : 0;
+			minDeg = moving ? 1 / pxPerDeg : 0;
 		const seenIds: Record<string, boolean> = {},
 			base: GeoJSON.Polygon[] = [],
 			vis: GeoJSON.Polygon[] = [],
@@ -459,7 +468,7 @@ export function createWorldMap(o: MapOptions) {
 		fillGroup(soft, PAL.land, PAL.visitedSoft, hatchPattern(c));
 		fillGroup(vis, PAL.visited);
 		c.beginPath();
-		path(moving ? getLod('s10')!.borders : lod.borders);
+		pathQ(lod.borders);
 		c.strokeStyle = PAL.border;
 		c.lineWidth = 0.7;
 		c.stroke();
