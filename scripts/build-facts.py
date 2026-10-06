@@ -8,7 +8,7 @@ Quellen (vorher in dasselbe Verzeichnis laden):
     q1: Hauptstadt (deutscher Name), Einwohner (mit Stichtag), Verkehrsseite je ISO-Code (P297, P36, P1082, P1622)
     q2: Amtssprachen mit ISO-639-1-Code (P37, P218)
     q3/q4: höchster Punkt mit Höhe (P610, P2044, bevorzugter Rang) und englischem Ersatznamen
-  wd5–wd8.json  Hauptstädte (Lage P625, Einwohner P1082 mit Rang), Gipfel-Lage, Nachbarn P47 (Abfragen q5–q8 unten)
+  wd5, wd6, wd8.json  Hauptstädte (Lage P625, Einwohner P1082 mit Rang), Gipfel-Lage (Abfragen q5, q6, q8 unten)
   tzn.json      Anzahl unterschiedlicher Normalzeiten je Land: node scripts/tzcount.mjs (aus zone.tab)
 Aufruf: python3 scripts/build-facts.py  (im Verzeichnis mit den Quelldateien), dann facts.json nach src/lib/data/ kopieren.
 """
@@ -81,20 +81,9 @@ def cap_pop(rows):
 peakLL = {}
 for b in json.load(open('wd6.json'))['results']['bindings']:
     peakLL.setdefault(b['hp']['value'], pt(b['coord']['value']))
-# Nachbarn über das Meer: Wikidata „grenzt an“ ohne die Landgrenzen, beidseitig ergänzt
-sea = collections.defaultdict(set)
-for b in json.load(open('wd7.json'))['results']['bindings']:
-    a, z = b['iso']['value'], b['nbIso']['value']
-    if a != z: sea[a].add(z); sea[z].add(a)
-# enge Verbindungen übers Meer, die in Wikidata fehlen bzw. deren Landesmitten weit auseinanderliegen
-for a_, z_ in (('GB', 'FR'), ('AU', 'PG'), ('SG', 'ID')):
-    sea[a_].add(z_); sea[z_].add(a_)
-# keine echten Nachbarn über das Meer (Prüfung): Saint-Martin (FR–NL), umstrittene oder veraltete Landgrenzen
-# (Kaschmir, Kosovo, Sudan vor 2011), gar keine Grenze, Karibik–Venezuela nur über die winzige Isla de Aves
-for a_, z_ in (('FR', 'NL'), ('AF', 'IN'), ('AL', 'RS'), ('CD', 'CM'), ('CD', 'SD'), ('KE', 'SD'), ('SD', 'UG'), ('AO', 'GA'),
-               ('DM', 'VE'), ('GD', 'VE'), ('KN', 'VE'), ('LC', 'VE'), ('VC', 'VE'), ('DO', 'VE')):
-    sea[a_].discard(z_); sea[z_].discard(a_)
-SEA_KEEP = {('GB', 'FR'), ('FR', 'GB'), ('AU', 'PG'), ('PG', 'AU'), ('SG', 'ID'), ('ID', 'SG')}
+# Nachbarländer = gemeinsame Landgrenze (mledoze). Seegrenzen zählen nicht. Sonderfälle:
+# feste Verbindung über das Wasser (Brücke, Damm, Tunnel) zählt wie eine Landgrenze – man kann hinüberfahren
+FIXED = {('SG', 'MY'): 'Damm', ('DK', 'SE'): 'Brücke', ('GB', 'FR'): 'Tunnel', ('BH', 'SA'): 'Damm', ('HK', 'MO'): 'Brücke'}
 CAP_WD = {'TM': 'Aşgabat', 'MN': 'Ulaanbaatar'}  # deutscher Anzeigename weicht vom Wikidata-Namen ab
 CAP_EXTRA = {'GQ': {'ll': [8.774, 3.752], 'pop': [137000, 2011]}}  # Malabo (Wikidata führt die Planstadt Ciudad de la Paz)
 out = {}
@@ -142,18 +131,10 @@ for x in m:
         cp = ex.get('pop') or cap_pop(capPops[c].get(key, []))
         if ll: e['capLL'] = ll
         if cp: e['capPop'] = cp
-    land_nb = set(e.get('nb') or [])
-    # nur heutige Länder (keine DDR, Jugoslawien …) und nur, was nahe am Hauptgebiet liegt
-    # (nicht Frankreich–Madagaskar über Réunion): Abstand der Landesmitten < 800 km + halbe „Ausdehnung“ beider Länder
-    def near(a, b):
-        A, B = mm.get(a), mm.get(b)
-        if not A or not B or not A.get('latlng') or not B.get('latlng'): return False
-        (la1, lo1), (la2, lo2) = A['latlng'][:2], B['latlng'][:2]
-        p1, p2, dl = math.radians(la1), math.radians(la2), math.radians(lo2 - lo1)
-        d = 6371 * math.acos(max(-1, min(1, math.sin(p1)*math.sin(p2) + math.cos(p1)*math.cos(p2)*math.cos(dl))))
-        return d < 800 + 0.5 * (math.sqrt(A.get('area') or 0) + math.sqrt(B.get('area') or 0))
-    seanb = sorted(z for z in sea.get(c, set()) - land_nb - {c} if z in mm and ((c, z) in SEA_KEEP or near(c, z)))
-    if seanb: e['sea'] = seanb
+    fix = {z: v for (x, y), v in FIXED.items() for z in ((y,) if x == c else (x,) if y == c else ())}
+    if fix:
+        e['nb'] = sorted(set(e['nb']) | set(fix))
+        e['fix'] = fix
     if c == 'FR':  # Datensatz führt nur das europäische Frankreich; Gesamtfläche mit Überseegebieten laut Wikidata
         e['areaNote'] = f"davon {e['area']:,.0f} km² in Europa".replace(',', '.')
         e['area'] = 643801
@@ -183,6 +164,5 @@ for c in ('AT', 'ZA', 'US', 'JP', 'VA', 'XK', 'TV', 'GB', 'CH'): print(c, out.ge
 # q5.rq: SELECT ?iso ?capLabel ?coord ?pop ?popDate WHERE { ?c wdt:P297 ?iso ; wdt:P36 ?cap . ?cap rdfs:label ?capLabel FILTER(lang(?capLabel)='de')
 #        OPTIONAL { ?cap wdt:P625 ?coord } OPTIONAL { ?cap p:P1082 ?ps . ?ps ps:P1082 ?pop . OPTIONAL { ?ps pq:P585 ?popDate } } }
 # q6.rq: SELECT ?iso ?hp ?coord WHERE { ?c wdt:P297 ?iso ; wdt:P610 ?hp . ?hp wdt:P625 ?coord . }
-# q7.rq: SELECT ?iso ?nbIso WHERE { ?c wdt:P297 ?iso ; wdt:P47 ?n . ?n wdt:P297 ?nbIso . }
 # q8.rq: SELECT ?iso ?capLabel ?pop ?popDate ?rank WHERE { ?c wdt:P297 ?iso ; wdt:P36 ?cap . ?cap rdfs:label ?capLabel FILTER(lang(?capLabel)='de')
 #        ?cap p:P1082 ?ps . ?ps ps:P1082 ?pop ; wikibase:rank ?rank . OPTIONAL { ?ps pq:P585 ?popDate } }

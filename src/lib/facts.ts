@@ -21,8 +21,8 @@ export interface Facts {
 	capLL?: [number, number];
 	/** Einwohner der (ersten) Hauptstadt und Jahr der Angabe */
 	capPop?: [number, number | null];
-	/** Nachbarn über das Meer (keine Landgrenze, aber nah: Brücke, Fähre, Meerenge) */
-	sea?: string[];
+	/** Nachbarn ohne Landgrenze, aber mit fester Verbindung (Brücke, Damm, Tunnel) – zählen als Nachbarländer */
+	fix?: Record<string, string>;
 	/** Hinweis zur Fläche (z. B. Frankreich mit Überseegebieten) */
 	areaNote?: string;
 }
@@ -158,7 +158,7 @@ function tzOffset(tz: string, d: Date) {
 		return 0;
 	}
 }
-/** Ortszeit und Unterschied zur eigenen Zeit, z. B. { time: '14:32', diff: '+1 Std.' } */
+/** Ortszeit und Unterschied zur eigenen Zeit, z. B. { time: '14:32', diff: '+1 Std' } (diff leer bei gleicher Zeit) */
 export function localTime(tz: string, d = new Date()) {
 	let time = '';
 	try {
@@ -167,8 +167,8 @@ export function localTime(tz: string, d = new Date()) {
 		return null;
 	}
 	const m = tzOffset(tz, d) + d.getTimezoneOffset(); // getTimezoneOffset ist umgekehrt gepolt
-	if (!m) return { time, diff: 'gleiche Zeit wie hier' };
-	const h = Math.abs(m) / 60;
-	const s = nf({ maximumFractionDigits: 2 }).format(h);
-	return { time, diff: `${m > 0 ? '+' : '−'}${s} Std.` };
+	if (!m) return { time, diff: '' };
+	const h = Math.floor(Math.abs(m) / 60),
+		q = ['', '¼', '½', '¾'][Math.round((Math.abs(m) % 60) / 15) % 4];
+	return { time, diff: `${m > 0 ? '+' : '−'}${h || !q ? h : ''}${q} Std` };
 }

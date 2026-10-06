@@ -54,17 +54,17 @@
 		const c = curs.find((x) => x.code !== 'EUR' && rates!.rates[x.code.toLowerCase()]);
 		return c ? { ...c, rate: rates.rates[c.code.toLowerCase()] } : null;
 	});
-	let amount = $state('100');
+	let amount = $state('1');
 	let fromEur = $state(true);
 	const amountNum = $derived(Number(amount.replace(/\./g, '').replace(',', '.')) || 0);
 	const converted = $derived(fx ? (fromEur ? amountNum * fx.rate : amountNum / fx.rate) : 0);
 	const unit = (eur: boolean) => (eur ? '€' : fx?.sym || fx?.code || '');
 
-	const nbList = (codes: string[] = []) => codes.map((c) => ({ code: c, name: nameOf(c), been: visited.has(c) })).sort((a, b) => a.name.localeCompare(b.name, 'de'));
-	const neighbours = $derived(nbList(facts?.nb));
-	const seaNb = $derived(nbList(facts?.sea));
-	const nbAll = $derived(neighbours.length + seaNb.length);
-	const nbBeen = $derived([...neighbours, ...seaNb].filter((n) => n.been).length);
+	// Nachbarländer: gemeinsame Landgrenze; ohne Landgrenze nur mit fester Verbindung (Brücke, Damm, Tunnel)
+	const neighbours = $derived(
+		(facts?.nb ?? []).map((c) => ({ code: c, name: nameOf(c), been: visited.has(c), via: facts?.fix?.[c] ?? '' })).sort((a, b) => a.name.localeCompare(b.name, 'de'))
+	);
+	const nbBeen = $derived(neighbours.filter((n) => n.been).length);
 
 	// Höhe der kompakten Karte melden (für die „peek“-Stufe des Sheets)
 	let peekEl: HTMLDivElement;
@@ -135,7 +135,7 @@
 		<div class="cs-quick">
 			{#if facts.pop}<div><b>{fmtPop(facts.pop)}</b><span>Einwohner</span></div>{/if}
 			{#if facts.area}<div><b>{fmtAreaShort(facts.area)}</b><span>Fläche</span></div>{/if}
-			{#if lt}<div><b>{lt.time}</b><span>Ortszeit</span></div>{/if}
+			{#if lt}<div><b>{lt.time}{#if lt.diff}<small>{lt.diff}</small>{/if}</b><span>Ortszeit</span></div>{/if}
 		</div>
 	{/if}
 </div>
@@ -151,7 +151,6 @@
 					<span class="lbl">Hauptstadt</span>
 					<b>{facts.cap.join(', ')}</b>
 					{#if facts.capPop}<span class="sub">{fmtPop(facts.capPop[0])} Einwohner{facts.capPop[1] ? ` (${facts.capPop[1]})` : ''}{facts.cap.length > 1 ? ` · ${facts.cap[0]}` : ''}</span>{/if}
-					{#if lt}<span class="sub">Ortszeit {lt.time} · {lt.diff}</span>{/if}
 				</div>
 			{/if}
 			{#if facts.pop}
@@ -237,26 +236,17 @@
 			{/if}
 		</div>
 
-		{#if nbAll}
-			<h4 class="cs-h">Nachbarländer <span>{nbBeen} von {nbAll} bereist</span></h4>
-			{#if neighbours.length}
-				{#if seaNb.length}<div class="cs-nbh">Landgrenzen</div>{/if}
-				<div class="cs-nb">
-					{#each neighbours as n (n.code)}
-						<button type="button" class="cs-chip" class:been={n.been} onclick={() => goNeighbour(n.code)}><span aria-hidden="true">{flag(n.code)}</span>{n.name}</button>
-					{/each}
-				</div>
-			{/if}
-			{#if seaNb.length}
-				<div class="cs-nbh">Über das Meer</div>
-				<div class="cs-nb">
-					{#each seaNb as n (n.code)}
-						<button type="button" class="cs-chip sea" class:been={n.been} onclick={() => goNeighbour(n.code)}><span aria-hidden="true">{flag(n.code)}</span>{n.name}</button>
-					{/each}
-				</div>
-			{/if}
+		{#if neighbours.length}
+			<h4 class="cs-h">Nachbarländer <span>{nbBeen} von {neighbours.length} bereist</span></h4>
+			<div class="cs-nb">
+				{#each neighbours as n (n.code)}
+					<button type="button" class="cs-chip" class:been={n.been} onclick={() => goNeighbour(n.code)}
+						><span aria-hidden="true">{flag(n.code)}</span>{n.name}{#if n.via}<small>{n.via}</small>{/if}</button
+					>
+				{/each}
+			</div>
 		{:else if facts.cap}
-			<p class="cs-note">Keine Landgrenzen – nur über See oder Luft erreichbar</p>
+			<p class="cs-note">Keine Nachbarländer – nur über das Meer oder per Flug erreichbar</p>
 		{/if}
 	{:else}
 		<p class="cs-note">Fakten werden geladen …</p>
