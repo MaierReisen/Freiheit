@@ -97,6 +97,7 @@ for b in json.load(open('wd6.json'))['results']['bindings']:
 # Nachbarländer = gemeinsame Landgrenze (mledoze). Seegrenzen zählen nicht. Sonderfälle:
 # feste Verbindung über das Wasser (Brücke, Damm, Tunnel) zählt wie eine Landgrenze – man kann hinüberfahren
 FIXED = {('SG', 'MY'): 'Damm', ('DK', 'SE'): 'Brücke', ('GB', 'FR'): 'Tunnel', ('BH', 'SA'): 'Damm', ('HK', 'MO'): 'Brücke'}
+AREA_OVR = {'SJ': 61399}  # Spitzbergen 61.022 km² + Jan Mayen 377 km² (Quelle: -1)
 CAP_WD = {'TM': 'Aşgabat', 'MN': 'Ulaanbaatar'}  # deutscher Anzeigename weicht vom Wikidata-Namen ab
 CAP_EXTRA = {'GQ': {'ll': [8.774, 3.752], 'pop': [137000, 2011]}}  # Malabo (Wikidata führt die Planstadt Ciudad de la Paz)
 out = {}
@@ -129,7 +130,9 @@ for x in m:
     tz = tz or TZ_OVR.get(c)
     cap = CAP_OVR.get(c, cap)
     cur = CUR_OVR.get(c, cur)
-    e = {'cap': cap[:3], 'pop': pop, 'area': x.get('area'), 'lang': LANG_OVR.get(c) or langs.get(c) or list((x.get('languages') or {}).keys()),
+    area = AREA_OVR.get(c, x.get('area'))
+    area = area if area and area > 0 else None  # mledoze nutzt -1 für „unbekannt“
+    e = {'cap': cap[:3], 'pop': pop, 'area': area, 'lang': LANG_OVR.get(c) or langs.get(c) or list((x.get('languages') or {}).keys()),
          'cur': cur, 'call': call, 'drive': DRIVE_OVR.get(c, drive.get(c)), 'tz': tz, 'tzn': tzn.get(c, 1 if tz else 0), 'nb': [by3[b] for b in x.get('borders', []) if b in by3 and (c, by3[b]) not in (('LK', 'IN'),)],  # Sri Lanka–Indien: keine Landgrenze (Palkstraße)
          'll': [round(v, 2) for v in x.get('latlng', [])], 'land': bool(x.get('landlocked'))}
     if peaks.get(c):

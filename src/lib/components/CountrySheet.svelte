@@ -3,9 +3,12 @@
 	import { SCOPES, inScope } from '$lib/scope';
 	import { contOf, flag, nameOf } from '$lib/countries';
 	import { closeSheet, hooks, openCountry, reduceMotion, setSheetDetent, ui } from '$lib/app.svelte';
-	import { compareArea, currencies, factsNow, fmtArea, fmtAreaShort, fmtDensity, fmtHeight, fmtPop, languages, loadFacts, localTime, type Facts } from '$lib/facts';
+	import { compareArea, currencies, factsNow, loadClimate, loadEntry, fmtArea, fmtAreaShort, fmtDensity, fmtHeight, fmtPop, languages, loadFacts, localTime, type Facts } from '$lib/facts';
 	import { fmtMoney, fmtRateDate, getRates, type Rates } from '$lib/rates';
 	import CountryShape from './CountryShape.svelte';
+	import { INFO } from '$lib/map/geo';
+	import EntryCard from './EntryCard.svelte';
+	import ClimateCard from './ClimateCard.svelte';
 
 	/* Länderseite: oben die kompakte Karte (Name, Status, „Als bereist markieren“, drei Schnellfakten) – sie ist auch
 	   die „peek“-Stufe über dem Globus. Darunter (nach oben ziehen) Kartenausschnitt, Fakten und Nachbarländer. */
@@ -31,7 +34,8 @@
 	let facts = $state<Facts | null>(factsNow(code));
 	$effect(() => {
 		if (facts) return;
-		loadFacts().then((all) => (facts = all[code] ?? {}));
+		// Einreise und Klima gleich mitladen: alle Kacheln erscheinen zusammen, nichts springt nachträglich
+		Promise.all([loadFacts(), loadEntry(), loadClimate()]).then(([all]) => (facts = all[code] ?? {}));
 	});
 	let now = $state(new Date());
 	$effect(() => {
@@ -112,7 +116,7 @@
 			onkeydown={(e) => e.key === 'Enter' && ui.sheetDetent === 'peek' && setSheetDetent('full')}
 		>
 			<h3 id="sheetTitle" class:long={name.length > 13} class:xlong={name.length > 20}>{name}</h3>
-			<div class="cs-sub">{contOf(code)}{facts?.cap?.length ? ` · ${facts.cap[0]}` : ''}</div>
+			<div class="cs-sub">{[contOf(code), facts?.cap?.[0]].filter(Boolean).join(' · ')}</div>
 		</div>
 		{#if !been}
 			<button type="button" class="cs-mark" class:busy disabled={busy} onclick={markVisited} aria-label="Als bereist markieren"
@@ -174,10 +178,13 @@
 </div>
 
 <div class="cs-body">
-	<div class="cs-map"><CountryShape {code} {been} {facts} /></div>
+	<!-- Gebiete ohne eigene Umrisse in den Kartendaten (z. B. Réunion, in Frankreich enthalten): keine leere Karte -->
+	{#if INFO[code]}<div class="cs-map"><CountryShape {code} {been} {facts} /></div>{/if}
 
 	{#if facts}
 		<div class="cs-grid">
+			{#if code !== 'DE'}<EntryCard {code} />{/if}
+			<ClimateCard {code} />
 			{#if facts.peak}
 				<div class="cs-tile">
 					<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 20l6.5-11 4 6.5L16 12l5 8z" /><path d="M8 11.5l1.5 1.5L11 11.5" /></svg>

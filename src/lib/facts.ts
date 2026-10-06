@@ -104,7 +104,8 @@ export function fmtAreaShort(a: number) {
 }
 export function fmtDensity(pop: number, area: number) {
 	const d = pop / area;
-	return nf({ maximumFractionDigits: d < 10 ? 1 : 0 }).format(d) + ' pro km²';
+	if (d > 0 && d < 0.01) return 'unter 0,01 pro km²';
+	return nf({ maximumFractionDigits: d < 1 ? 2 : d < 10 ? 1 : 0 }).format(d) + ' pro km²';
 }
 
 const DE_AREA = 357588,
@@ -186,4 +187,124 @@ export function localTime(tz: string, d = new Date()) {
 	const h = Math.floor(Math.abs(m) / 60),
 		q = ['', '¼', '½', '¾'][Math.round((Math.abs(m) % 60) / 15) % 4];
 	return { time, diff: `${m > 0 ? '+' : '−'}${h || !q ? h : ''}${q} Std` };
+}
+
+/* Einreise für Deutsche (Auswärtiges Amt, täglich beim Build aktualisiert – siehe scripts/build-entry.py) */
+export interface Entry {
+	/** eu: Freizügigkeit · free: visumfrei · auth: visumfrei mit Online-Genehmigung (ESTA, ETA …) · arrival: Visum bei
+	    Ankunft · evisa: E-Visum vorab · visa: Visum vorab (Botschaft) · special: Sonderregeln */
+	k: 'eu' | 'free' | 'auth' | 'arrival' | 'evisa' | 'visa' | 'special';
+	/** erlaubte Aufenthaltsdauer in Tagen */
+	d?: number;
+	/** kurzer Hinweis */
+	n?: string;
+	/** Regelung befristet bis (JJJJ-MM-TT) */
+	u?: string;
+	/** eigener Warnhinweis (z. B. Westsahara) */
+	wt?: string;
+	link?: string;
+	/** Seite des Auswärtigen Amts (Inhalts-Nr.), Stand der Seite */
+	id?: number;
+	lm?: string;
+	/** 2 Reisewarnung, 1 Teilreisewarnung */
+	w?: 0 | 1 | 2;
+	/** Personalausweis / Reisepass: y ja, r ja mit Einschränkungen, n nein */
+	pa?: 'y' | 'r' | 'n';
+	rp?: 'y' | 'r' | 'n';
+	/** Einschränkung im Wortlaut (z. B. „mit ESTA oder Visum“) */
+	pat?: string;
+	rpt?: string;
+	/** Gebiet ohne eigene Seite: Regeln von der Seite dieses Landes */
+	par?: string;
+	/** Regeln seit der Prüfung geändert: dann gilt der Satz des Amts (s) statt der Einordnung */
+	chg?: boolean;
+	s?: string;
+}
+let entryCache: { date: string; c: Record<string, Entry> } | null = null;
+let entryLoading: Promise<{ date: string; c: Record<string, Entry> }> | null = null;
+export const entryNow = (code: string) => (entryCache ? (entryCache.c[code] ?? null) : undefined);
+export const entryDate = () => entryCache?.date ?? '';
+export function loadEntry() {
+	if (entryCache) return Promise.resolve(entryCache);
+	entryLoading ??= import('./data/entry.json').then((m) => (entryCache = m.default as unknown as { date: string; c: Record<string, Entry> }));
+	return entryLoading;
+}
+
+/* Klima (TerraClimate, Mittel 1991–2020): je Land ein oder mehrere Orte mit Monatswerten –
+   [Name, [lon, lat], Tageshöchsttemperatur °C ×12, Tiefsttemperatur °C ×12, Niederschlag mm ×12] */
+export type ClimatePlace = [string, [number, number], number[], number[], number[]];
+let climateCache: Record<string, ClimatePlace[]> | null = null;
+let climateLoading: Promise<Record<string, ClimatePlace[]>> | null = null;
+export const climateNow = (code: string) => (climateCache ? (climateCache[code] ?? null) : undefined);
+export function loadClimate() {
+	if (climateCache) return Promise.resolve(climateCache);
+	climateLoading ??= import('./data/climate.json').then((m) => (climateCache = m.default as unknown as Record<string, ClimatePlace[]>));
+	return climateLoading;
+}
+
+/** Wie angenehm ist ein Monat zum Reisen (0–1)? Tagestemperatur 22–32 °C ideal (abnehmend bis 10 °C bzw. 39 °C – am
+    Strand sind 32 °C noch angenehm), dazu wenig Regen (bis 60 mm voll, ab 250 mm im Monat Regenzeit). Gedacht für Städte-,
+    Rund- und Badereisen, nicht für Wintersport. */
+export function monthScore(tmax: number, ppt: number) {
+	const t = tmax < 22 ? Math.max(0, (tmax - 10) / 12) : tmax > 32 ? Math.max(0, (39 - tmax) / 7) : 1;
+	const r = ppt <= 60 ? 1 : ppt >= 250 ? 0 : 1 - (ppt - 60) / 190;
+	return t * (0.35 + 0.65 * r);
+}
+/** beste Monate (0–11): mindestens 80 % des besten Monats. Erreicht kein Monat ein gutes Maß (zu kalt oder ständig
+    nass), sind es nur die angenehmsten – bei Kälte das ganze Jahr über die wärmsten Monate (z. B. Spitzbergen: Jul – Aug). */
+export function bestMonths(tmax: number[], ppt: number[]) {
+	const s = tmax.map((t, i) => monthScore(t, ppt[i]));
+	const max = Math.max(...s);
+	if (max >= 0.5) {
+		const ok = s.map((v) => v >= 0.8 * max);
+		// einzelne knapp verfehlte Monate zwischen zwei guten nicht herausreißen (Cusco: Apr – Nov statt Apr – Jun, Aug – Nov)
+		const fill = ok.map((o, i) => o || (ok[(i + 11) % 12] && ok[(i + 1) % 12] && s[i] >= 0.65 * max));
+		return { months: fill.map((o, i) => (o ? i : -1)).filter((i) => i >= 0), good: true };
+	}
+	if (max >= 0.12) return { months: s.map((v, i) => (v >= max - 0.08 ? i : -1)).filter((i) => i >= 0), good: false };
+	const warm = Math.max(...tmax);
+	return { months: tmax.map((t, i) => (t >= warm - 1.5 ? i : -1)).filter((i) => i >= 0), good: false };
+}
+const MONTHS = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez'];
+export const MONTHS_LONG = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
+/** Monate als Zeiträume, auch über den Jahreswechsel, nach Beginn sortiert: „Mai – Sep“, „Nov – Mär“, „Jan – Mär, Jun – Aug“ */
+export function monthRanges(ms: number[]) {
+	if (!ms.length) return '';
+	if (ms.length === 12) return 'ganzjährig';
+	const set = new Set(ms);
+	const start = [...Array(12).keys()].find((i) => !set.has(i)) ?? 0; // an einer Lücke beginnen, dann zusammenhängend
+	const runs: number[][] = [];
+	let run: number[] = [];
+	for (let k = 1; k <= 12; k++) {
+		const i = (start + k) % 12;
+		if (set.has(i)) run.push(i);
+		else if (run.length) {
+			runs.push(run);
+			run = [];
+		}
+	}
+	if (run.length) runs.push(run);
+	return runs
+		.sort((a, b) => a[0] - b[0])
+		.map((r) => (r.length === 1 ? MONTHS[r[0]] : `${MONTHS[r[0]]} – ${MONTHS[r[r.length - 1]]}`))
+		.join(', ');
+}
+
+/** Tageslicht am 15. des Monats (0–11) an einem Ort: Stunden von Sonnenauf- bis -untergang (Sonnenmitte 0,833° unter
+    dem Horizont, wie im Kalender üblich); 24 = Mitternachtssonne, 0 = Polarnacht */
+export function daylight(lat: number, month: number) {
+	const doy = [15, 46, 74, 105, 135, 166, 196, 227, 258, 288, 319, 349][month];
+	const g = ((2 * Math.PI) / 365) * (doy - 1);
+	const decl = 0.006918 - 0.399912 * Math.cos(g) + 0.070257 * Math.sin(g) - 0.006758 * Math.cos(2 * g) + 0.000907 * Math.sin(2 * g) - 0.002697 * Math.cos(3 * g) + 0.00148 * Math.sin(3 * g);
+	const phi = (lat * Math.PI) / 180;
+	const c = (Math.sin((-0.833 * Math.PI) / 180) - Math.sin(phi) * Math.sin(decl)) / (Math.cos(phi) * Math.cos(decl));
+	if (c <= -1) return 24;
+	if (c >= 1) return 0;
+	return (2 * ((Math.acos(c) * 180) / Math.PI)) / 15;
+}
+export function fmtDaylight(h: number) {
+	if (h >= 24) return 'Mitternachtssonne';
+	if (h <= 0) return 'Polarnacht';
+	const m = Math.round(h * 60);
+	return `${Math.floor(m / 60)} Std.${m % 60 ? ` ${m % 60} Min.` : ''} Tageslicht`;
 }

@@ -1,0 +1,1598 @@
+{
+"AD": {
+"k": "free",
+"sig": "67250de142"
+},
+"AE": {
+"k": "free",
+"d": 90,
+"sig": "adfc675378"
+},
+"AF": {
+"k": "visa",
+"sig": "b1c0217bbe"
+},
+"AG": {
+"k": "free",
+"d": 90,
+"sig": "2d5a175f2a"
+},
+"AI": {
+"p": "GB",
+"hb": [
+"Reisedokumente",
+"Visum",
+"Elektronische Reisegenehmigung"
+],
+"pa": "n",
+"k": "free",
+"n": "Dauer legt die Einreisebehörde fest",
+"sig": "cdf3397138"
+},
+"AL": {
+"k": "free",
+"d": 90,
+"sig": "c45432f9d1"
+},
+"AM": {
+"k": "free",
+"d": 180,
+"n": "pro Kalenderjahr",
+"sig": "d19619975a"
+},
+"AO": {
+"k": "free",
+"d": 30,
+"n": "für touristische Reisen",
+"sig": "64df018c91"
+},
+"AQ": {
+"k": "special",
+"n": "Genehmigung des Umweltbundesamts nötig (bei Reiseveranstaltern meist inklusive)",
+"link": "https://www.umweltbundesamt.de/themen/nachhaltigkeit-strategien-internationales/antarktis"
+},
+"AR": {
+"k": "free",
+"d": 90,
+"sig": "3010845919"
+},
+"AS": {
+"p": "US",
+"hb": [
+"Reisedokumente",
+"Visum",
+"Einreise nach Amerikanisch-Samoa"
+],
+"pa": "n",
+"k": "special",
+"n": "eigene Einreiseerlaubnis vorab · Pass 6 Monate über Ausreise gültig",
+"sig": "9e65e7c540"
+},
+"AT": {
+"k": "eu",
+"sig": "88b61c4e9c",
+"n": "EU-Freizügigkeit"
+},
+"AU": {
+"k": "evisa",
+"d": 90,
+"n": "eVisitor-Visum vorab online (kostenlos)",
+"sig": "1a91686b95"
+},
+"AW": {
+"p": "NL",
+"hb": [
+"Karibische Teile"
+],
+"pa": "n",
+"k": "free",
+"n": "Online-Einreisekarte (ED-Card) vorab",
+"sig": "a44478acd2"
+},
+"AX": {
+"p": "FI",
+"hb": [
+"Reisedokumente"
+],
+"pa": "y",
+"k": "eu",
+"sig": "7313e583dd",
+"n": "EU-Freizügigkeit"
+},
+"AZ": {
+"k": "evisa",
+"d": 30,
+"n": "online über das Visaportal oder bei der Botschaft",
+"sig": "9122e266d9"
+},
+"BA": {
+"k": "free",
+"d": 90,
+"n": "innerhalb von 6 Monaten",
+"sig": "95ea4f1d22"
+},
+"BB": {
+"k": "free",
+"d": 90,
+"sig": "6c034cc0d2"
+},
+"BD": {
+"k": "arrival",
+"n": "oder vorab bei der Botschaft",
+"sig": "b9b8ef5e46"
+},
+"BE": {
+"k": "eu",
+"sig": "01c2d9a95b",
+"n": "EU-Freizügigkeit"
+},
+"BF": {
+"k": "evisa",
+"n": "nur online, frühzeitig beantragen",
+"sig": "652246d45e"
+},
+"BG": {
+"k": "eu",
+"sig": "f6731274f9",
+"n": "EU-Freizügigkeit"
+},
+"BH": {
+"k": "arrival",
+"d": 14,
+"n": "oder vorab online bzw. bei der Botschaft",
+"sig": "4802aaefd8"
+},
+"BI": {
+"k": "arrival",
+"n": "nur am Flughafen, Antrag vorab online möglich",
+"sig": "57eec477f7"
+},
+"BJ": {
+"k": "evisa",
+"n": "mind. 7 Tage vor Abflug online",
+"sig": "c4d6692e96"
+},
+"BL": {
+"p": "FR",
+"hb": [
+"Reisen in die französischen Überseegebiete"
+],
+"pa": "r",
+"k": "free",
+"n": "Reisepass empfohlen",
+"sig": "7036914622",
+"pat": "nur ohne Zwischenstopp außerhalb Frankreichs"
+},
+"BM": {
+"p": "GB",
+"hb": [
+"Reisedokumente",
+"Visum",
+"Elektronische Reisegenehmigung"
+],
+"pa": "n",
+"k": "free",
+"n": "Dauer legt die Einreisebehörde fest",
+"sig": "cdf3397138"
+},
+"BN": {
+"k": "free",
+"d": 90,
+"sig": "46fdef2739"
+},
+"BO": {
+"k": "free",
+"d": 90,
+"n": "pro Kalenderjahr",
+"sig": "bdcb8dd08e"
+},
+"BQ": {
+"p": "NL",
+"hb": [
+"Karibische Teile"
+],
+"pa": "n",
+"k": "free",
+"sig": "a44478acd2"
+},
+"BR": {
+"k": "free",
+"d": 90,
+"n": "innerhalb von 6 Monaten",
+"sig": "243b441a0a"
+},
+"BS": {
+"k": "free",
+"d": 90,
+"sig": "23cb4ca0ae"
+},
+"BT": {
+"k": "visa",
+"n": "über einen Reiseveranstalter · 100 USD Gebühr pro Tag",
+"sig": "1cc820c985"
+},
+"BV": {
+"p": "NO",
+"hb": [
+"Reisedokumente"
+],
+"pa": null,
+"k": "special",
+"n": "Unbewohnt · Betreten nur mit Genehmigung",
+"sig": "bebb10a564"
+},
+"BW": {
+"k": "free",
+"d": 90,
+"n": "pro Kalenderjahr",
+"sig": "4d7a481034"
+},
+"BY": {
+"k": "free",
+"d": 30,
+"u": "2026-12-31",
+"sig": "4eea9d67ff"
+},
+"BZ": {
+"k": "free",
+"d": 30,
+"sig": "d5318dc80f"
+},
+"CA": {
+"k": "auth",
+"d": 180,
+"n": "eTA vorab online (bei Anreise per Flugzeug)",
+"sig": "e25cb0f5d2"
+},
+"CC": {
+"p": "AU",
+"hb": [
+"Reisedokumente",
+"Visum"
+],
+"pa": "n",
+"k": "evisa",
+"d": 90,
+"n": "eVisitor-Visum vorab online (wie Australien)",
+"sig": "1a91686b95"
+},
+"CD": {
+"k": "visa",
+"n": "bei der Botschaft · kein Visum bei Ankunft",
+"sig": "cc211f654e"
+},
+"CF": {
+"k": "visa",
+"n": "bei der Botschaft in Paris",
+"sig": "18ec16e8d2"
+},
+"CG": {
+"k": "visa",
+"n": "bei der Botschaft · kein Visum bei Ankunft",
+"sig": "91a244e16b"
+},
+"CH": {
+"k": "eu",
+"sig": "592ed3be5c",
+"n": "Freizügigkeit wie in der EU"
+},
+"CI": {
+"k": "evisa",
+"n": "online vorab, Ausstellung bei Ankunft",
+"sig": "f282bc9d8d"
+},
+"CK": {
+"k": "arrival",
+"d": 31,
+"n": "kostenlos",
+"sig": "020e3ce4ff"
+},
+"CL": {
+"k": "free",
+"d": 90,
+"sig": "8bcd42043c"
+},
+"CM": {
+"k": "evisa",
+"sig": "444a43dfd9"
+},
+"CN": {
+"k": "free",
+"d": 30,
+"u": "2026-12-31",
+"sig": "262dc736b6"
+},
+"CO": {
+"k": "free",
+"d": 90,
+"n": "Dauer legt die Einreisebehörde fest",
+"sig": "a1c2c66d49"
+},
+"CR": {
+"k": "free",
+"d": 180,
+"sig": "084181fa1b"
+},
+"CU": {
+"k": "evisa",
+"d": 90,
+"n": "nur online (eVisaCuba)",
+"sig": "76b84b2388"
+},
+"CV": {
+"k": "auth",
+"d": 30,
+"n": "Online-Registrierung vorab (gebührenpflichtig)",
+"sig": "bb2c56b7b5"
+},
+"CW": {
+"p": "NL",
+"hb": [
+"Karibische Teile"
+],
+"pa": "n",
+"k": "free",
+"n": "Online-Einreisekarte (ED-Card) vorab",
+"sig": "a44478acd2"
+},
+"CX": {
+"p": "AU",
+"hb": [
+"Reisedokumente",
+"Visum"
+],
+"pa": "n",
+"k": "evisa",
+"d": 90,
+"n": "eVisitor-Visum vorab online (wie Australien)",
+"sig": "1a91686b95"
+},
+"CY": {
+"k": "eu",
+"sig": "06beeedc48",
+"n": "EU-Freizügigkeit"
+},
+"CZ": {
+"k": "eu",
+"sig": "c6ed0e0d82",
+"n": "EU-Freizügigkeit"
+},
+"DJ": {
+"k": "arrival",
+"n": "oder vorab als E-Visum",
+"sig": "8a6db52e6f"
+},
+"DK": {
+"k": "eu",
+"sig": "4d1ef73051",
+"n": "EU-Freizügigkeit"
+},
+"DM": {
+"k": "free",
+"d": 90,
+"sig": "72147ccf8c"
+},
+"DO": {
+"k": "free",
+"d": 30,
+"sig": "aa6b9e8a1d"
+},
+"DZ": {
+"k": "visa",
+"n": "persönlich bei der Botschaft · kein Visum bei Ankunft",
+"sig": "794a53fd7c"
+},
+"EC": {
+"k": "free",
+"d": 90,
+"n": "pro Jahr",
+"sig": "a6132b0cd3"
+},
+"EE": {
+"k": "eu",
+"sig": "942d1b2846",
+"n": "EU-Freizügigkeit"
+},
+"EG": {
+"k": "arrival",
+"n": "oder vorab als E-Visum",
+"sig": "a7480bee61",
+"pat": "nur mit 2 biometrischen Passfotos"
+},
+"EH": {
+"p": "MA",
+"hb": [
+"Reisedokumente",
+"Visum"
+],
+"pa": "n",
+"k": "free",
+"d": 90,
+"n": "Regeln wie Marokko",
+"wt": "Von Reisen wird dringend abgeraten",
+"sig": "c627a69052"
+},
+"ER": {
+"k": "visa",
+"sig": "2335b2bc80"
+},
+"ES": {
+"k": "eu",
+"sig": "5cb8b220cf",
+"n": "EU-Freizügigkeit"
+},
+"ET": {
+"k": "evisa",
+"n": "oder bei der Botschaft",
+"sig": "6d8f9427f9"
+},
+"FI": {
+"k": "eu",
+"sig": "70737df559",
+"n": "EU-Freizügigkeit"
+},
+"FJ": {
+"k": "free",
+"d": 120,
+"n": "Dauer legt die Einreisebehörde fest",
+"sig": "033c45c442"
+},
+"FK": {
+"p": "GB",
+"hb": [
+"Reisedokumente",
+"Visum",
+"Elektronische Reisegenehmigung"
+],
+"pa": "n",
+"k": "free",
+"n": "Dauer legt die Einreisebehörde fest",
+"sig": "cdf3397138"
+},
+"FM": {
+"k": "free",
+"d": 90,
+"sig": "0b8981e65c"
+},
+"FO": {
+"p": "DK",
+"hb": [
+"Einreise in die Färöer"
+],
+"pa": "y",
+"k": "free",
+"n": "nicht EU/Schengen",
+"sig": "0c64d0ed3f"
+},
+"FR": {
+"k": "eu",
+"sig": "41b01a4f3f",
+"n": "EU-Freizügigkeit"
+},
+"GA": {
+"k": "evisa",
+"n": "nur für Touristen",
+"sig": "9f16ed3630"
+},
+"GB": {
+"k": "auth",
+"d": 180,
+"n": "ETA vorab online (gebührenpflichtig)",
+"sig": "2e8942a443"
+},
+"GD": {
+"k": "free",
+"n": "meist 4 Wochen, verlängerbar",
+"sig": "8eb0620861"
+},
+"GE": {
+"k": "free",
+"d": 360,
+"sig": "824e166739",
+"pat": "bei Anreise über Drittstaaten Reisepass empfohlen"
+},
+"GF": {
+"p": "FR",
+"hb": [
+"Reisen in die französischen Überseegebiete"
+],
+"pa": "r",
+"k": "eu",
+"n": "EU-Gebiet · Reisepass empfohlen",
+"sig": "7036914622",
+"pat": "nur ohne Zwischenstopp außerhalb Frankreichs"
+},
+"GG": {
+"p": "GB",
+"hb": [
+"Reisedokumente",
+"Visum",
+"Elektronische Reisegenehmigung"
+],
+"pa": "n",
+"k": "auth",
+"d": 180,
+"n": "ETA vorab online (wie Großbritannien)",
+"sig": "cdf3397138"
+},
+"GH": {
+"k": "evisa",
+"n": "vorab online",
+"sig": "1377e8a7ec"
+},
+"GI": {
+"p": "GB",
+"hb": [
+"Reisedokumente",
+"Visum",
+"Elektronische Reisegenehmigung"
+],
+"pa": "y",
+"k": "free",
+"n": "ETA nur bei Anreise über Großbritannien",
+"sig": "cdf3397138"
+},
+"GL": {
+"p": "DK",
+"hb": [
+"Einreise nach Grönland"
+],
+"pa": "n",
+"k": "free",
+"n": "nicht EU/Schengen",
+"sig": "a7614f0ad6"
+},
+"GM": {
+"k": "arrival",
+"d": 28,
+"n": "kostenlos",
+"sig": "32340ff9c5"
+},
+"GN": {
+"k": "evisa",
+"n": "vorab online",
+"sig": "485b6443c9"
+},
+"GP": {
+"p": "FR",
+"hb": [
+"Reisen in die französischen Überseegebiete"
+],
+"pa": "r",
+"k": "eu",
+"n": "EU-Gebiet · Reisepass empfohlen",
+"sig": "7036914622",
+"pat": "nur ohne Zwischenstopp außerhalb Frankreichs"
+},
+"GQ": {
+"k": "evisa",
+"n": "bei Flugreise vorab online",
+"sig": "1f6504cdc0"
+},
+"GR": {
+"k": "eu",
+"sig": "a97e57e849",
+"n": "EU-Freizügigkeit"
+},
+"GS": {
+"p": "GB",
+"hb": [
+"Reisedokumente",
+"Visum",
+"Elektronische Reisegenehmigung"
+],
+"pa": null,
+"k": "special",
+"n": "Besuch nur mit Genehmigung, meist per Expeditionsschiff",
+"sig": "cdf3397138"
+},
+"GT": {
+"k": "free",
+"d": 90,
+"n": "digitale Reiseerklärung vorab",
+"sig": "ec039aace2"
+},
+"GU": {
+"p": "US",
+"hb": [
+"Reisedokumente",
+"Visum",
+"Einreise nach Amerikanisch-Samoa"
+],
+"pa": "n",
+"k": "auth",
+"d": 90,
+"n": "ESTA vorab online (wie USA)",
+"sig": "9e65e7c540"
+},
+"GW": {
+"k": "arrival",
+"d": 30,
+"n": "am Flughafen (80 EUR) oder vorab in Brüssel",
+"sig": "956e8e871b"
+},
+"GY": {
+"k": "free",
+"d": 90,
+"sig": "8df518cc6d"
+},
+"HK": {
+"k": "free",
+"d": 90,
+"sig": "3cfb4d7b15"
+},
+"HM": {
+"p": "AU",
+"hb": [
+"Reisedokumente",
+"Visum"
+],
+"pa": null,
+"k": "special",
+"n": "Unbewohnt · Betreten nur mit Genehmigung",
+"sig": "1a91686b95"
+},
+"HN": {
+"k": "free",
+"d": 90,
+"sig": "a42eca2668"
+},
+"HR": {
+"k": "eu",
+"sig": "373958c49d",
+"n": "EU-Freizügigkeit"
+},
+"HT": {
+"k": "free",
+"d": 90,
+"sig": "50469b4d6f"
+},
+"HU": {
+"k": "eu",
+"sig": "58d2650f58",
+"n": "EU-Freizügigkeit"
+},
+"ID": {
+"k": "arrival",
+"d": 30,
+"n": "auch vorab online (e-VoA)",
+"sig": "84af1ffaff"
+},
+"IE": {
+"k": "eu",
+"sig": "f05161c627",
+"n": "EU-Freizügigkeit"
+},
+"IL": {
+"k": "auth",
+"d": 90,
+"n": "ETA-IL vorab online",
+"sig": "35811c582c"
+},
+"IM": {
+"p": "GB",
+"hb": [
+"Reisedokumente",
+"Visum",
+"Elektronische Reisegenehmigung"
+],
+"pa": "n",
+"k": "auth",
+"d": 180,
+"n": "ETA vorab online (wie Großbritannien)",
+"sig": "cdf3397138"
+},
+"IN": {
+"k": "evisa",
+"n": "kein Visum bei Ankunft",
+"sig": "fc2135bdb4"
+},
+"IO": {
+"p": "GB",
+"hb": [
+"Reisedokumente",
+"Visum",
+"Elektronische Reisegenehmigung"
+],
+"pa": null,
+"k": "special",
+"n": "Kein Tourismus · Zutritt nur mit Genehmigung",
+"sig": "cdf3397138"
+},
+"IQ": {
+"k": "evisa",
+"n": "kein Visum bei Ankunft",
+"sig": "815c91c21c"
+},
+"IR": {
+"k": "visa",
+"sig": "4f8424bc4c"
+},
+"IS": {
+"k": "eu",
+"sig": "8bbfc8ef38",
+"n": "EWR-Freizügigkeit"
+},
+"IT": {
+"k": "eu",
+"sig": "af1c5dbc5e",
+"n": "EU-Freizügigkeit"
+},
+"JE": {
+"p": "GB",
+"hb": [
+"Reisedokumente",
+"Visum",
+"Elektronische Reisegenehmigung"
+],
+"pa": "n",
+"k": "auth",
+"d": 180,
+"n": "ETA vorab online (wie Großbritannien)",
+"sig": "cdf3397138"
+},
+"JM": {
+"k": "free",
+"d": 90,
+"n": "kostenlose Online-Registrierung vorab",
+"sig": "fc1e78e2bd"
+},
+"JO": {
+"k": "arrival",
+"n": "oder vorab online",
+"sig": "6b4043bd9e"
+},
+"JP": {
+"k": "free",
+"d": 90,
+"sig": "754fef3b43"
+},
+"KE": {
+"k": "auth",
+"n": "eTA vorab online",
+"sig": "404125a349"
+},
+"KG": {
+"k": "free",
+"d": 30,
+"sig": "cd04048f4f"
+},
+"KH": {
+"k": "arrival",
+"n": "Online-Registrierung (e-Arrival) vorab · auch E-Visum",
+"sig": "13cc45af2d"
+},
+"KI": {
+"k": "free",
+"d": 90,
+"sig": "5c0bc6b407"
+},
+"KM": {
+"k": "arrival",
+"d": 45,
+"sig": "bc65bd4cd5"
+},
+"KN": {
+"k": "auth",
+"d": 90,
+"n": "eTA vorab",
+"sig": "5fe4f3b51a"
+},
+"KP": {
+"k": "visa",
+"n": "nur mit Einladung über ein Reisebüro",
+"sig": "a6d440479d"
+},
+"KR": {
+"k": "free",
+"d": 90,
+"n": "K-ETA bis Ende 2026 nicht nötig",
+"u": "2026-12-31",
+"sig": "d43fbc3e49"
+},
+"KW": {
+"k": "arrival",
+"n": "oder vorab online bzw. bei der Botschaft",
+"sig": "b07b89362b"
+},
+"KY": {
+"p": "GB",
+"hb": [
+"Reisedokumente",
+"Visum",
+"Elektronische Reisegenehmigung"
+],
+"pa": "n",
+"k": "free",
+"n": "Dauer legt die Einreisebehörde fest",
+"sig": "cdf3397138"
+},
+"KZ": {
+"k": "free",
+"d": 30,
+"n": "ETA (App QazETA) empfohlen",
+"sig": "983d767682"
+},
+"LA": {
+"k": "arrival",
+"n": "oder vorab online bzw. bei der Botschaft",
+"sig": "fa8f35b07f"
+},
+"LB": {
+"k": "arrival",
+"d": 30,
+"n": "kostenlos",
+"sig": "7375db9259"
+},
+"LC": {
+"k": "free",
+"d": 90,
+"sig": "ea3f9c996f"
+},
+"LI": {
+"k": "eu",
+"sig": "5efdacfdd8",
+"n": "EWR-Freizügigkeit"
+},
+"LK": {
+"k": "auth",
+"d": 30,
+"n": "ETA vorab online (kostenlos)",
+"sig": "a88001a3ab"
+},
+"LR": {
+"k": "visa",
+"n": "bei der Botschaft · kein Visum bei Ankunft",
+"sig": "0613de47f2"
+},
+"LS": {
+"k": "free",
+"d": 14,
+"sig": "6d840b9cad"
+},
+"LT": {
+"k": "eu",
+"sig": "8c2e4bf455",
+"n": "EU-Freizügigkeit"
+},
+"LU": {
+"k": "eu",
+"sig": "7dac993d06",
+"n": "EU-Freizügigkeit"
+},
+"LV": {
+"k": "eu",
+"sig": "0f379673f5",
+"n": "EU-Freizügigkeit"
+},
+"LY": {
+"k": "visa",
+"sig": "e39f345322"
+},
+"MA": {
+"k": "free",
+"d": 90,
+"sig": "c627a69052"
+},
+"MC": {
+"k": "eu",
+"sig": "dd06b2c89c",
+"n": "Regeln wie Frankreich"
+},
+"MD": {
+"k": "free",
+"d": 90,
+"sig": "9c735131fa"
+},
+"ME": {
+"k": "free",
+"d": 90,
+"sig": "eb9801ef2f"
+},
+"MF": {
+"p": "FR",
+"hb": [
+"Reisen in die französischen Überseegebiete"
+],
+"pa": "r",
+"k": "eu",
+"n": "EU-Gebiet · Reisepass empfohlen",
+"sig": "7036914622",
+"pat": "nur ohne Zwischenstopp außerhalb Frankreichs"
+},
+"MG": {
+"k": "arrival",
+"d": 90,
+"n": "Gebühr je nach Dauer 30–50 EUR",
+"sig": "8e2e250718"
+},
+"MH": {
+"k": "free",
+"sig": "5f3b3186aa"
+},
+"MK": {
+"k": "free",
+"d": 90,
+"sig": "c7b036ed7c"
+},
+"ML": {
+"k": "visa",
+"sig": "9e683c6d9c"
+},
+"MM": {
+"k": "evisa",
+"n": "oder bei der Botschaft",
+"sig": "343d2993d5"
+},
+"MN": {
+"k": "free",
+"d": 30,
+"sig": "daaffdbaaa"
+},
+"MO": {
+"k": "arrival",
+"d": 90,
+"n": "kostenlos",
+"sig": "27f77c427c"
+},
+"MP": {
+"p": "US",
+"hb": [
+"Reisedokumente",
+"Visum",
+"Einreise nach Amerikanisch-Samoa"
+],
+"pa": "n",
+"k": "auth",
+"d": 90,
+"n": "ESTA vorab online (wie USA)",
+"sig": "9e65e7c540"
+},
+"MQ": {
+"p": "FR",
+"hb": [
+"Reisen in die französischen Überseegebiete"
+],
+"pa": "r",
+"k": "eu",
+"n": "EU-Gebiet · Reisepass empfohlen",
+"sig": "7036914622",
+"pat": "nur ohne Zwischenstopp außerhalb Frankreichs"
+},
+"MR": {
+"k": "evisa",
+"d": 30,
+"n": "nur online",
+"sig": "efa42b6111"
+},
+"MS": {
+"p": "GB",
+"hb": [
+"Reisedokumente",
+"Visum",
+"Elektronische Reisegenehmigung"
+],
+"pa": "n",
+"k": "free",
+"n": "Dauer legt die Einreisebehörde fest",
+"sig": "cdf3397138"
+},
+"MT": {
+"k": "eu",
+"sig": "466fa57137",
+"n": "EU-Freizügigkeit"
+},
+"MU": {
+"k": "free",
+"sig": "dcf5b0ffa9"
+},
+"MV": {
+"k": "arrival",
+"d": 30,
+"n": "kostenlos",
+"sig": "adb8b31a9d"
+},
+"MW": {
+"k": "arrival",
+"d": 90,
+"n": "auch online · 50 USD",
+"sig": "020db25bf3"
+},
+"MX": {
+"k": "free",
+"d": 180,
+"sig": "d92958975c"
+},
+"MY": {
+"k": "free",
+"d": 90,
+"n": "MDAC-Anmeldung vorab online",
+"sig": "16e3d74fad"
+},
+"MZ": {
+"k": "auth",
+"d": 30,
+"n": "eTA vorab online (ca. 41 EUR)",
+"sig": "581ba63d81"
+},
+"NA": {
+"k": "arrival",
+"d": 90,
+"n": "Online-Antrag vorab empfohlen",
+"sig": "fef2b2c30a"
+},
+"NC": {
+"p": "FR",
+"hb": [
+"Reisen in die französischen Überseegebiete"
+],
+"pa": "r",
+"k": "free",
+"n": "Reisepass empfohlen",
+"sig": "7036914622",
+"pat": "nur ohne Zwischenstopp außerhalb Frankreichs"
+},
+"NE": {
+"k": "special",
+"sig": "da182dc6b0",
+"n": "Angaben zur Einreise siehe Auswärtiges Amt"
+},
+"NF": {
+"p": "AU",
+"hb": [
+"Reisedokumente",
+"Visum"
+],
+"pa": "n",
+"k": "evisa",
+"d": 90,
+"n": "eVisitor-Visum vorab online (wie Australien)",
+"sig": "1a91686b95"
+},
+"NG": {
+"k": "evisa",
+"n": "nur online",
+"sig": "86bb6ea1c9"
+},
+"NI": {
+"k": "free",
+"d": 90,
+"sig": "03756b2e56"
+},
+"NL": {
+"k": "eu",
+"sig": "9fdc7a97e2",
+"n": "EU-Freizügigkeit"
+},
+"NO": {
+"k": "eu",
+"sig": "6a3548db00",
+"n": "EWR-Freizügigkeit"
+},
+"NP": {
+"k": "arrival",
+"n": "oder vorab bei der Botschaft",
+"sig": "436517e364"
+},
+"NR": {
+"k": "auth",
+"d": 30,
+"n": "Einreisegenehmigung vorab nötig",
+"sig": "3afbe6ba25"
+},
+"NU": {
+"k": "free",
+"d": 30,
+"sig": "5382eb5823"
+},
+"NZ": {
+"k": "auth",
+"d": 90,
+"n": "NZeTA vorab online",
+"sig": "88ce6097ec"
+},
+"OM": {
+"k": "evisa",
+"n": "14 Tage auch kostenlos bei Einreise möglich",
+"sig": "fef831b23d"
+},
+"PA": {
+"k": "free",
+"d": 90,
+"sig": "5b76ed042a"
+},
+"PE": {
+"k": "free",
+"d": 90,
+"n": "pro Halbjahr",
+"sig": "7759246553"
+},
+"PF": {
+"p": "FR",
+"hb": [
+"Reisen in die französischen Überseegebiete"
+],
+"pa": "r",
+"k": "free",
+"n": "Reisepass empfohlen",
+"sig": "7036914622",
+"pat": "nur ohne Zwischenstopp außerhalb Frankreichs"
+},
+"PG": {
+"k": "visa",
+"n": "teils online möglich",
+"sig": "f9c7336b0c"
+},
+"PH": {
+"k": "arrival",
+"d": 30,
+"n": "kostenlos",
+"sig": "7a1a36ed7d"
+},
+"PK": {
+"k": "visa",
+"n": "möglichst vorab bei der Botschaft",
+"sig": "3017531493"
+},
+"PL": {
+"k": "eu",
+"sig": "ef4f927a81",
+"n": "EU-Freizügigkeit"
+},
+"PM": {
+"p": "FR",
+"hb": [
+"Reisen in die französischen Überseegebiete"
+],
+"pa": "r",
+"k": "free",
+"n": "Reisepass empfohlen",
+"sig": "7036914622",
+"pat": "nur ohne Zwischenstopp außerhalb Frankreichs"
+},
+"PN": {
+"p": "GB",
+"hb": [
+"Reisedokumente",
+"Visum",
+"Elektronische Reisegenehmigung"
+],
+"pa": "n",
+"k": "special",
+"n": "Britisches Überseegebiet mit eigenen Einreiseregeln",
+"sig": "cdf3397138"
+},
+"PR": {
+"p": "US",
+"hb": [
+"Reisedokumente",
+"Visum",
+"Einreise nach Amerikanisch-Samoa"
+],
+"pa": "n",
+"k": "auth",
+"d": 90,
+"n": "ESTA vorab online (wie USA)",
+"sig": "9e65e7c540"
+},
+"PS": {
+"k": "auth",
+"d": 90,
+"n": "ETA-IL (Einreise über Israel)",
+"sig": "35811c582c"
+},
+"PT": {
+"k": "eu",
+"sig": "aa0f3dabf7",
+"n": "EU-Freizügigkeit"
+},
+"PW": {
+"k": "free",
+"d": 90,
+"sig": "27940c0fb3"
+},
+"PY": {
+"k": "free",
+"d": 90,
+"sig": "0fc3a45230"
+},
+"QA": {
+"k": "free",
+"d": 90,
+"n": "Visa-Waiver bei Einreise",
+"sig": "749f9b9658"
+},
+"RE": {
+"p": "FR",
+"hb": [
+"Reisen in die französischen Überseegebiete"
+],
+"pa": "r",
+"k": "eu",
+"n": "EU-Gebiet · Reisepass empfohlen",
+"sig": "7036914622",
+"pat": "nur ohne Zwischenstopp außerhalb Frankreichs"
+},
+"RO": {
+"k": "eu",
+"sig": "99705cfee5",
+"n": "EU-Freizügigkeit"
+},
+"RS": {
+"k": "free",
+"d": 90,
+"sig": "9db3b67394"
+},
+"RU": {
+"k": "visa",
+"n": "Botschaft oder E-Visum · nicht bei Ankunft",
+"sig": "85fc89beb5"
+},
+"RW": {
+"k": "arrival",
+"d": 30,
+"n": "oder vorab online",
+"sig": "0198845379"
+},
+"SA": {
+"k": "evisa",
+"n": "auch bei Einreise möglich",
+"sig": "d330f24c41"
+},
+"SB": {
+"k": "free",
+"d": 90,
+"sig": "cd343287c0"
+},
+"SC": {
+"k": "auth",
+"n": "digitale Einreisegenehmigung vorab",
+"sig": "aa2712ff9f"
+},
+"SD": {
+"k": "visa",
+"sig": "4ac0b19792"
+},
+"SE": {
+"k": "eu",
+"sig": "2280ccba7a",
+"n": "EU-Freizügigkeit"
+},
+"SG": {
+"k": "free",
+"d": 90,
+"sig": "c593ff0751"
+},
+"SH": {
+"p": "GB",
+"hb": [
+"Reisedokumente",
+"Visum",
+"Elektronische Reisegenehmigung"
+],
+"pa": "n",
+"k": "special",
+"n": "Britisches Überseegebiet mit eigenen Einreiseregeln",
+"sig": "cdf3397138"
+},
+"SI": {
+"k": "eu",
+"sig": "c6311534b9",
+"n": "EU-Freizügigkeit"
+},
+"SJ": {
+"p": "NO",
+"hb": [
+"Reisedokumente",
+"Visum"
+],
+"pa": "y",
+"k": "free",
+"n": "Grenzkontrolle bei Einreise",
+"sig": "6a3548db00"
+},
+"SK": {
+"k": "eu",
+"sig": "3cbd70577e",
+"n": "EU-Freizügigkeit"
+},
+"SL": {
+"k": "evisa",
+"n": "vorab online",
+"sig": "68b730dfe1"
+},
+"SM": {
+"k": "free",
+"d": 30,
+"sig": "b26654ca6b"
+},
+"SN": {
+"k": "free",
+"d": 90,
+"sig": "779d9eb01a"
+},
+"SO": {
+"k": "evisa",
+"n": "vorab online",
+"sig": "5d36ae2da1"
+},
+"SR": {
+"k": "auth",
+"n": "E-Touristenkarte vorab online",
+"sig": "1db99098b8"
+},
+"SS": {
+"k": "evisa",
+"n": "oder bei der Botschaft",
+"sig": "f8727fa238"
+},
+"ST": {
+"k": "free",
+"d": 15,
+"sig": "7dfd34e395"
+},
+"SV": {
+"k": "free",
+"d": 90,
+"sig": "7e62d0d615"
+},
+"SX": {
+"p": "NL",
+"hb": [
+"Karibische Teile"
+],
+"pa": "n",
+"k": "free",
+"sig": "a44478acd2"
+},
+"SY": {
+"k": "visa",
+"sig": "ebed4535da"
+},
+"SZ": {
+"k": "arrival",
+"d": 30,
+"sig": "e4ff9af0ea"
+},
+"TC": {
+"p": "GB",
+"hb": [
+"Reisedokumente",
+"Visum",
+"Elektronische Reisegenehmigung"
+],
+"pa": "n",
+"k": "free",
+"n": "Dauer legt die Einreisebehörde fest",
+"sig": "cdf3397138"
+},
+"TD": {
+"k": "evisa",
+"n": "mind. 7 Tage vorher online",
+"sig": "ac7279ca8f"
+},
+"TF": {
+"p": "FR",
+"hb": [
+"Reisen in die französischen Überseegebiete"
+],
+"pa": null,
+"k": "special",
+"n": "Besuch nur mit Genehmigung, meist per Versorgungsschiff",
+"sig": "7036914622"
+},
+"TG": {
+"k": "evisa",
+"n": "mind. 5 Tage vorher online",
+"sig": "6da6c1e268"
+},
+"TH": {
+"k": "free",
+"d": 30,
+"n": "einmal um 30 Tage verlängerbar",
+"sig": "725e6a0699"
+},
+"TJ": {
+"k": "free",
+"d": 30,
+"sig": "234e2514a7"
+},
+"TK": {
+"p": "NZ",
+"hb": [
+"Reisedokumente",
+"Visum"
+],
+"pa": "n",
+"k": "special",
+"n": "Einreise nur mit Genehmigung, Anreise über Samoa",
+"sig": "88ce6097ec"
+},
+"TL": {
+"k": "free",
+"d": 90,
+"sig": "d0ac833fb4"
+},
+"TM": {
+"k": "visa",
+"n": "nur mit Einladung",
+"sig": "9d592c31e2"
+},
+"TN": {
+"k": "free",
+"d": 120,
+"sig": "5e8dbc1a34"
+},
+"TO": {
+"k": "free",
+"d": 90,
+"sig": "6ffe6bdba1"
+},
+"TR": {
+"k": "free",
+"d": 90,
+"n": "innerhalb von 180 Tagen",
+"sig": "63d1fe743d"
+},
+"TT": {
+"k": "free",
+"d": 90,
+"sig": "15d9523e4f"
+},
+"TV": {
+"k": "free",
+"d": 90,
+"sig": "a2f1b896c9"
+},
+"TW": {
+"k": "free",
+"d": 90,
+"sig": "136fbbc044"
+},
+"TZ": {
+"k": "evisa",
+"n": "auch bei Einreise möglich",
+"sig": "dd09bf81a9"
+},
+"UA": {
+"k": "free",
+"d": 90,
+"n": "innerhalb von 180 Tagen",
+"sig": "339605088f"
+},
+"UG": {
+"k": "evisa",
+"n": "nur online",
+"sig": "c68f32c2be"
+},
+"UM": {
+"p": "US",
+"hb": [
+"Reisedokumente",
+"Visum",
+"Einreise nach Amerikanisch-Samoa"
+],
+"pa": null,
+"k": "special",
+"n": "Kein öffentlicher Zugang",
+"sig": "9e65e7c540"
+},
+"US": {
+"k": "auth",
+"d": 90,
+"n": "ESTA vorab online",
+"sig": "25338865ba"
+},
+"UY": {
+"k": "free",
+"d": 90,
+"sig": "364d99fba8"
+},
+"UZ": {
+"k": "free",
+"d": 30,
+"sig": "034f21dded"
+},
+"VA": {
+"k": "free",
+"sig": "759249096b"
+},
+"VC": {
+"k": "free",
+"d": 180,
+"sig": "0e162bcbcc"
+},
+"VE": {
+"k": "free",
+"d": 90,
+"sig": "e2a48ab72c"
+},
+"VG": {
+"p": "GB",
+"hb": [
+"Reisedokumente",
+"Visum",
+"Elektronische Reisegenehmigung"
+],
+"pa": "n",
+"k": "free",
+"n": "Dauer legt die Einreisebehörde fest",
+"sig": "cdf3397138"
+},
+"VI": {
+"p": "US",
+"hb": [
+"Reisedokumente",
+"Visum",
+"Einreise nach Amerikanisch-Samoa"
+],
+"pa": "n",
+"k": "auth",
+"d": 90,
+"n": "ESTA vorab online (wie USA)",
+"sig": "9e65e7c540"
+},
+"VN": {
+"k": "free",
+"d": 45,
+"sig": "6f3463959e"
+},
+"VU": {
+"k": "free",
+"d": 90,
+"sig": "af5c3086f7"
+},
+"WF": {
+"p": "FR",
+"hb": [
+"Reisen in die französischen Überseegebiete"
+],
+"pa": "r",
+"k": "free",
+"n": "Reisepass empfohlen",
+"sig": "7036914622",
+"pat": "nur ohne Zwischenstopp außerhalb Frankreichs"
+},
+"WS": {
+"k": "free",
+"d": 90,
+"sig": "31cc3a59b4"
+},
+"XK": {
+"k": "free",
+"d": 90,
+"sig": "93f98cd339"
+},
+"YE": {
+"k": "visa",
+"sig": "35dba667e0"
+},
+"YT": {
+"p": "FR",
+"hb": [
+"Reisen in die französischen Überseegebiete"
+],
+"pa": "r",
+"k": "eu",
+"n": "EU-Gebiet · Reisepass empfohlen",
+"sig": "7036914622",
+"pat": "nur ohne Zwischenstopp außerhalb Frankreichs"
+},
+"ZA": {
+"k": "free",
+"d": 90,
+"sig": "7e5c8b4c88"
+},
+"ZM": {
+"k": "free",
+"d": 30,
+"n": "verlängerbar",
+"sig": "0bd47352ff"
+},
+"ZW": {
+"k": "arrival",
+"d": 30,
+"n": "30 USD",
+"sig": "73ccb51915"
+}
+}

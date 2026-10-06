@@ -4,6 +4,9 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+  # täglich neu bauen: Reisewarnungen und Einreiseregeln des Auswärtigen Amts bleiben aktuell
+  schedule:
+    - cron: '23 3 * * *'
 
 permissions:
   contents: read
@@ -28,6 +31,11 @@ jobs:
           cache: npm
 
       - run: npm ci
+
+      # Einreise-Daten frisch vom Auswärtigen Amt; schlägt der Abruf fehl, bleibt der gespeicherte Stand
+      - name: Einreise-Daten aktualisieren
+        run: python3 scripts/build-entry.py
+        continue-on-error: true
 
       - run: npm run check
 

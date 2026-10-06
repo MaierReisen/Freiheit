@@ -15,7 +15,7 @@
 	// Legende "zählt nicht" nur zeigen, wenn es solche bereisten Gebiete gibt
 	const hasUncounted = $derived(atlas.data.countries.some((c) => !isCounted(c.code)));
 
-	// Touch-Geräte: Globus erst nach einem Tipp drehbar, sonst scrollt die Seite (siehe engine.ts)
+	// Touch-Geräte: Tipp öffnet ein Land, langes Drücken aktiviert Drehen/Verschieben – sonst scrollt die Seite (siehe engine.ts)
 	const coarse = typeof window !== 'undefined' && !!window.matchMedia?.('(pointer: coarse)').matches;
 	const hint = $derived(
 		ui.full
@@ -23,7 +23,9 @@
 			: ui.mapActive
 				? 'Aktiv · außerhalb tippen zum Beenden'
 				: coarse
-					? 'Tippen zum Drehen'
+					? s.mode === 'globe'
+						? 'Land antippen · halten zum Drehen'
+						: 'Land antippen · halten zum Verschieben'
 					: s.mode === 'globe'
 						? 'Ziehen zum Drehen'
 						: 'Tippe auf ein Land'
