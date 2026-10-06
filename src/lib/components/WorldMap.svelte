@@ -122,7 +122,7 @@
 	});
 </script>
 
-<div class="map-box" class:full={ui.full} class:active={ui.mapActive && !ui.full} id="mapBox" bind:this={box}>
+<div class="map-box" class:full={ui.full} class:active={ui.mapActive && !ui.full} id="mapBox" bind:this={box} oncontextmenu={(e) => e.preventDefault()} role="presentation">
 	<canvas id="mapCv" aria-hidden="true" bind:this={cvB}></canvas>
 	<!-- svelte-ignore a11y_no_interactive_element_to_noninteractive_role -->
 	<canvas id="mapTop" role="img" aria-label="Interaktive Weltkarte mit deinen bereisten Ländern" bind:this={cvT}></canvas>
