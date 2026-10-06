@@ -282,15 +282,20 @@ button.cont{border:0;font:inherit;font-size:14px;color:inherit}
 .map-panel .sw.vs{background:repeating-linear-gradient(135deg,#34D1BF 0 1.5px,transparent 1.5px 4px),rgba(52,209,191,.32)}
 .legend{flex-wrap:wrap;gap:8px 18px}
 
-/* Startseite: Logo-Motiv als eigener Streifen unter der Zahl – das Flugzeug fliegt so weit, wie Länder bereist sind */
+/* Startseite: Logo-Motiv als Streifen unter der Zahl – Startbahn, Sonne, Flugkurve; das Flugzeug fliegt so weit,
+   wie Länder bereist sind, und ist vor der Sonne eine dunkle Silhouette */
 .hero{padding-bottom:0}
-.flight{position:relative;height:132px;margin-top:14px}
+.flight{position:relative;height:150px;margin-top:10px}
 .flight svg{position:absolute;left:0;top:0;overflow:visible}
 .flight-sun{fill:var(--sun)}
+.flight-glow-in{stop-color:var(--sun);stop-opacity:.32}
+.flight-glow-out{stop-color:var(--sun);stop-opacity:0}
+.flight-runway{stroke:var(--ink);stroke-opacity:.35;stroke-width:2;stroke-dasharray:10 8}
 .flight-rest{fill:none;stroke:var(--ink);stroke-opacity:.4;stroke-width:2.6;stroke-linecap:round;stroke-dasharray:.1 7}
 .flight-done{fill:none;stroke:var(--primary);stroke-width:3;stroke-linecap:round}
 .flight-plane{fill:var(--ink)}
-.flight-pct{position:absolute;right:0;bottom:8px;display:flex;flex-direction:column;align-items:flex-end;line-height:1}
+.flight-plane-sil{fill:#0D2B3A}
+.flight-pct{position:absolute;left:0;top:0;display:flex;flex-direction:column;align-items:flex-start;line-height:1}
 .flight-pct b{font-family:var(--display);font-weight:800;font-size:30px;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
 .flight-pct span{margin-top:4px;font-size:13px;font-weight:600;color:var(--muted)}
 
