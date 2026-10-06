@@ -279,11 +279,29 @@ export const ALL = [...new Set(features.map((f) => f.id))].sort((a, b) => nameOf
 
 /** Form eines Landes für Vorschaubilder: alle Teile nahe am Hauptgebiet (weit Entferntes wie Alaska, Hawaii oder
     Französisch-Guayana bleibt weg, damit das Land groß genug erscheint) – plus die Nachbarschaft als Umgebung. */
-export function shapeOf(id: string): { shape: GeoJSON.Feature; around: GeoJSON.Feature; aroundIds: string[]; c: [number, number] } | null {
+type Shape = { shape: GeoJSON.Feature; around: GeoJSON.Feature; aroundIds: string[]; c: [number, number] };
+// Mittelpunkte und fertige Formen merken: das Durchsuchen aller Länderteile kostet sonst bei jedem Öffnen spürbar Zeit
+const centroids = new WeakMap<GeoJSON.Polygon, [number, number]>();
+const centroidOf = (g: GeoJSON.Polygon) => {
+	let c = centroids.get(g);
+	if (!c) centroids.set(g, (c = geoCentroid(g) as [number, number]));
+	return c;
+};
+const shapes = new WeakMap<Lod, Map<string, Shape | null>>();
+export function shapeOf(id: string): Shape | null {
 	const i = INFO[id];
 	// kleine Länder mit den feinen Daten (sofern schon geladen), sonst wären Singapur & Co. nur grobe Vielecke
-	const lod = (i && i.size < 8 && LODS.fine) || getLod('full');
+	let lod = (i && i.size < 8 && LODS.fine) || getLod('full');
 	if (!i || !lod) return null;
+	// große Länder (Russland, Kanada …) erscheinen klein: vereinfachte Umrisse reichen und sparen viel Rechenzeit
+	const coarse = i.size > 40 ? 'v2' : i.size > 20 ? 'v3' : '';
+	if (coarse && lodReady(coarse)) lod = getLod(coarse)!;
+	let cache = shapes.get(lod);
+	if (!cache) shapes.set(lod, (cache = new Map()));
+	if (!cache.has(id)) cache.set(id, buildShape(id, i, lod));
+	return cache.get(id)!;
+}
+function buildShape(id: string, i: (typeof INFO)[string], lod: Lod): Shape | null {
 	let own = lod.polys.filter((p) => p.id === id);
 	if (!own.length && lod !== LODS.full) own = getLod('full')!.polys.filter((p) => p.id === id);
 	// Hauptgebiet = größte Fläche; dazu große Teile (≥ 25 % davon, z. B. Indonesiens Inseln) und alles in seiner Nähe
@@ -291,16 +309,16 @@ export function shapeOf(id: string): { shape: GeoJSON.Feature; around: GeoJSON.F
 	const areas = own.map((p) => geoArea(p.g));
 	const mainIdx = areas.indexOf(Math.max(...areas, 0));
 	const main = own[mainIdx];
-	const mc = main ? geoCentroid(main.g) : i.c;
+	const mc = main ? centroidOf(main.g) : i.c;
 	const near = (Math.max(6, Math.min(20, (main?.size ?? i.size) * 0.9)) * Math.PI) / 180;
-	const parts = own.filter((p, k) => k === mainIdx || areas[k] >= 0.25 * areas[mainIdx] || geoDistance(geoCentroid(p.g), mc) < near);
+	const parts = own.filter((p, k) => k === mainIdx || areas[k] >= 0.25 * areas[mainIdx] || geoDistance(centroidOf(p.g), mc) < near);
 	const R = (Math.max(25, i.size * 1.5) * Math.PI) / 180;
 	const geom: GeoJSON.Geometry = parts.length
 		? { type: 'MultiPolygon', coordinates: parts.map((p) => p.g.coordinates) }
 		: (features.find((f) => f.id === id)?.geometry ?? { type: 'MultiPolygon', coordinates: [] });
 	// Umgebung: andere Länder in der Nähe (für den Kartenausschnitt)
 	const R2 = R * 2.2;
-	const others = lod.polys.filter((p) => p.id !== id && geoDistance(geoCentroid(p.g), i.c) < R2 + (p.size * Math.PI) / 180);
+	const others = lod.polys.filter((p) => p.id !== id && geoDistance(centroidOf(p.g), i.c) < R2 + (p.size * Math.PI) / 180);
 	return {
 		shape: { type: 'Feature', properties: {}, geometry: geom },
 		around: { type: 'Feature', properties: {}, geometry: { type: 'MultiPolygon', coordinates: others.map((p) => p.g.coordinates) } },

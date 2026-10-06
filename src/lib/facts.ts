@@ -1,3 +1,5 @@
+import { geoCentroid, geoDistance } from 'd3-geo';
+
 /* Länder-Fakten für die Detailseite: Daten werden erst beim ersten Öffnen nachgeladen (eigene Datei, ~50 KB).
    Quellen: Wikidata (CC0), mledoze/countries (ODbL), IANA-Zeitzonen – siehe scripts/build-facts.py */
 
@@ -28,19 +30,25 @@ export interface Facts {
 }
 
 /* Gewässer (Natural Earth): Flüsse als Linien, Seen als Flächen – erst beim ersten Öffnen einer Länderseite geladen */
+export interface WaterFeature {
+	n: string;
+	r: number;
+	c: [number, number][][];
+	/** Mittelpunkt [lon, lat] und Ausdehnung (Bogenmaß) – zum schnellen Aussortieren entfernter Gewässer */
+	m: [number, number];
+	rad: number;
+}
 export interface Water {
-	rivers: { n: string; r: number; c: [number, number][][] }[];
-	lakes: { n: string; r: number; c: [number, number][][] }[];
+	rivers: WaterFeature[];
+	lakes: WaterFeature[];
 }
 let water: Water | null = null;
 let waterLoading: Promise<Water> | null = null;
 type Packed = [string, number, number[][]][];
 /** gespeichert als ganze Hundertstelgrad mit Differenzen zum Vorgänger: [x0,y0,dx1,dy1,…] */
-const unpack = (list: Packed) =>
-	list.map(([n, r, parts]) => ({
-		n,
-		r,
-		c: parts.map((f) => {
+const unpack = (list: Packed): WaterFeature[] =>
+	list.map(([n, r, parts]) => {
+		const c = parts.map((f) => {
 			const out: [number, number][] = [];
 			let x = 0,
 				y = 0;
@@ -50,8 +58,15 @@ const unpack = (list: Packed) =>
 				out.push([x / 100, y / 100]);
 			}
 			return out;
-		})
-	}));
+		});
+		const all = c.flat();
+		const pts = all.filter((_, i) => i % Math.max(1, Math.floor(all.length / 48)) === 0);
+		const m = geoCentroid({ type: 'MultiPoint', coordinates: pts }) as [number, number];
+		let rad = 0;
+		for (const q of pts) rad = Math.max(rad, geoDistance(m, q));
+		for (const f of c) rad = Math.max(rad, geoDistance(m, f[0]), geoDistance(m, f[f.length - 1]));
+		return { n, r, c, m, rad: rad + 0.01 };
+	});
 export function loadWater(): Promise<Water> {
 	if (water) return Promise.resolve(water);
 	waterLoading ??= import('./data/water.json').then((m) => {

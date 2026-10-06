@@ -1049,7 +1049,7 @@ export function createWorldMap(o: MapOptions) {
 			const t = tapOnly;
 			if (t)
 				holdTimer = setTimeout(() => {
-					if (tapOnly !== t || t.moved >= 10 || lastScroll > t.t - 350) return;
+					if (tapOnly !== t || t.moved >= 10 || lastScroll > t.t - 350 || ptrs.size) return;
 					tapOnly = null;
 					o.onActivate();
 					navigator.vibrate?.(8);
@@ -1066,6 +1066,11 @@ export function createWorldMap(o: MapOptions) {
 					markDirty(false);
 				}, HOLD_MS);
 			return;
+		}
+		// neuer erster Finger: hängengebliebene Zeiger (ohne „pointerup“) verwerfen, sonst wird jede Berührung zum Zwei-Finger-Zoom
+		if (e.isPrimary && ptrs.size) {
+			ptrs.clear();
+			gest = null;
 		}
 		try {
 			cv.setPointerCapture(e.pointerId);

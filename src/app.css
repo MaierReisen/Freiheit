@@ -419,8 +419,9 @@ input,textarea,[contenteditable="true"]{-webkit-user-select:text;user-select:tex
 .cs-quick .sub em.same{font-weight:600;color:var(--muted)}
 .cs-body{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;margin:14px -22px 0;padding:4px 22px calc(28px + env(safe-area-inset-bottom,0px))}
 .sheet.peek .cs-body{overflow:hidden}
-.cs-map{border-radius:20px;overflow:hidden;box-shadow:inset 0 0 0 1px rgba(255,255,255,.06);background:#0C2E45}
-.cshape{display:block;width:100%;height:auto;aspect-ratio:340/210}
+.cs-map{aspect-ratio:340/210;border-radius:20px;overflow:hidden;box-shadow:inset 0 0 0 1px rgba(255,255,255,.06);background:#0C2E45}
+.cshape{display:block;width:100%;height:auto;aspect-ratio:340/210;animation:cs-in .35s ease-out}
+@keyframes cs-in{from{opacity:0}to{opacity:1}}
 .cs-water.dim{opacity:.38}
 .cs-river{fill:none;stroke:#2F86BD;stroke-linecap:round;stroke-linejoin:round}
 .cs-water:not(.dim) .cs-river{filter:drop-shadow(0 0 1.5px rgba(255,255,255,.45))}

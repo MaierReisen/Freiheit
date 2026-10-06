@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { geoContains, geoDistance, geoGraticule10, geoInterpolate, geoOrthographic, geoPath } from 'd3-geo';
+	import { geoDistance, geoGraticule10, geoInterpolate, geoOrthographic, geoPath } from 'd3-geo';
 	import { shapeOf } from '$lib/map/geo';
 	import { fmtHeight, loadWater, type Facts, type Water } from '$lib/facts';
 	import { visitedSet } from '$lib/atlas.svelte';
@@ -15,6 +15,12 @@
 		H = 210;
 
 	let water = $state<Water | null>(null);
+	// erst zeichnen, wenn die Länderkarte aufgeglitten ist – sonst ruckelt das Öffnen (die Berechnung braucht etwas)
+	let ready = $state(false);
+	$effect(() => {
+		const t = setTimeout(() => (ready = true), 380);
+		return () => clearTimeout(t);
+	});
 	const visited = $derived(visitedSet());
 	// Nachbarschaft getrennt nach bereist (türkis) und nicht bereist (Landfarbe) – wie auf dem Globus
 	const aroundSplit = $derived.by(() => {
@@ -24,7 +30,7 @@
 		return { been: base.path(pick(true)) ?? '', rest: base.path(pick(false)) ?? '' };
 	});
 	$effect(() => {
-		loadWater().then((w) => (water = w));
+		if (ready) loadWater().then((w) => (water = w));
 	});
 
 	const base = $derived.by(() => {
@@ -101,31 +107,52 @@
 			return out;
 		};
 		// Länge im Land selbst zählt (Stichproben), Flüsse nur im Nachbarland fallen weg
-		const inLand = (q: [number, number]) => geoContains(s.shape, q);
-		const byName = new Map<string, { n: string; r: number; runs: [number, number][][]; len: number }>();
-		for (const rv of water.rivers) {
-			if (!rv.n) continue;
-			const parts = rv.c.filter(near);
-			if (!parts.length) continue;
-			let len = 0;
-			for (const part of parts) {
-				const step = Math.max(1, Math.floor(part.length / 40));
-				for (let i = step; i < part.length; i += step) {
-					const a = P(part[i - step]) as [number, number] | null,
-						b = P(part[i]) as [number, number] | null;
-					if (a && b && inLand(part[i])) len += Math.hypot(b[0] - a[0], b[1] - a[1]);
+		// Liegt ein Bildpunkt im Land? Einmal als Pixelmaske gezeichnet, danach kostet jede Abfrage nur einen Zugriff
+		// (die Prüfung auf den Umrissen dauerte bei Russland & Co. auf dem Handy mehrere Sekunden)
+		const mask = (() => {
+			const cv = document.createElement('canvas');
+			cv.width = W;
+			cv.height = H;
+			const cx = cv.getContext('2d', { willReadFrequently: true });
+			if (!cx || !base.land) return null;
+			cx.fill(new Path2D(base.land));
+			return cx.getImageData(0, 0, W, H).data;
+		})();
+		const inPx = (x: number, y: number) => {
+			const xi = Math.round(x),
+				yi = Math.round(y);
+			return !!mask && xi >= 0 && yi >= 0 && xi < W && yi < H && mask[(yi * W + xi) * 4 + 3] > 0;
+		};
+		// nur Stichproben für die Rangfolge; die ganzen Linien werden erst für die ausgewählten Flüsse berechnet
+		const byName = new Map<string, { n: string; r: number; parts: [number, number][][]; len: number }>();
+		const rank = (maxR: number, minR = 0) => {
+			for (const rv of water!.rivers) {
+				if (!rv.n || rv.r > maxR || rv.r <= minR || geoDistance(rv.m, c) > reach * 1.4 + rv.rad) continue;
+				const parts = rv.c.filter(near);
+				if (!parts.length) continue;
+				let len = 0;
+				for (const part of parts) {
+					const step = Math.max(1, Math.floor(part.length / 40));
+					for (let i = step; i < part.length; i += step) {
+						const a = P(part[i - step]) as [number, number] | null,
+							b = P(part[i]) as [number, number] | null;
+						if (a && b && inPx(b[0], b[1])) len += Math.hypot(b[0] - a[0], b[1] - a[1]);
+					}
 				}
+				const o = byName.get(rv.n) ?? { n: rv.n, r: rv.r, parts: [], len: 0 };
+				o.parts.push(...parts);
+				o.len += len;
+				o.r = Math.min(o.r, rv.r);
+				byName.set(rv.n, o);
 			}
-			const o = byName.get(rv.n) ?? { n: rv.n, r: rv.r, runs: [], len: 0 };
-			o.runs.push(...parts.flatMap(runsOf));
-			o.len += len;
-			o.r = Math.min(o.r, rv.r);
-			byName.set(rv.n, o);
-		}
+		};
+		// zuerst nur die Hauptströme; gibt es davon kaum welche im Land (z. B. Japan), auch die kleineren
+		rank(rankMax);
+		if ([...byName.values()].filter((x) => x.len > 18).length < 2) rank(9, rankMax);
 		// große Länder nur Hauptströme; gibt es davon kaum welche (z. B. Japan), auch kleinere
 		const ranked = [...byName.values()].filter((x) => x.len > 18).sort((a, b) => b.len * (10 - b.r) ** 2 - a.len * (10 - a.r) ** 2);
 		const major = ranked.filter((x) => x.r <= rankMax);
-		const top = (major.length >= 2 ? major : ranked).slice(0, 5);
+		const top = (major.length >= 2 ? major : ranked).slice(0, 5).map((x) => ({ ...x, runs: x.parts.flatMap(runsOf) }));
 		const rivers = top.map((x) => ({ d: x.runs.map((r) => smooth(r)).join(''), w: x.r <= 3 ? 2.1 : x.r <= 5 ? 1.6 : 1.2 }));
 		// Beschriftung: längster zusammenhängender Abschnitt im Bild, Text entlang der Richtung dort
 		// mehrere mögliche Stellen (Mitte, dann weiter vorn/hinten), falls die Mitte schon belegt ist
@@ -158,23 +185,28 @@
 			cand.push({ n: x.n, spots });
 		}
 		// Seen
-		const lakeList: { d: string; n: string; at: [number, number]; area: number }[] = [];
-		for (const lk of water.lakes) {
-			if (lk.r > rankMax + 2) continue;
+		// nur Seen im Land oder an seiner Grenze (Bodensee): Stichproben der Uferpunkte und ihr nahes Umfeld prüfen;
+		// Fläche und Umriss erst danach (und die Umrisse nur für die größten vier)
+		const near3 = (p: [number, number] | null) => !!p && [[0, 0], [3, 0], [-3, 0], [0, 3], [0, -3]].some(([dx, dy]) => inPx(p[0] + dx, p[1] + dy));
+		const lakeList: { parts: [number, number][][]; g: GeoJSON.Polygon; n: string; area: number }[] = [];
+		// Rang ~ Größe: die Fläche nur für die bedeutendsten 16 Seen im Land bestimmen
+		let lakeN = 0;
+		for (const lk of [...water.lakes].sort((a, b) => a.r - b.r)) {
+			if (lakeN >= 16) break;
+			if (lk.r > rankMax + 2 || geoDistance(lk.m, c) > reach * 1.4 + lk.rad) continue;
 			const parts = lk.c.filter(near);
 			if (!parts.length) continue;
+			if (!parts.some((ring) => { const st = Math.max(1, Math.floor(ring.length / 24)); return ring.some((q, i) => i % st === 0 && near3(P(q) as [number, number] | null)); })) continue;
+			lakeN++;
 			const g: GeoJSON.Polygon = { type: 'Polygon', coordinates: parts };
 			const area = path.area(g);
-			if (area < 10) continue;
-			// nur Seen im Land oder an seiner Grenze (Bodensee): Uferpunkte und ihr nahes Umfeld prüfen
-			const o = 0.08;
-			if (!parts.some((ring) => ring.some((q, i) => i % 3 === 0 && [[0, 0], [o, 0], [-o, 0], [0, o], [0, -o]].some(([dx, dy]) => inLand([q[0] + dx, q[1] + dy]))))) continue;
-			const rings = parts.flatMap(runsOf).filter((r) => r.length > 2);
-			if (!rings.length) continue;
-			lakeList.push({ d: rings.map((r) => smooth(r, true)).join(''), n: lk.n, at: path.centroid(g) as [number, number], area });
+			if (area >= 10) lakeList.push({ parts, g, n: lk.n, area });
 		}
 		lakeList.sort((a, b) => b.area - a.area);
-		const lakesTop = lakeList.slice(0, 4);
+		const lakesTop = lakeList
+			.slice(0, 4)
+			.map((l) => ({ ...l, d: l.parts.flatMap(runsOf).filter((r) => r.length > 2).map((r) => smooth(r, true)).join(''), at: path.centroid(l.g) as [number, number] }))
+			.filter((l) => l.d);
 		const lakes = lakesTop.map((l) => l.d);
 		const lakeLabels = lakesTop.filter((l) => l.n && l.area > 120 && inside(l.at));
 
@@ -268,7 +300,7 @@
 	});
 </script>
 
-{#if base}
+{#if ready && base}
 	<svg class="cshape" viewBox="0 0 {W} {H}" role="img" aria-hidden="true" preserveAspectRatio="xMidYMid slice">
 		<defs>
 			<radialGradient id="cs-sea" cx="35%" cy="25%" r="90%">
