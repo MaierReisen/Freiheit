@@ -15,6 +15,50 @@ export interface Facts {
 	land?: boolean;
 	/** höchster Punkt: Name, Höhe in m */
 	peak?: [string, number];
+	/** Lage des höchsten Punkts [lon, lat] */
+	peakLL?: [number, number];
+	/** Lage der (ersten) Hauptstadt [lon, lat] */
+	capLL?: [number, number];
+	/** Einwohner der (ersten) Hauptstadt und Jahr der Angabe */
+	capPop?: [number, number | null];
+	/** Nachbarn über das Meer (keine Landgrenze, aber nah: Brücke, Fähre, Meerenge) */
+	sea?: string[];
+	/** Hinweis zur Fläche (z. B. Frankreich mit Überseegebieten) */
+	areaNote?: string;
+}
+
+/* Gewässer (Natural Earth): Flüsse als Linien, Seen als Flächen – erst beim ersten Öffnen einer Länderseite geladen */
+export interface Water {
+	rivers: { n: string; r: number; c: [number, number][][] }[];
+	lakes: { n: string; r: number; c: [number, number][][] }[];
+}
+let water: Water | null = null;
+let waterLoading: Promise<Water> | null = null;
+type Packed = [string, number, number[][]][];
+/** gespeichert als ganze Hundertstelgrad mit Differenzen zum Vorgänger: [x0,y0,dx1,dy1,…] */
+const unpack = (list: Packed) =>
+	list.map(([n, r, parts]) => ({
+		n,
+		r,
+		c: parts.map((f) => {
+			const out: [number, number][] = [];
+			let x = 0,
+				y = 0;
+			for (let i = 0; i < f.length; i += 2) {
+				x = i ? x + f[i] : f[i];
+				y = i ? y + f[i + 1] : f[i + 1];
+				out.push([x / 100, y / 100]);
+			}
+			return out;
+		})
+	}));
+export function loadWater(): Promise<Water> {
+	if (water) return Promise.resolve(water);
+	waterLoading ??= import('./data/water.json').then((m) => {
+		const d = m.default as unknown as { rivers: Packed; lakes: Packed };
+		return (water = { rivers: unpack(d.rivers), lakes: unpack(d.lakes) });
+	});
+	return waterLoading;
 }
 
 let cache: Record<string, Facts> | null = null;

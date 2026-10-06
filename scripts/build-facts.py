@@ -8,10 +8,11 @@ Quellen (vorher in dasselbe Verzeichnis laden):
     q1: Hauptstadt (deutscher Name), Einwohner (mit Stichtag), Verkehrsseite je ISO-Code (P297, P36, P1082, P1622)
     q2: Amtssprachen mit ISO-639-1-Code (P37, P218)
     q3/q4: höchster Punkt mit Höhe (P610, P2044, bevorzugter Rang) und englischem Ersatznamen
+  wd5–wd8.json  Hauptstädte (Lage P625, Einwohner P1082 mit Rang), Gipfel-Lage, Nachbarn P47 (Abfragen q5–q8 unten)
   tzn.json      Anzahl unterschiedlicher Normalzeiten je Land: node scripts/tzcount.mjs (aus zone.tab)
 Aufruf: python3 scripts/build-facts.py  (im Verzeichnis mit den Quelldateien), dann facts.json nach src/lib/data/ kopieren.
 """
-import json, re, unicodedata, collections
+import json, re, unicodedata, collections, math
 m = json.load(open('mledoze.json'))
 wd1 = json.load(open('wd1.json'))['results']['bindings']
 wd2 = json.load(open('wd2.json'))['results']['bindings']
@@ -20,6 +21,7 @@ for line in open('zone.tab'):
     if line.startswith('#') or not line.strip(): continue
     p = line.rstrip('\n').split('\t'); zones[p[0]].append(p[2])
 by3 = {x['cca3']: x['cca2'] for x in m}
+mm = {x['cca2']: x for x in m}
 caps = collections.defaultdict(set); pops = collections.defaultdict(list); drive = {}
 for b in wd1:
     iso = b['iso']['value']
@@ -52,9 +54,49 @@ for b in wd3:
     cur = peaks[iso].get(hp)
     v = float(b['elev']['value'])
     if cur is None or (pref and not cur[1]) or (pref == cur[1] and v > cur[0]):
-        peaks[iso][hp] = (v, pref, b.get('hpLabel', {}).get('value') or en.get(hp, ''))
+        peaks[iso][hp] = (v, pref, b.get('hpLabel', {}).get('value') or en.get(hp, ''), hp)
 PEAK_NOTE = {'NL': 'Mount Scenery (Saba, Karibik)'}  # Gipfel liegt nicht im europäischen Teil
 tzn = json.load(open('tzn.json'))
+def pt(wkt):
+    m_ = re.match(r'Point\(([-\d.]+) ([-\d.]+)\)', wkt or '')
+    return [round(float(m_.group(1)), 3), round(float(m_.group(2)), 3)] if m_ else None
+# Hauptstädte: Lage (wd5) und Einwohner mit Rang (wd8)
+capLL = collections.defaultdict(dict)
+for b in json.load(open('wd5.json'))['results']['bindings']:
+    if 'coord' in b: capLL[b['iso']['value']].setdefault(b['capLabel']['value'], pt(b['coord']['value']))
+capPops = collections.defaultdict(lambda: collections.defaultdict(list))
+for b in json.load(open('wd8.json'))['results']['bindings']:
+    try: v = float(b['pop']['value'])
+    except ValueError: continue
+    capPops[b['iso']['value']][b['capLabel']['value']].append((b.get('popDate', {}).get('value', '')[:4], v, b['rank']['value'].endswith('PreferredRank')))
+def cap_pop(rows):
+    # bevorzugt bzw. neuester Wert – außer er ist offensichtlich der Großraum (mehr als doppelt so hoch wie sonst üblich)
+    rows = sorted(r for r in rows if r[1] > 0)
+    if not rows: return None
+    vals = sorted(r[1] for r in rows); med = vals[len(vals)//2]
+    cand = [r for r in rows if r[2]] + list(reversed(rows))
+    for y, v, _ in cand:
+        if len(rows) < 3 or v <= 2 * med: return [int(v), int(y) if y else None]
+    return [int(cand[0][1]), int(cand[0][0]) if cand[0][0] else None]
+peakLL = {}
+for b in json.load(open('wd6.json'))['results']['bindings']:
+    peakLL.setdefault(b['hp']['value'], pt(b['coord']['value']))
+# Nachbarn über das Meer: Wikidata „grenzt an“ ohne die Landgrenzen, beidseitig ergänzt
+sea = collections.defaultdict(set)
+for b in json.load(open('wd7.json'))['results']['bindings']:
+    a, z = b['iso']['value'], b['nbIso']['value']
+    if a != z: sea[a].add(z); sea[z].add(a)
+# enge Verbindungen übers Meer, die in Wikidata fehlen bzw. deren Landesmitten weit auseinanderliegen
+for a_, z_ in (('GB', 'FR'), ('AU', 'PG'), ('SG', 'ID')):
+    sea[a_].add(z_); sea[z_].add(a_)
+# keine echten Nachbarn über das Meer (Prüfung): Saint-Martin (FR–NL), umstrittene oder veraltete Landgrenzen
+# (Kaschmir, Kosovo, Sudan vor 2011), gar keine Grenze, Karibik–Venezuela nur über die winzige Isla de Aves
+for a_, z_ in (('FR', 'NL'), ('AF', 'IN'), ('AL', 'RS'), ('CD', 'CM'), ('CD', 'SD'), ('KE', 'SD'), ('SD', 'UG'), ('AO', 'GA'),
+               ('DM', 'VE'), ('GD', 'VE'), ('KN', 'VE'), ('LC', 'VE'), ('VC', 'VE'), ('DO', 'VE')):
+    sea[a_].discard(z_); sea[z_].discard(a_)
+SEA_KEEP = {('GB', 'FR'), ('FR', 'GB'), ('AU', 'PG'), ('PG', 'AU'), ('SG', 'ID'), ('ID', 'SG')}
+CAP_WD = {'TM': 'Aşgabat', 'MN': 'Ulaanbaatar'}  # deutscher Anzeigename weicht vom Wikidata-Namen ab
+CAP_EXTRA = {'GQ': {'ll': [8.774, 3.752], 'pop': [137000, 2011]}}  # Malabo (Wikidata führt die Planstadt Ciudad de la Paz)
 out = {}
 for x in m:
     c = x['cca2']
@@ -78,7 +120,7 @@ for x in m:
                 'PY': ['es', 'gn'], 'PE': ['es', 'qu', 'ay'], 'KZ': ['kk', 'ru'], 'KG': ['ky', 'ru'], 'BY': ['be', 'ru'], 'IQ': ['ar', 'ku'],
                 'PK': ['ur', 'en'], 'TZ': ['sw', 'en'], 'CM': ['fr', 'en'], 'HT': ['fr', 'ht'], 'FI': ['fi', 'sv'], 'IE': ['ga', 'en'], 'NZ': ['en', 'mi'],
                 'NO': ['no'], 'AF': ['ps', 'prs'], 'LK': ['si', 'ta'], 'GQ': ['es', 'fr', 'pt']}
-    CAP_OVR = {'PK': ['Islamabad'], 'GQ': ['Malabo'], 'TM': ['Aschgabat'], 'MN': ['Ulan Bator']}
+    CAP_OVR = {'PK': ['Islamabad'], 'GQ': ['Malabo'], 'TM': ['Aschgabat'], 'MN': ['Ulan Bator'], 'ZA': ['Pretoria', 'Kapstadt', 'Bloemfontein']}
     DRIVE_OVR = {'AR': 'r'}  # Wikidata enthält auch den historischen Linksverkehr (bis 1945)
     CUR_OVR = {'FM': [{'c': 'USD', 's': '$'}], 'ZW': [{'c': 'ZWG', 's': 'ZiG'}, {'c': 'USD', 's': '$'}]}
     TZ_OVR = {'XK': 'Europe/Belgrade'}
@@ -86,11 +128,35 @@ for x in m:
     cap = CAP_OVR.get(c, cap)
     cur = CUR_OVR.get(c, cur)
     e = {'cap': cap[:3], 'pop': pop, 'area': x.get('area'), 'lang': LANG_OVR.get(c) or langs.get(c) or list((x.get('languages') or {}).keys()),
-         'cur': cur, 'call': call, 'drive': DRIVE_OVR.get(c, drive.get(c)), 'tz': tz, 'tzn': tzn.get(c, 1 if tz else 0), 'nb': [by3[b] for b in x.get('borders', []) if b in by3],
+         'cur': cur, 'call': call, 'drive': DRIVE_OVR.get(c, drive.get(c)), 'tz': tz, 'tzn': tzn.get(c, 1 if tz else 0), 'nb': [by3[b] for b in x.get('borders', []) if b in by3 and (c, by3[b]) not in (('LK', 'IN'),)],  # Sri Lanka–Indien: keine Landgrenze (Palkstraße)
          'll': [round(v, 2) for v in x.get('latlng', [])], 'land': bool(x.get('landlocked'))}
     if peaks.get(c):
-        v, _, n = max(peaks[c].values())
-        if n: e['peak'] = [PEAK_NOTE.get(c, n), round(v)]
+        v, _, n, hp = max(peaks[c].values())
+        if n:
+            e['peak'] = [PEAK_NOTE.get(c, n), round(v)]
+            if peakLL.get(hp): e['peakLL'] = peakLL[hp]
+    if cap:
+        key = CAP_WD.get(c, cap[0])
+        ex = CAP_EXTRA.get(c, {})
+        ll = ex.get('ll') or capLL[c].get(key)
+        cp = ex.get('pop') or cap_pop(capPops[c].get(key, []))
+        if ll: e['capLL'] = ll
+        if cp: e['capPop'] = cp
+    land_nb = set(e.get('nb') or [])
+    # nur heutige Länder (keine DDR, Jugoslawien …) und nur, was nahe am Hauptgebiet liegt
+    # (nicht Frankreich–Madagaskar über Réunion): Abstand der Landesmitten < 800 km + halbe „Ausdehnung“ beider Länder
+    def near(a, b):
+        A, B = mm.get(a), mm.get(b)
+        if not A or not B or not A.get('latlng') or not B.get('latlng'): return False
+        (la1, lo1), (la2, lo2) = A['latlng'][:2], B['latlng'][:2]
+        p1, p2, dl = math.radians(la1), math.radians(la2), math.radians(lo2 - lo1)
+        d = 6371 * math.acos(max(-1, min(1, math.sin(p1)*math.sin(p2) + math.cos(p1)*math.cos(p2)*math.cos(dl))))
+        return d < 800 + 0.5 * (math.sqrt(A.get('area') or 0) + math.sqrt(B.get('area') or 0))
+    seanb = sorted(z for z in sea.get(c, set()) - land_nb - {c} if z in mm and ((c, z) in SEA_KEEP or near(c, z)))
+    if seanb: e['sea'] = seanb
+    if c == 'FR':  # Datensatz führt nur das europäische Frankreich; Gesamtfläche mit Überseegebieten laut Wikidata
+        e['areaNote'] = f"davon {e['area']:,.0f} km² in Europa".replace(',', '.')
+        e['area'] = 643801
     out[c] = {k: v for k, v in e.items() if v not in (None, [], '')}
 json.dump(out, open('facts.json', 'w'), ensure_ascii=False, separators=(',', ':'))
 print(len(out), round(len(json.dumps(out, ensure_ascii=False, separators=(',', ':')).encode())/1024, 1), 'KB')
@@ -114,3 +180,9 @@ for c in ('AT', 'ZA', 'US', 'JP', 'VA', 'XK', 'TV', 'GB', 'CH'): print(c, out.ge
 # }
 # q4.rq:
 # SELECT ?hp ?enLabel WHERE { ?c wdt:P297 ?iso ; wdt:P610 ?hp . ?hp rdfs:label ?enLabel FILTER(lang(?enLabel)='en') }
+# q5.rq: SELECT ?iso ?capLabel ?coord ?pop ?popDate WHERE { ?c wdt:P297 ?iso ; wdt:P36 ?cap . ?cap rdfs:label ?capLabel FILTER(lang(?capLabel)='de')
+#        OPTIONAL { ?cap wdt:P625 ?coord } OPTIONAL { ?cap p:P1082 ?ps . ?ps ps:P1082 ?pop . OPTIONAL { ?ps pq:P585 ?popDate } } }
+# q6.rq: SELECT ?iso ?hp ?coord WHERE { ?c wdt:P297 ?iso ; wdt:P610 ?hp . ?hp wdt:P625 ?coord . }
+# q7.rq: SELECT ?iso ?nbIso WHERE { ?c wdt:P297 ?iso ; wdt:P47 ?n . ?n wdt:P297 ?nbIso . }
+# q8.rq: SELECT ?iso ?capLabel ?pop ?popDate ?rank WHERE { ?c wdt:P297 ?iso ; wdt:P36 ?cap . ?cap rdfs:label ?capLabel FILTER(lang(?capLabel)='de')
+#        ?cap p:P1082 ?ps . ?ps ps:P1082 ?pop ; wikibase:rank ?rank . OPTIONAL { ?ps pq:P585 ?popDate } }

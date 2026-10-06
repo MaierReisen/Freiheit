@@ -6,7 +6,7 @@
 	/* Nach unten ziehen schließt das Sheet (wie in iOS): am Griff/Titel jederzeit, in der Liste nur,
 	   wenn sie ganz oben steht – sonst scrollt die Liste ganz normal.
 	   Länderseite mit zwei Stufen: kompakte Karte („peek“, Globus bleibt sichtbar und antippbar) und volle Seite.
-	   Kompakt: hochziehen → voll, runterziehen → schließen. Voll: runterziehen → kompakt. */
+	   Kompakt: hochziehen → voll, runterziehen → schließen. Voll: runterziehen → schließen. */
 
 	const isCountry = $derived(ui.sheetView?.kind === 'country');
 	const peek = $derived(isCountry && ui.sheetDetent === 'peek');
@@ -97,11 +97,8 @@
 			else if (dy > 70 || (d.vy > 0.5 && dy > 30)) closeSheet();
 			return;
 		}
-		// weit genug oder kräftig nach unten geschnippt → Länderseite auf kompakt, sonst schließen
-		if (dy > Math.min(140, sheet.offsetHeight * 0.3) || (d.vy > 0.6 && dy > 40)) {
-			if (isCountry) setSheetDetent('peek');
-			else closeSheet();
-		}
+		// weit genug oder kräftig nach unten geschnippt → schließen (auch die volle Länderseite)
+		if (dy > Math.min(140, sheet.offsetHeight * 0.3) || (d.vy > 0.6 && dy > 40)) closeSheet();
 	}
 
 	// nicht-passiv, damit das Ziehen das Scrollen verhindern kann

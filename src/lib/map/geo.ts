@@ -280,10 +280,12 @@ export const ALL = [...new Set(features.map((f) => f.id))].sort((a, b) => nameOf
 /** Form eines Landes für Vorschaubilder: alle Teile nahe am Hauptgebiet (weit Entferntes wie Alaska, Hawaii oder
     Französisch-Guayana bleibt weg, damit das Land groß genug erscheint) – plus die Nachbarschaft als Umgebung. */
 export function shapeOf(id: string): { shape: GeoJSON.Feature; around: GeoJSON.Feature; c: [number, number] } | null {
-	const i = INFO[id],
-		lod = getLod('full');
+	const i = INFO[id];
+	// kleine Länder mit den feinen Daten (sofern schon geladen), sonst wären Singapur & Co. nur grobe Vielecke
+	const lod = (i && i.size < 8 && LODS.fine) || getLod('full');
 	if (!i || !lod) return null;
-	const own = lod.polys.filter((p) => p.id === id);
+	let own = lod.polys.filter((p) => p.id === id);
+	if (!own.length && lod !== LODS.full) own = getLod('full')!.polys.filter((p) => p.id === id);
 	// Hauptgebiet = größte Fläche; dazu große Teile (≥ 25 % davon, z. B. Indonesiens Inseln) und alles in seiner Nähe
 	// (Korsika ja, Azoren/Kanaren/Alaska nein – die würden das Festland klein an den Rand drücken)
 	const areas = own.map((p) => geoArea(p.g));

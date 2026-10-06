@@ -60,8 +60,11 @@
 	const converted = $derived(fx ? (fromEur ? amountNum * fx.rate : amountNum / fx.rate) : 0);
 	const unit = (eur: boolean) => (eur ? '€' : fx?.sym || fx?.code || '');
 
-	const neighbours = $derived((facts?.nb ?? []).map((c) => ({ code: c, name: nameOf(c), been: visited.has(c) })).sort((a, b) => a.name.localeCompare(b.name, 'de')));
-	const nbBeen = $derived(neighbours.filter((n) => n.been).length);
+	const nbList = (codes: string[] = []) => codes.map((c) => ({ code: c, name: nameOf(c), been: visited.has(c) })).sort((a, b) => a.name.localeCompare(b.name, 'de'));
+	const neighbours = $derived(nbList(facts?.nb));
+	const seaNb = $derived(nbList(facts?.sea));
+	const nbAll = $derived(neighbours.length + seaNb.length);
+	const nbBeen = $derived([...neighbours, ...seaNb].filter((n) => n.been).length);
 
 	// Höhe der kompakten Karte melden (für die „peek“-Stufe des Sheets)
 	let peekEl: HTMLDivElement;
@@ -138,7 +141,7 @@
 </div>
 
 <div class="cs-body">
-	<div class="cs-map"><CountryShape {code} {been} /></div>
+	<div class="cs-map"><CountryShape {code} {been} {facts} /></div>
 
 	{#if facts}
 		<div class="cs-grid">
@@ -147,6 +150,7 @@
 					<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21h18M5 21V10l7-5 7 5v11M9 21v-6h6v6" /></svg>
 					<span class="lbl">Hauptstadt</span>
 					<b>{facts.cap.join(', ')}</b>
+					{#if facts.capPop}<span class="sub">{fmtPop(facts.capPop[0])} Einwohner{facts.capPop[1] ? ` (${facts.capPop[1]})` : ''}{facts.cap.length > 1 ? ` · ${facts.cap[0]}` : ''}</span>{/if}
 					{#if lt}<span class="sub">Ortszeit {lt.time} · {lt.diff}</span>{/if}
 				</div>
 			{/if}
@@ -163,6 +167,7 @@
 					<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 15v5h-5M4 4l6 6M20 20l-6-6M15 4h5v5M9 20H4v-5" /></svg>
 					<span class="lbl">Fläche</span>
 					<b>{fmtArea(facts.area)}</b>
+					{#if facts.areaNote}<span class="sub">{facts.areaNote}</span>{/if}
 					{#if compareArea(code, facts.area)}<span class="sub">{compareArea(code, facts.area)}</span>{/if}
 				</div>
 			{/if}
@@ -232,13 +237,24 @@
 			{/if}
 		</div>
 
-		{#if neighbours.length}
-			<h4 class="cs-h">Nachbarländer <span>{nbBeen} von {neighbours.length} bereist</span></h4>
-			<div class="cs-nb">
-				{#each neighbours as n (n.code)}
-					<button type="button" class="cs-chip" class:been={n.been} onclick={() => goNeighbour(n.code)}><span aria-hidden="true">{flag(n.code)}</span>{n.name}</button>
-				{/each}
-			</div>
+		{#if nbAll}
+			<h4 class="cs-h">Nachbarländer <span>{nbBeen} von {nbAll} bereist</span></h4>
+			{#if neighbours.length}
+				{#if seaNb.length}<div class="cs-nbh">Landgrenzen</div>{/if}
+				<div class="cs-nb">
+					{#each neighbours as n (n.code)}
+						<button type="button" class="cs-chip" class:been={n.been} onclick={() => goNeighbour(n.code)}><span aria-hidden="true">{flag(n.code)}</span>{n.name}</button>
+					{/each}
+				</div>
+			{/if}
+			{#if seaNb.length}
+				<div class="cs-nbh">Über das Meer</div>
+				<div class="cs-nb">
+					{#each seaNb as n (n.code)}
+						<button type="button" class="cs-chip sea" class:been={n.been} onclick={() => goNeighbour(n.code)}><span aria-hidden="true">{flag(n.code)}</span>{n.name}</button>
+					{/each}
+				</div>
+			{/if}
 		{:else if facts.cap}
 			<p class="cs-note">Keine Landgrenzen – nur über See oder Luft erreichbar</p>
 		{/if}
