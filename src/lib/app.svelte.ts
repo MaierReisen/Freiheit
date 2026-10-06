@@ -1,4 +1,5 @@
 import { tick } from 'svelte';
+import { CONT, CONT_VIEW } from './countries';
 
 /* App-weiter Zustand der Oberfläche: Tabs, Bottom-Sheet, Vollbild-Karte, Länder-Übersicht, Toast.
    Die Komponenten mit DOM-Animationen (Karte, Übersicht) melden ihre Steuerfunktionen in `hooks` an. */
@@ -147,6 +148,8 @@ export function openCountry(code: string, opts: { peek?: boolean } = {}) {
 	const already = ui.sheetOpen && ui.sheetView?.kind === 'country';
 	ui.sheetDetent = already ? ui.sheetDetent : opts.peek ? 'peek' : 'full';
 	ui.selected = code;
+	// vom Globus aus (Tippen, Suche, Nachbarland): Kontinent-Knopf folgt dem Land
+	if (opts.peek && CONT[code] && CONT_VIEW[CONT[code]]) ui.focusContinent = CONT[code];
 	openSheet({ kind: 'country', code });
 }
 export function setSheetDetent(d: 'peek' | 'full') {

@@ -976,7 +976,9 @@ export function createWorldMap(o: MapOptions) {
 		const hit = at(x, y);
 		if (hit && smallIds.has(hit)) return hit;
 		const dotShown = (id: string) => o.getVisited().has(id) || o.getSelected() === id || (o.isCounted(id) && !wideView(ppd));
-		if (near && (!hit || (dotShown(near) && nearD <= r * 0.85))) return near;
+		// Punkt eines Zwergstaats: im Meer großzügig, auf einem anderen Land nur direkt auf/knapp neben dem Punkt
+		// (sonst würde z. B. ein Tipp in die Mitte Italiens San Marino treffen)
+		if (near && (!hit || (dotShown(near) && nearD <= Math.max(5, r * 0.4)))) return near;
 		if (hit) return hit;
 		// knapp neben einem Land: Ringe um den Tipp absuchen
 		for (const rr of [r * 0.5, r])

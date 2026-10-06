@@ -13,13 +13,15 @@ export interface Facts {
 	tzn?: number;
 	nb?: string[];
 	land?: boolean;
+	/** höchster Punkt: Name, Höhe in m */
+	peak?: [string, number];
 }
 
 let cache: Record<string, Facts> | null = null;
 let loading: Promise<Record<string, Facts>> | null = null;
 export function loadFacts(): Promise<Record<string, Facts>> {
 	if (cache) return Promise.resolve(cache);
-	loading ??= import('./data/facts.json').then((m) => (cache = m.default as Record<string, Facts>));
+	loading ??= import('./data/facts.json').then((m) => (cache = m.default as unknown as Record<string, Facts>));
 	return loading;
 }
 export const factsNow = (code: string): Facts | null => cache?.[code] ?? null;
@@ -34,6 +36,12 @@ export function fmtPop(n: number) {
 }
 export function fmtArea(a: number) {
 	return nf({ maximumFractionDigits: a < 10 ? 2 : 0 }).format(a) + ' km²';
+}
+/** kurz für die Schnellfakten: 513 Tsd. km², 1,2 Mio. km² */
+export function fmtAreaShort(a: number) {
+	if (a >= 1e6) return nf({ maximumFractionDigits: 1 }).format(a / 1e6) + ' Mio. km²';
+	if (a >= 1e5) return nf({ maximumFractionDigits: 0 }).format(a / 1e3) + ' Tsd. km²';
+	return fmtArea(a);
 }
 export function fmtDensity(pop: number, area: number) {
 	const d = pop / area;
@@ -81,15 +89,20 @@ export function languages(codes: string[] = []) {
 	}
 	return out;
 }
+/** Währungen auf Deutsch; lokale Nebenwährungen ohne Namen (z. B. Tuvalu-Dollar neben dem Australischen Dollar)
+    fallen weg, wenn es eine bekannte Hauptwährung gibt */
 export function currencies(list: Facts['cur'] = []) {
-	return list.map((x) => {
+	const all = list.map((x) => {
 		let n = x.c;
 		try {
 			n = curNames?.of(x.c) ?? x.c;
 		} catch {}
-		return { name: n, sym: x.s && x.s !== x.c ? x.s : '', code: x.c };
+		return { name: n, sym: x.s && x.s !== x.c ? x.s : '', code: x.c, known: n !== x.c };
 	});
+	const known = all.filter((x) => x.known);
+	return known.length ? known : all;
 }
+export const fmtHeight = (m: number) => new Intl.NumberFormat('de-DE').format(m) + ' m';
 
 /** Minuten Versatz einer Zeitzone zu UTC (mit Sommerzeit, zum Zeitpunkt d) */
 function tzOffset(tz: string, d: Date) {

@@ -3,7 +3,8 @@
 	import { SCOPES, inScope } from '$lib/scope';
 	import { contOf, flag, nameOf } from '$lib/countries';
 	import { closeSheet, hooks, openCountry, reduceMotion, setSheetDetent, ui } from '$lib/app.svelte';
-	import { compareArea, currencies, factsNow, fmtArea, fmtDensity, fmtPop, languages, loadFacts, localTime, type Facts } from '$lib/facts';
+	import { compareArea, currencies, factsNow, fmtArea, fmtAreaShort, fmtDensity, fmtHeight, fmtPop, languages, loadFacts, localTime, type Facts } from '$lib/facts';
+	import { fmtMoney, fmtRateDate, getRates, type Rates } from '$lib/rates';
 	import CountryShape from './CountryShape.svelte';
 
 	/* Länderseite: oben die kompakte Karte (Name, Status, „Als bereist markieren“, drei Schnellfakten) – sie ist auch
@@ -41,6 +42,24 @@
 	const langs = $derived(languages(facts?.lang));
 	const curs = $derived(currencies(facts?.cur));
 	const visited = $derived(visitedSet());
+	// Währungsrechner: tagesaktueller Kurs zum Euro (erste Währung mit Kurs)
+	let rates = $state<Rates | null>(null);
+	let ratesFailed = $state(false);
+	$effect(() => {
+		if (!curs.length || curs.every((c) => c.code === 'EUR')) return;
+		getRates().then((r) => (r ? (rates = r) : (ratesFailed = true)));
+	});
+	const fx = $derived.by(() => {
+		if (!rates) return null;
+		const c = curs.find((x) => x.code !== 'EUR' && rates!.rates[x.code.toLowerCase()]);
+		return c ? { ...c, rate: rates.rates[c.code.toLowerCase()] } : null;
+	});
+	let amount = $state('100');
+	let fromEur = $state(true);
+	const amountNum = $derived(Number(amount.replace(/\./g, '').replace(',', '.')) || 0);
+	const converted = $derived(fx ? (fromEur ? amountNum * fx.rate : amountNum / fx.rate) : 0);
+	const unit = (eur: boolean) => (eur ? '€' : fx?.sym || fx?.code || '');
+
 	const neighbours = $derived((facts?.nb ?? []).map((c) => ({ code: c, name: nameOf(c), been: visited.has(c) })).sort((a, b) => a.name.localeCompare(b.name, 'de')));
 	const nbBeen = $derived(neighbours.filter((n) => n.been).length);
 
@@ -112,7 +131,7 @@
 	{#if facts && (facts.pop || facts.area || lt)}
 		<div class="cs-quick">
 			{#if facts.pop}<div><b>{fmtPop(facts.pop)}</b><span>Einwohner</span></div>{/if}
-			{#if facts.area}<div><b>{fmtArea(facts.area)}</b><span>Fläche</span></div>{/if}
+			{#if facts.area}<div><b>{fmtAreaShort(facts.area)}</b><span>Fläche</span></div>{/if}
 			{#if lt}<div><b>{lt.time}</b><span>Ortszeit</span></div>{/if}
 		</div>
 	{/if}
@@ -147,6 +166,14 @@
 					{#if compareArea(code, facts.area)}<span class="sub">{compareArea(code, facts.area)}</span>{/if}
 				</div>
 			{/if}
+			{#if facts.peak}
+				<div class="cs-tile">
+					<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 20l6.5-11 4 6.5L16 12l5 8z" /><path d="M8 11.5l1.5 1.5L11 11.5" /></svg>
+					<span class="lbl">Höchster Berg</span>
+					<b class="cs-list">{facts.peak[0]}</b>
+					<span class="sub">{fmtHeight(facts.peak[1])}</span>
+				</div>
+			{/if}
 			{#if langs.length}
 				<div class="cs-tile">
 					<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z" /><path d="M8 9h8M8 12h5" /></svg>
@@ -155,10 +182,29 @@
 				</div>
 			{/if}
 			{#if curs.length}
-				<div class="cs-tile">
+				<div class="cs-tile wide cs-fx">
 					<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" /><path d="M14.8 9.2c-.6-.8-1.6-1.2-2.8-1.2-1.7 0-3 .9-3 2.2 0 2.9 6 1.4 6 4.4 0 1.3-1.3 2.2-3 2.2-1.3 0-2.4-.5-3-1.4M12 6v2M12 16.8V18" /></svg>
 					<span class="lbl">Währung</span>
 					<b class="cs-list">{curs.map((c) => c.name + (c.sym ? ` (${c.sym})` : '')).join(', ')}</b>
+					{#if curs.every((c) => c.code === 'EUR')}
+						<span class="sub">wie zu Hause – kein Umrechnen nötig</span>
+					{:else if fx}
+						<span class="sub">1 € = {fmtMoney(fx.rate)} {unit(false)} · 1 {unit(false)} = {fmtMoney(1 / fx.rate)} €</span>
+						<div class="fx-row">
+							<label class="fx-in"
+								><input type="text" inputmode="decimal" aria-label="Betrag in {fromEur ? 'Euro' : fx.name}" bind:value={amount} /><span>{unit(fromEur)}</span></label
+							>
+							<button type="button" class="fx-swap" aria-label="Richtung tauschen" onclick={() => (fromEur = !fromEur)}
+								><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h12l-3-3M17 17H5l3 3" /></svg></button
+							>
+							<div class="fx-out"><b>{fmtMoney(converted)}</b><span>{unit(!fromEur)}</span></div>
+						</div>
+						<span class="sub fx-date">Kurs vom {fmtRateDate(rates!.date)}{rates!.stale ? ' (offline, letzter Stand)' : ''}</span>
+					{:else if ratesFailed}
+						<span class="sub">Kurs gerade nicht verfügbar</span>
+					{:else}
+						<span class="sub">Kurs wird geladen …</span>
+					{/if}
 				</div>
 			{/if}
 			{#if facts.drive}
@@ -203,5 +249,5 @@
 	{#if been}
 		<button type="button" class="cs-remove" onclick={remove}>Aus Liste entfernen</button>
 	{/if}
-	<p class="cs-src">Daten: Wikidata, mledoze/countries (ODbL), IANA-Zeitzonen</p>
+	<p class="cs-src">Daten: Wikidata, mledoze/countries (ODbL), IANA-Zeitzonen · Kurse: fawazahmed0/currency-api</p>
 </div>
