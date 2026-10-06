@@ -1,8 +1,9 @@
 <script lang="ts">
-	import { bestMonths, climateNow, daylight, highlightsNow, loadHighlights, type Highlight, fmtDaylight, loadClimate, MONTHS_LONG, monthRanges, type ClimatePlace } from '$lib/facts';
+	import { bestMonths, climateNow, highlightsNow, loadClimate, loadHighlights, MONSOON, MONTHS_LONG, monthRanges, rainSeason, sunTimes, type ClimatePlace, type Highlight } from '$lib/facts';
 
-	/* Klima & beste Reisezeit: je Monat Tages-/Nachttemperatur (Balken) und Niederschlag, beste Monate markiert.
-	   Große Länder mit mehreren Klimazonen: Orte zum Umschalten. Quelle TerraClimate, Mittel 1991–2020. */
+	/* Klima & beste Reisezeit: je Monat Tages-/Nachttemperatur (Balken), Niederschlag und – am Meer – Wassertemperatur
+	   (Linie); darunter Regenzeit/Monsun und Wirbelsturmsaison als Balken, beste Monate markiert. Große Länder mit
+	   mehreren Klimazonen: Orte zum Umschalten. Quellen TerraClimate und NOAA OISST, Mittel 1991–2020. */
 
 	let { code }: { code: string } = $props();
 
@@ -19,8 +20,7 @@
 	$effect(() => {
 		if (highlightsNow(code) === undefined) loadHighlights().then((d) => (hls = d[code] ?? []));
 	});
-	// ganzjährige Highlights setzen keine Monatspunkte und werden beim Antippen eines Monats nie ausgegraut
-	const hlMonths = $derived(new Set(hls.filter((h) => !h.y).flatMap((h) => h.m)));
+	// ganzjährige Highlights werden beim Antippen eines Monats nie ausgegraut
 	const when = (h: Highlight) => (h.y ? 'ganzjährig' : (h.d ?? monthRanges(h.m)));
 	const whenSub = (h: Highlight) => (h.y ? (h.m.length ? `am besten ${monthRanges(h.m)}` : '') : h.v ? 'je nach Jahr' : '');
 
@@ -28,17 +28,38 @@
 	const best = $derived(p ? bestMonths(p[2], p[4]) : null);
 	const bestSet = $derived(new Set(best?.months ?? []));
 
-	// Tageslicht je Monat (aus der Sonnenbahn berechnet)
-	const light = $derived(p ? [...Array(12).keys()].map((m) => daylight(p[1][1], m)) : []);
+	const water = $derived(p?.[5] ?? null);
+	const sun = $derived(p?.[6] ? sunTimes(p[1][1], p[1][0], sel, p[6]) : null);
 
-	// Diagramm: 12 Spalten à 25 Einheiten; Temperatur oben (y 24–84), Tageslicht als feine Linie (y 99–109),
-	// Niederschlag unten (bis y 136)
+	// Jahreszeiten-Balken unter dem Diagramm: Regenzeit bzw. Monsun (aus dem Niederschlag) und Wirbelsturmsaison
+	const seasons = $derived.by(() => {
+		if (!p) return [];
+		const out: { label: string; months: Set<number>; cls: string }[] = [];
+		const wet = rainSeason(p[4]);
+		if (wet.length) out.push({ label: MONSOON.has(code) ? 'Monsun' : 'Regenzeit', months: new Set(wet), cls: 'rain' });
+		if (p[7]) out.push({ label: p[7][0], months: new Set(p[7][1]), cls: 'storm' });
+		return out;
+	});
+	/** zusammenhängende Monate als Abschnitte [Start, Ende] (über den Jahreswechsel geteilt, weil das Diagramm bei Januar beginnt) */
+	const runs = (ms: Set<number>) => {
+		const out: [number, number][] = [];
+		for (let i = 0; i < 12; i++) if (ms.has(i) && !ms.has(i - 1)) {
+			let j = i;
+			while (ms.has(j + 1)) j++;
+			out.push([i, j]);
+		}
+		return out;
+	};
+
+	// Diagramm: 12 Spalten à 25 Einheiten; Temperatur oben (y 24–96), Niederschlag unten (bis y 136), Monate (y 151),
+	// darunter je Jahreszeit eine Zeile
 	const CW = 25,
 		X0 = 10;
+	const H = $derived(156 + seasons.length * 14);
 	const scale = $derived.by(() => {
 		if (!p) return { lo: 0, hi: 1, rain: 1 };
-		let lo = Math.min(...p[3]) - 1,
-			hi = Math.max(...p[2]) + 1;
+		let lo = Math.min(...p[3], ...(water ?? [])) - 1,
+			hi = Math.max(...p[2], ...(water ?? [])) + 1;
 		if (hi - lo < 18) {
 			const m = (hi + lo) / 2; // gleichmäßiges Tropenklima nicht übertrieben schwanken lassen
 			lo = m - 9;
@@ -46,9 +67,8 @@
 		}
 		return { lo, hi, rain: Math.max(150, ...p[4]) };
 	});
-	const ty = (t: number) => 84 - ((t - scale.lo) / (scale.hi - scale.lo)) * 60;
+	const ty = (t: number) => 92 - ((t - scale.lo) / (scale.hi - scale.lo)) * 68;
 	const ry = (mm: number) => (Math.min(mm, scale.rain) / scale.rain) * 22;
-	const ly = (h: number) => 109 - (h / 24) * 10;
 
 	// Farbe nach Tagestemperatur: kalt blau → mild türkis → warm gelb → heiß orange/rot
 	const STOPS: [number, [number, number, number]][] = [
@@ -91,7 +111,7 @@
 		</div>
 
 		<div class="cl-chart">
-			<svg viewBox="0 0 320 161" aria-hidden="true">
+			<svg viewBox="0 0 320 {H}" aria-hidden="true">
 				{#each p[2] as tmax, i (i)}
 					{@const x = X0 + i * CW}
 					{@const cx = x + CW / 2}
@@ -103,11 +123,19 @@
 					<text class="cl-tmin" x={cx} y={ty(p[3][i]) + 10}>{p[3][i]}°</text>
 					<rect class="cl-rain" x={cx - 5} y={136 - ry(p[4][i])} width="10" height={Math.max(1, ry(p[4][i]))} rx="2" />
 					<text class="cl-m" class:on={i === sel} x={cx} y="151">{LETTERS[i]}</text>
-					{#if hlMonths.has(i)}<circle class="cl-hl-dot" cx={cx} cy="157.5" r="1.8" />{/if}
 				{/each}
 				<line class="cl-base" x1={X0} x2={X0 + 12 * CW} y1="136.5" y2="136.5" />
-				<polyline class="cl-light" points={light.map((h, i) => `${X0 + i * CW + CW / 2},${ly(h).toFixed(1)}`).join(' ')} />
-				<circle class="cl-light-dot" cx={X0 + sel * CW + CW / 2} cy={ly(light[sel])} r="2.4" />
+				{#if water}
+					<polyline class="cl-water" points={water.map((w, i) => `${X0 + i * CW + CW / 2},${ty(w).toFixed(1)}`).join(' ')} />
+					{#each water as w, i (i)}<circle class="cl-water-dot" class:on={i === sel} cx={X0 + i * CW + CW / 2} cy={ty(w)} r={i === sel ? 3 : 1.6} />{/each}
+				{/if}
+				{#each seasons as se, k (se.label)}
+					{@const y = 158 + k * 14}
+					{#each runs(se.months) as [a, b] (a)}
+						<rect class="cl-season {se.cls}" x={X0 + a * CW + 2} {y} width={(b - a + 1) * CW - 4} height="11" rx="5.5" />
+						{#if b - a + 1 >= 3}<text class="cl-season-t {se.cls}" x={X0 + ((a + b + 1) * CW) / 2} y={y + 8.2}>{se.label}</text>{/if}
+					{/each}
+				{/each}
 			</svg>
 			<div class="cl-hit">
 				{#each LETTERS as _, i (i)}
@@ -116,14 +144,22 @@
 			</div>
 		</div>
 		<div class="cl-legend" aria-hidden="true">
-			<span><i class="t"></i>Tag/Nacht</span><span><i class="r"></i>Regen</span><span><i class="l"></i>Tageslicht</span>{#if bestSet.size}<span><i class="g"></i>{best.good ? 'beste Zeit' : 'angenehmste Zeit'}</span>{/if}{#if hlMonths.size}<span><i class="h"></i>Highlight</span>{/if}
+			<span><i class="t"></i>Tag/Nacht</span><span><i class="r"></i>Regen</span>{#if water}<span><i class="w"></i>Wasser</span>{/if}{#if bestSet.size}<span><i class="g"></i>{best.good ? 'beste Zeit' : 'angenehmste Zeit'}</span>{/if}{#each seasons as se (se.label)}<span><i class="s {se.cls}"></i>{se.label}</span>{/each}
 		</div>
 		<div class="cl-detail">
 			<b>{MONTHS_LONG[sel]}</b>
 			<span>tagsüber <b>{p[2][sel]} °C</b></span>
 			<span>nachts <b>{p[3][sel]} °C</b></span>
 			<span><b>{p[4][sel]} mm</b> Regen</span>
-			<span class="cl-day">☀ <b>{fmtDaylight(light[sel])}</b></span>
+			{#if water}<span>Wasser <b>{water[sel]} °C</b></span>{/if}
+			{#if sun}
+				<span class="cl-sun-t">
+					{#if 'polar' in sun}<b>{sun.polar === 'day' ? 'Mitternachtssonne' : 'Polarnacht'}</b>
+					{:else}<svg viewBox="0 0 24 24" aria-label="Sonnenaufgang"><path d="M4 18h16M7 14.5a5 5 0 0 1 10 0M12 4v4M9.5 6.5 12 4l2.5 2.5" /></svg><b>{sun.rise}</b>
+						<svg viewBox="0 0 24 24" aria-label="Sonnenuntergang"><path d="M4 18h16M7 14.5a5 5 0 0 1 10 0M12 4v4M9.5 5.5 12 8l2.5-2.5" /></svg><b>{sun.set}</b>{/if}
+				</span>
+			{/if}
+			{#each seasons.filter((se) => se.months.has(sel)) as se (se.label)}<span class="cl-season-chip {se.cls}">{se.label}</span>{/each}
 		</div>
 		{#if hls.length}
 			<div class="cl-hls">
@@ -146,6 +182,6 @@
 				{/each}
 			</div>
 		{/if}
-		<span class="sub cl-src">Mittel 1991–2020{places.length > 1 || p[0] ? ` · ${p[0]}` : ''} · TerraClimate</span>
+		<span class="sub cl-src">Mittel 1991–2020 · {p[0]} · TerraClimate{water ? ', NOAA' : ''}{sun ? ' · Sonnenzeiten am 15.' : ''}</span>
 	</div>
 {/if}

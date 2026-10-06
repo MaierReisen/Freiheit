@@ -77,13 +77,13 @@ export function normalize(d: unknown): AtlasData | null {
 		.filter((c): c is Raw => !!c && typeof (c as Raw).code === 'string')
 		.map((c) => {
 			const code = (c.code as string).toUpperCase();
-			return { ...c, code, name: (c.name as string) || nameOf(code), visits: Array.isArray(c.visits) ? c.visits : [] };
+			return { ...c, code, name: nameOf(code), visits: Array.isArray(c.visits) ? c.visits : [] }; // Anzeige immer mit dem aktuellen deutschen Namen
 		});
 	const wishlist = (Array.isArray(rest.wishlist) ? rest.wishlist : [])
 		.filter((w): w is Raw => !!w && typeof (w as Raw).code === 'string')
 		.map((w) => {
 			const code = (w.code as string).toUpperCase();
-			return { ...w, code, name: (w.name as string) || nameOf(code) };
+			return { ...w, code, name: nameOf(code) };
 		});
 	return {
 		...rest,
@@ -249,8 +249,8 @@ async function pull() {
 	}
 	const next: AtlasData = {
 		schemaVersion: 1,
-		countries: c.data.map((r) => ({ code: r.code, name: r.name || nameOf(r.code), visits: [], position: r.position })),
-		wishlist: w.data.map((r) => ({ code: r.code, name: r.name || nameOf(r.code) })),
+		countries: c.data.map((r) => ({ code: r.code, name: nameOf(r.code), visits: [], position: r.position })),
+		wishlist: w.data.map((r) => ({ code: r.code, name: nameOf(r.code) })),
 		milestones: m.data.map((r) => ({ year: r.year, count: r.count }))
 	};
 	// nur bei echten Änderungen ersetzen (z. B. von einem anderen Gerät): sonst kein Neuaufbau von Liste und Globus

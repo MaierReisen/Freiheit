@@ -231,8 +231,9 @@ export function loadEntry() {
 }
 
 /* Klima (TerraClimate, Mittel 1991–2020): je Land ein oder mehrere Orte mit Monatswerten –
-   [Name, [lon, lat], Tageshöchsttemperatur °C ×12, Tiefsttemperatur °C ×12, Niederschlag mm ×12] */
-export type ClimatePlace = [string, [number, number], number[], number[], number[]];
+   [Name, [lon, lat], Tageshöchsttemperatur °C ×12, Tiefsttemperatur °C ×12, Niederschlag mm ×12,
+    Wassertemperatur °C ×12 (nur am Meer, sonst null), Zeitzone (sonst null), Wirbelsturmsaison [Bezeichnung, Monate] oder null] */
+export type ClimatePlace = [string, [number, number], number[], number[], number[], number[] | null, string | null, [string, number[]] | null];
 let climateCache: Record<string, ClimatePlace[]> | null = null;
 let climateLoading: Promise<Record<string, ClimatePlace[]>> | null = null;
 export const climateNow = (code: string) => (climateCache ? (climateCache[code] ?? null) : undefined);
@@ -290,24 +291,46 @@ export function monthRanges(ms: number[]) {
 		.join(', ');
 }
 
-/** Tageslicht am 15. des Monats (0–11) an einem Ort: Stunden von Sonnenauf- bis -untergang (Sonnenmitte 0,833° unter
-    dem Horizont, wie im Kalender üblich); 24 = Mitternachtssonne, 0 = Polarnacht */
-export function daylight(lat: number, month: number) {
-	const doy = [15, 46, 74, 105, 135, 166, 196, 227, 258, 288, 319, 349][month];
+/** Sonnenauf- und -untergang am 15. des Monats an einem Ort, in dessen Ortszeit (mit Sommerzeit) –
+    z. B. { rise: '06:12', set: '18:34' }; bei Mitternachtssonne bzw. Polarnacht { polar: 'day' | 'night' } */
+export function sunTimes(lat: number, lon: number, month: number, tz: string) {
+	const year = new Date().getFullYear();
+	const doy = Math.round((Date.UTC(year, month, 15) - Date.UTC(year, 0, 0)) / 864e5);
 	const g = ((2 * Math.PI) / 365) * (doy - 1);
 	const decl = 0.006918 - 0.399912 * Math.cos(g) + 0.070257 * Math.sin(g) - 0.006758 * Math.cos(2 * g) + 0.000907 * Math.sin(2 * g) - 0.002697 * Math.cos(3 * g) + 0.00148 * Math.sin(3 * g);
+	const eqt = 229.18 * (0.000075 + 0.001868 * Math.cos(g) - 0.032077 * Math.sin(g) - 0.014615 * Math.cos(2 * g) - 0.040849 * Math.sin(2 * g));
 	const phi = (lat * Math.PI) / 180;
 	const c = (Math.sin((-0.833 * Math.PI) / 180) - Math.sin(phi) * Math.sin(decl)) / (Math.cos(phi) * Math.cos(decl));
-	if (c <= -1) return 24;
-	if (c >= 1) return 0;
-	return (2 * ((Math.acos(c) * 180) / Math.PI)) / 15;
+	if (c <= -1) return { polar: 'day' as const };
+	if (c >= 1) return { polar: 'night' as const };
+	const ha = (Math.acos(c) * 180) / Math.PI;
+	const at = (minUtc: number) => {
+		try {
+			return new Intl.DateTimeFormat('de-DE', { timeZone: tz, hour: '2-digit', minute: '2-digit' }).format(new Date(Date.UTC(year, month, 15) + minUtc * 6e4));
+		} catch {
+			return '';
+		}
+	};
+	return { rise: at(720 - 4 * (lon + ha) - eqt), set: at(720 - 4 * (lon - ha) - eqt) };
 }
-export function fmtDaylight(h: number) {
-	if (h >= 24) return 'Mitternachtssonne';
-	if (h <= 0) return 'Polarnacht';
-	const m = Math.round(h * 60);
-	return `${Math.floor(m / 60)} Std.${m % 60 ? ` ${m % 60} Min.` : ''} Tageslicht`;
+
+/** Regenzeit: Monate mit viel Regen (ab 120 mm) und deutlich mehr als in der trockenen Zeit (mindestens das Doppelte
+    der vier trockensten Monate). Wo es das ganze Jahr ähnlich nass ist, gibt es keine Regenzeit. */
+export function rainSeason(ppt: number[]) {
+	const dry = [...ppt].sort((a, b) => a - b).slice(0, 4);
+	const dryAvg = dry.reduce((a, b) => a + b, 0) / 4;
+	const w = ppt.map((v) => v >= 120 && v >= 2 * dryAvg + 20);
+	// kurze, etwas trockenere Pausen (bis zwei Monate, noch ab 75 mm) gehören dazu – Karibik: Jun – Okt statt Jun, Sep – Okt
+	const fill = w.map((on, i) => {
+		if (on || ppt[i] < 75) return on;
+		for (const [a, b] of [[1, 1], [1, 2], [2, 1]]) if (w[(i + 12 - a) % 12] && w[(i + b) % 12] && (a + b === 2 || ppt[(i + (a === 2 ? 11 : 1)) % 12] >= 75)) return true;
+		return false;
+	});
+	const wet = fill.map((on, i) => (on ? i : -1)).filter((i) => i >= 0);
+	return wet.length === 12 ? [] : wet;
 }
+/** Länder, in denen die Regenzeit Monsun heißt (Süd- und Südostasien) */
+export const MONSOON = new Set(['IN', 'PK', 'NP', 'BT', 'BD', 'LK', 'MV', 'MM', 'TH', 'LA', 'KH', 'VN', 'PH']);
 
 /* Saisonale Highlights je Land (von Hand zusammengestellt und geprüft, siehe data/highlights.json):
    c: Art (tier, meer, bluete, laub, natur, fest), t: Titel, r: Ort/Region, m: Monate (0–11),

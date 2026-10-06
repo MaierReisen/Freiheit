@@ -511,8 +511,14 @@ input,textarea,[contenteditable="true"]{-webkit-user-select:text;user-select:tex
 .cl-tmin{font-size:7.5px;font-weight:600;fill:var(--muted);text-anchor:middle;font-family:var(--text)}
 .cl-rain{fill:var(--rain);opacity:.8}
 .cl-base{stroke:var(--line);stroke-width:1}
-.cl-light{fill:none;stroke:var(--sun);stroke-width:1.4;stroke-linejoin:round;stroke-linecap:round;opacity:.75}
-.cl-light-dot{fill:var(--sun)}
+.cl-water{fill:none;stroke:var(--rain);stroke-width:1.6;stroke-linejoin:round;stroke-linecap:round;stroke-dasharray:4 3}
+.cl-water-dot{fill:var(--rain)}
+.cl-water-dot.on{stroke:var(--surface);stroke-width:1.5}
+.cl-season.rain{fill:color-mix(in srgb,var(--rain) 32%,transparent)}
+.cl-season.storm{fill:color-mix(in srgb,var(--warn) 30%,transparent)}
+.cl-season-t{font-size:7.5px;font-weight:700;text-anchor:middle;font-family:var(--text);letter-spacing:.02em}
+.cl-season-t.rain{fill:var(--rain)}
+.cl-season-t.storm{fill:var(--warn)}
 .cl-m{font-size:9px;font-weight:600;fill:var(--muted);text-anchor:middle;font-family:var(--text)}
 .cl-m.on{fill:var(--ink);font-weight:800}
 .cl-hit{position:absolute;inset:0 3.125%;display:grid;grid-template-columns:repeat(12,1fr)}
@@ -522,14 +528,21 @@ input,textarea,[contenteditable="true"]{-webkit-user-select:text;user-select:tex
 .cl-legend i{display:inline-block}
 .cl-legend i.t{width:6px;height:11px;border-radius:3px;background:linear-gradient(#F6C445,#34D1BF)}
 .cl-legend i.r{width:8px;height:6px;border-radius:2px;background:var(--rain);opacity:.8}
-.cl-legend i.l{width:12px;height:2px;border-radius:1px;background:var(--sun)}
-.cl-legend i.h{width:6px;height:6px;border-radius:50%;background:var(--primary)}
+.cl-legend i.w{width:12px;height:0;border-top:2px dashed var(--rain)}
+.cl-legend i.s{width:12px;height:7px;border-radius:3.5px}
+.cl-legend i.s.rain{background:color-mix(in srgb,var(--rain) 45%,transparent)}
+.cl-legend i.s.storm{background:color-mix(in srgb,var(--warn) 45%,transparent)}
 .cl-legend i.g{width:10px;height:11px;border-radius:3px;background:color-mix(in srgb,var(--sun) 22%,transparent);box-shadow:inset 0 2px 0 var(--sun)}
 .cl-detail{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px;margin-top:6px;font-size:13.5px;color:var(--muted)}
+.cl-sun-t{display:inline-flex;align-items:center;gap:4px}
+.cs-tile .cl-sun-t svg{width:15px;height:15px;margin:0;stroke:var(--sun);stroke-width:2;fill:none}
+.cl-sun-t b + svg{margin-left:6px!important}
+.cl-season-chip{font-size:12px;font-weight:700;padding:2px 8px;border-radius:999px}
+.cl-season-chip.rain{background:color-mix(in srgb,var(--rain) 18%,transparent);color:var(--rain)}
+.cl-season-chip.storm{background:color-mix(in srgb,var(--warn) 18%,transparent);color:var(--warn)}
 .cs-tile .cl-detail b{color:var(--ink);font-size:14px;line-height:1.3}
 .cs-tile .cl-src{font-size:11.5px;margin-top:4px}
 /* Highlights */
-.cl-hl-dot{fill:var(--primary)}
 .cl-hls{display:flex;flex-direction:column;gap:2px;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
 .cl-hls .lbl{margin-bottom:4px}
 .cl-hl{display:flex;align-items:center;gap:10px;padding:6px 0;transition:opacity .2s}

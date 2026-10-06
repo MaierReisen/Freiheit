@@ -3,7 +3,7 @@
 	import { SCOPES, inScope } from '$lib/scope';
 	import { contOf, flag, nameOf } from '$lib/countries';
 	import { closeSheet, hooks, openCountry, reduceMotion, setSheetDetent, ui } from '$lib/app.svelte';
-	import { compareArea, currencies, factsNow, loadClimate, loadEntry, loadHighlights, fmtArea, fmtAreaShort, fmtDensity, fmtHeight, fmtPop, languages, loadFacts, localTime, type Facts } from '$lib/facts';
+	import { compareArea, currencies, factsNow, loadClimate, loadEntry, loadHighlights, fmtArea, fmtAreaShort, fmtDensity, fmtPop, languages, loadFacts, localTime, type Facts } from '$lib/facts';
 	import { fmtMoney, fmtRateDate, getRates, type Rates } from '$lib/rates';
 	import CountryShape from './CountryShape.svelte';
 	import { INFO } from '$lib/map/geo';
@@ -27,7 +27,7 @@
 				? `zählt bei „${SCOPES.find((x) => x.id === atlas.settings.countryScope)?.label}“ nicht als Land`
 				: 'Gebiet, zählt nicht als eigenes Land'
 	);
-	const name = $derived(entry?.name || nameOf(code));
+	const name = $derived(nameOf(code));
 
 	// Fakten (beim ersten Mal nachgeladen)
 	// svelte-ignore state_referenced_locally
@@ -161,6 +161,7 @@
 					<span class="lbl">Einwohner</span>
 					<b class="nw">{fmtPop(facts.pop)}</b>
 					{#if facts.area}<span class="sub">{fmtDensity(facts.pop, facts.area)}</span>{/if}
+					{#if langs[0]}<span class="sub">Sprache: {langs[0]}</span>{/if}
 				</div>
 			{/if}
 			{#if facts.area}
@@ -185,21 +186,6 @@
 		<div class="cs-grid">
 			{#if code !== 'DE'}<EntryCard {code} />{/if}
 			<ClimateCard {code} />
-			{#if facts.peak}
-				<div class="cs-tile">
-					<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 20l6.5-11 4 6.5L16 12l5 8z" /><path d="M8 11.5l1.5 1.5L11 11.5" /></svg>
-					<span class="lbl">Höchster Berg</span>
-					<b class="cs-list">{facts.peak[0]}</b>
-					<span class="sub">{fmtHeight(facts.peak[1])}</span>
-				</div>
-			{/if}
-			{#if langs.length}
-				<div class="cs-tile">
-					<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z" /><path d="M8 9h8M8 12h5" /></svg>
-					<span class="lbl">{langs.length > 1 ? 'Sprachen' : 'Sprache'}</span>
-					<b class="cs-list">{langs.slice(0, 4).join(', ')}{langs.length > 4 ? ` +${langs.length - 4}` : ''}</b>
-				</div>
-			{/if}
 			{#if curs.length}
 				<div class="cs-tile wide cs-fx">
 					<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" /><path d="M14.8 9.2c-.6-.8-1.6-1.2-2.8-1.2-1.7 0-3 .9-3 2.2 0 2.9 6 1.4 6 4.4 0 1.3-1.3 2.2-3 2.2-1.3 0-2.4-.5-3-1.4M12 6v2M12 16.8V18" /></svg>
