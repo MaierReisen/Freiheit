@@ -1,0 +1,117 @@
+/* Länder-Fakten für die Detailseite: Daten werden erst beim ersten Öffnen nachgeladen (eigene Datei, ~50 KB).
+   Quellen: Wikidata (CC0), mledoze/countries (ODbL), IANA-Zeitzonen – siehe scripts/build-facts.py */
+
+export interface Facts {
+	cap?: string[];
+	pop?: number;
+	area?: number;
+	lang?: string[];
+	cur?: { c: string; s: string }[];
+	call?: string;
+	drive?: 'l' | 'r';
+	tz?: string;
+	tzn?: number;
+	nb?: string[];
+	land?: boolean;
+}
+
+let cache: Record<string, Facts> | null = null;
+let loading: Promise<Record<string, Facts>> | null = null;
+export function loadFacts(): Promise<Record<string, Facts>> {
+	if (cache) return Promise.resolve(cache);
+	loading ??= import('./data/facts.json').then((m) => (cache = m.default as Record<string, Facts>));
+	return loading;
+}
+export const factsNow = (code: string): Facts | null => cache?.[code] ?? null;
+
+const nf = (o: Intl.NumberFormatOptions) => new Intl.NumberFormat('de-DE', o);
+
+export function fmtPop(n: number) {
+	if (n < 10000) return nf({}).format(n);
+	if (n < 1e6) return nf({ maximumFractionDigits: 0 }).format(Math.round(n / 1000)) + ' Tsd.';
+	if (n < 1e9) return nf({ maximumFractionDigits: n < 1e7 ? 1 : 0 }).format(n / 1e6) + ' Mio.';
+	return nf({ maximumFractionDigits: 2 }).format(n / 1e9) + ' Mrd.';
+}
+export function fmtArea(a: number) {
+	return nf({ maximumFractionDigits: a < 10 ? 2 : 0 }).format(a) + ' km²';
+}
+export function fmtDensity(pop: number, area: number) {
+	const d = pop / area;
+	return nf({ maximumFractionDigits: d < 10 ? 1 : 0 }).format(d) + ' pro km²';
+}
+
+const DE_AREA = 357588,
+	BERLIN = 891;
+/** Größenvergleich, für Deutsche greifbar */
+export function compareArea(code: string, a: number) {
+	if (code === 'DE') return '';
+	if (a < BERLIN) {
+		const r = BERLIN / a;
+		return r < 1.5 ? 'etwa so groß wie Berlin' : `≈ ${nf({ maximumFractionDigits: 0 }).format(r)}-mal in Berlin`;
+	}
+	const r = a / DE_AREA;
+	if (r >= 1.15) return `≈ ${nf({ maximumFractionDigits: r < 10 ? 1 : 0 }).format(r)} × Deutschland`;
+	if (r >= 0.87) return 'etwa so groß wie Deutschland';
+	return `≈ ${nf({ maximumFractionDigits: r < 0.1 ? 1 : 0 }).format(r * 100)} % von Deutschland`;
+}
+
+const langNames = (() => {
+	try {
+		return new Intl.DisplayNames(['de'], { type: 'language' });
+	} catch {
+		return null;
+	}
+})();
+const curNames = (() => {
+	try {
+		return new Intl.DisplayNames(['de'], { type: 'currency' });
+	} catch {
+		return null;
+	}
+})();
+/** Sprachen auf Deutsch; unbekannte Codes (z. B. Gebärdensprachen ohne Namen) fallen weg */
+export function languages(codes: string[] = []) {
+	const out: string[] = [];
+	for (const c of codes) {
+		let n = '';
+		try {
+			n = langNames?.of(c) ?? '';
+		} catch {}
+		if (n && n.toLowerCase() !== c.toLowerCase() && !out.includes(n)) out.push(n);
+	}
+	return out;
+}
+export function currencies(list: Facts['cur'] = []) {
+	return list.map((x) => {
+		let n = x.c;
+		try {
+			n = curNames?.of(x.c) ?? x.c;
+		} catch {}
+		return { name: n, sym: x.s && x.s !== x.c ? x.s : '', code: x.c };
+	});
+}
+
+/** Minuten Versatz einer Zeitzone zu UTC (mit Sommerzeit, zum Zeitpunkt d) */
+function tzOffset(tz: string, d: Date) {
+	try {
+		const p = new Intl.DateTimeFormat('en-US', { timeZone: tz, timeZoneName: 'longOffset' }).formatToParts(d).find((x) => x.type === 'timeZoneName')?.value ?? '';
+		const m = /GMT([+-])(\d{1,2})(?::?(\d{2}))?/.exec(p);
+		return m ? (m[1] === '-' ? -1 : 1) * (Number(m[2]) * 60 + Number(m[3] || 0)) : 0;
+	} catch {
+		return 0;
+	}
+}
+/** Ortszeit und Unterschied zur eigenen Zeit, z. B. { time: '14:32', diff: '+1 Std.' } */
+export function localTime(tz: string, d = new Date()) {
+	let time = '';
+	try {
+		time = new Intl.DateTimeFormat('de-DE', { timeZone: tz, hour: '2-digit', minute: '2-digit' }).format(d);
+	} catch {
+		return null;
+	}
+	const m = tzOffset(tz, d) + d.getTimezoneOffset(); // getTimezoneOffset ist umgekehrt gepolt
+	if (!m) return { time, diff: 'gleiche Zeit wie hier' };
+	const h = Math.abs(m) / 60;
+	const s = nf({ maximumFractionDigits: 2 }).format(h);
+	return { time, diff: `${m > 0 ? '+' : '−'}${s} Std.` };
+}

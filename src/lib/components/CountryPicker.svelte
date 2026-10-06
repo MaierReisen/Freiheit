@@ -23,7 +23,7 @@
 		if (flyMode) {
 			closeSheet();
 			hooks.map?.flyToCountry(code, { ms: 1100 });
-			openCountry(code);
+			openCountry(code, { peek: true });
 			return;
 		}
 		addCountry(code);

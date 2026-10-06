@@ -276,3 +276,32 @@ export const lodReady = (name: string) => !!LODS[name];
 
 /** Alle Länder der Karte, alphabetisch nach deutschem Namen (für die Länderauswahl) */
 export const ALL = [...new Set(features.map((f) => f.id))].sort((a, b) => nameOf(a).localeCompare(nameOf(b), 'de'));
+
+/** Form eines Landes für Vorschaubilder: alle Teile nahe am Hauptgebiet (weit Entferntes wie Alaska, Hawaii oder
+    Französisch-Guayana bleibt weg, damit das Land groß genug erscheint) – plus die Nachbarschaft als Umgebung. */
+export function shapeOf(id: string): { shape: GeoJSON.Feature; around: GeoJSON.Feature; c: [number, number] } | null {
+	const i = INFO[id],
+		lod = getLod('full');
+	if (!i || !lod) return null;
+	const own = lod.polys.filter((p) => p.id === id);
+	// Hauptgebiet = größte Fläche; dazu große Teile (≥ 25 % davon, z. B. Indonesiens Inseln) und alles in seiner Nähe
+	// (Korsika ja, Azoren/Kanaren/Alaska nein – die würden das Festland klein an den Rand drücken)
+	const areas = own.map((p) => geoArea(p.g));
+	const mainIdx = areas.indexOf(Math.max(...areas, 0));
+	const main = own[mainIdx];
+	const mc = main ? geoCentroid(main.g) : i.c;
+	const near = (Math.max(6, Math.min(20, (main?.size ?? i.size) * 0.9)) * Math.PI) / 180;
+	const parts = own.filter((p, k) => k === mainIdx || areas[k] >= 0.25 * areas[mainIdx] || geoDistance(geoCentroid(p.g), mc) < near);
+	const R = (Math.max(25, i.size * 1.5) * Math.PI) / 180;
+	const geom: GeoJSON.Geometry = parts.length
+		? { type: 'MultiPolygon', coordinates: parts.map((p) => p.g.coordinates) }
+		: (features.find((f) => f.id === id)?.geometry ?? { type: 'MultiPolygon', coordinates: [] });
+	// Umgebung: andere Länder in der Nähe (für den Kartenausschnitt)
+	const R2 = R * 2.2;
+	const others = lod.polys.filter((p) => p.id !== id && geoDistance(geoCentroid(p.g), i.c) < R2 + (p.size * Math.PI) / 180);
+	return {
+		shape: { type: 'Feature', properties: {}, geometry: geom },
+		around: { type: 'Feature', properties: {}, geometry: { type: 'MultiPolygon', coordinates: others.map((p) => p.g.coordinates) } },
+		c: parts.length ? (geoCentroid({ type: 'MultiPolygon', coordinates: parts.map((p) => p.g.coordinates) }) as [number, number]) : i.c
+	};
+}

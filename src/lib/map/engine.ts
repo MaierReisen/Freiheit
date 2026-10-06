@@ -35,8 +35,6 @@ export interface MapOptions {
 	/** Startregion: Mittelpunkt und Zoom, auf die die Karte beim Start fliegt */
 	getStartView(): { c: [number, number]; k: number } | null | undefined;
 	onTapCountry(code: string): void;
-	/** erster Tipp auf die (noch nicht aktive) Karte: Land nur hervorheben, keine Detailseite */
-	onFocusCountry(code: string): void;
 	onTapEmpty(): void;
 	/** Modus, Drehen oder Ladezustand haben sich geändert */
 	onSync(s: MapSync): void;
@@ -989,7 +987,8 @@ export function createWorldMap(o: MapOptions) {
 			}
 		return null;
 	}
-	/** focusOnly (erster Tipp, der die Karte aktiviert): nur auf das Land bzw. die Stelle schwenken, keine Detailseite */
+	/** focusOnly (erster Tipp, der die Karte aktiviert): Meer → nur die Stelle in die Mitte holen; ein Land öffnet
+	    auch beim ersten Tipp gleich seine Seite (kompakt, der Globus bleibt sichtbar) */
 	function tap(cx: number, cy: number, touch = false, focusOnly = false) {
 		const r = cv.getBoundingClientRect(),
 			x = cx - r.left,
@@ -1008,8 +1007,7 @@ export function createWorldMap(o: MapOptions) {
 			return;
 		}
 		flyToCountry(hit, { keepK: true, ms: 650 });
-		if (focusOnly) o.onFocusCountry(hit);
-		else o.onTapCountry(hit);
+		o.onTapCountry(hit);
 	}
 
 	/* --- Zeiger: Ziehen, Pinch, Tippen, Schwung --- */

@@ -71,6 +71,10 @@ export const ui = $state({
 	sheetView: null as SheetView | null,
 	/** zählt jedes Öffnen hoch, damit das Sheet frisch aufgebaut wird (wie vorher per innerHTML) */
 	sheetKey: 0,
+	/** Länderseite: 'peek' = kompakte Karte unten (Globus bleibt sichtbar), 'full' = volle Detailseite */
+	sheetDetent: 'full' as 'peek' | 'full',
+	/** Höhe der kompakten Karte in px (misst die Länderseite selbst) */
+	sheetPeek: 260,
 	placesOpen: false,
 	full: false,
 	settingsOpen: false,
@@ -137,9 +141,16 @@ export function closeSheet() {
 	ui.sheetOpen = false;
 	ui.selected = null;
 }
-export function openCountry(code: string) {
+/** peek: aus Globus/Karte geöffnet – erst als kompakte Karte, damit man den Flug zum Land sieht.
+    Ist schon eine Länderseite offen, bleibt deren Stufe (Durchtippen durch Nachbarländer). */
+export function openCountry(code: string, opts: { peek?: boolean } = {}) {
+	const already = ui.sheetOpen && ui.sheetView?.kind === 'country';
+	ui.sheetDetent = already ? ui.sheetDetent : opts.peek ? 'peek' : 'full';
 	ui.selected = code;
 	openSheet({ kind: 'country', code });
+}
+export function setSheetDetent(d: 'peek' | 'full') {
+	ui.sheetDetent = d;
 }
 export function openPicker(mode: PickerMode) {
 	openSheet({ kind: 'picker', mode });

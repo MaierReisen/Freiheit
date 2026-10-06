@@ -1,15 +1,32 @@
 <script lang="ts">
-	import { closeSheet, ui } from '$lib/app.svelte';
+	import { closeSheet, setSheetDetent, ui } from '$lib/app.svelte';
 	import CountryPicker from './CountryPicker.svelte';
 	import CountrySheet from './CountrySheet.svelte';
 
 	/* Nach unten ziehen schließt das Sheet (wie in iOS): am Griff/Titel jederzeit, in der Liste nur,
-	   wenn sie ganz oben steht – sonst scrollt die Liste ganz normal. */
+	   wenn sie ganz oben steht – sonst scrollt die Liste ganz normal.
+	   Länderseite mit zwei Stufen: kompakte Karte („peek“, Globus bleibt sichtbar und antippbar) und volle Seite.
+	   Kompakt: hochziehen → voll, runterziehen → schließen. Voll: runterziehen → kompakt. */
+
+	const isCountry = $derived(ui.sheetView?.kind === 'country');
+	const peek = $derived(isCountry && ui.sheetDetent === 'peek');
 
 	let sheet: HTMLDivElement;
 	let scrim: HTMLDivElement;
 	let downOnScrim = false;
-	let g: { y0: number; x0: number; t0: number; ly: number; lt: number; vy: number; cy: number; sc: HTMLElement | null; on: boolean | null } | null = null;
+	let g: {
+		y0: number;
+		x0: number;
+		t0: number;
+		ly: number;
+		lt: number;
+		vy: number;
+		cy: number;
+		sc: HTMLElement | null;
+		on: boolean | null;
+		base: number;
+		peek: boolean;
+	} | null = null;
 
 	function scroller(t: EventTarget | null): HTMLElement | null {
 		for (let el = t as HTMLElement | null; el && el !== sheet; el = el.parentElement) {
@@ -17,11 +34,14 @@
 		}
 		return null;
 	}
-	function setDrag(dy: number) {
+	/** y: Verschiebung des Sheets nach unten (0 = ganz offen) */
+	function setDrag(y: number) {
 		sheet.style.transition = 'none';
-		sheet.style.transform = `translateY(${dy}px)`;
-		scrim.style.transition = 'none';
-		scrim.style.opacity = String(Math.max(0, 1 - dy / (sheet.offsetHeight || 1)));
+		sheet.style.transform = `translateY(${y}px)`;
+		if (!peek) {
+			scrim.style.transition = 'none';
+			scrim.style.opacity = String(Math.max(0, 1 - y / (sheet.offsetHeight || 1)));
+		}
 	}
 	function release() {
 		sheet.style.transition = '';
@@ -33,7 +53,8 @@
 	function start(e: TouchEvent) {
 		if (e.touches.length !== 1 || !ui.sheetOpen) return (g = null);
 		const t = e.touches[0];
-		g = { y0: t.clientY, x0: t.clientX, t0: e.timeStamp, ly: t.clientY, lt: e.timeStamp, vy: 0, cy: t.clientY, sc: scroller(e.target), on: null };
+		const base = peek ? Math.max(0, sheet.offsetHeight - ui.sheetPeek) : 0;
+		g = { y0: t.clientY, x0: t.clientX, t0: e.timeStamp, ly: t.clientY, lt: e.timeStamp, vy: 0, cy: t.clientY, sc: scroller(e.target), on: null, base, peek };
 	}
 	function move(e: TouchEvent) {
 		if (!g) return;
@@ -42,8 +63,8 @@
 			dx = t.clientX - g.x0;
 		if (g.on === null) {
 			if (Math.abs(dy) < 6 && Math.abs(dx) < 6) return;
-			// nur nach unten, überwiegend senkrecht und Liste (falls darin) ganz oben
-			g.on = dy > 0 && Math.abs(dy) > Math.abs(dx) && (!g.sc || g.sc.scrollTop <= 0);
+			// überwiegend senkrecht; kompakt in beide Richtungen, sonst nur nach unten und Liste (falls darin) ganz oben
+			g.on = Math.abs(dy) > Math.abs(dx) && (g.peek || (dy > 0 && (!g.sc || g.sc.scrollTop <= 0)));
 			if (g.on) {
 				(document.activeElement as HTMLElement | null)?.blur?.(); // Tastatur weg
 				g.ly = t.clientY;
@@ -60,7 +81,8 @@
 			g.lt = e.timeStamp;
 		}
 		g.cy = t.clientY;
-		setDrag(Math.max(0, dy) + Math.min(0, dy) * 0.2);
+		const y = g.base + dy;
+		setDrag(y >= 0 ? y : y * 0.2); // über „ganz offen“ hinaus nur gebremst
 	}
 	function end() {
 		if (!g) return;
@@ -69,8 +91,17 @@
 		if (!d.on) return;
 		const dy = d.cy - d.y0;
 		release();
-		// weit genug oder kräftig nach unten geschnippt → schließen (gleitet aus der aktuellen Lage hinaus)
-		if (dy > Math.min(140, sheet.offsetHeight * 0.3) || (d.vy > 0.6 && dy > 40)) closeSheet();
+		if (d.peek) {
+			// kompakt: hoch → volle Seite, runter → schließen
+			if (dy < -50 || (d.vy < -0.5 && dy < -20)) setSheetDetent('full');
+			else if (dy > 70 || (d.vy > 0.5 && dy > 30)) closeSheet();
+			return;
+		}
+		// weit genug oder kräftig nach unten geschnippt → Länderseite auf kompakt, sonst schließen
+		if (dy > Math.min(140, sheet.offsetHeight * 0.3) || (d.vy > 0.6 && dy > 40)) {
+			if (isCountry) setSheetDetent('peek');
+			else closeSheet();
+		}
 	}
 
 	// nicht-passiv, damit das Ziehen das Scrollen verhindern kann
@@ -91,7 +122,7 @@
 <!-- schließt nur, wenn die Berührung auch auf der Abdeckung begann (kein „Geister-Klick“ vom Antippen der Karte) -->
 <div
 	class="scrim"
-	class:open={ui.sheetOpen}
+	class:open={ui.sheetOpen && !peek}
 	id="scrim"
 	onpointerdown={() => (downOnScrim = true)}
 	onclick={() => {
@@ -101,7 +132,18 @@
 	role="presentation"
 	bind:this={scrim}
 ></div>
-<div class="sheet" class:open={ui.sheetOpen} id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle" bind:this={sheet}>
+<div
+	class="sheet"
+	class:open={ui.sheetOpen}
+	class:country={isCountry}
+	class:peek
+	style="--peek:{ui.sheetPeek}px"
+	id="sheet"
+	role="dialog"
+	aria-modal={!peek}
+	aria-labelledby="sheetTitle"
+	bind:this={sheet}
+>
 	{#if ui.sheetView}
 		{#key ui.sheetKey}
 			<div class="grab"></div>

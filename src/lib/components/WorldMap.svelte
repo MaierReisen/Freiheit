@@ -29,6 +29,14 @@
 						: 'Tippe auf ein Land'
 	);
 
+	/** Seite so rollen, dass der Globus mittig im freien Bereich über der kompakten Länderseite steht */
+	function keepMapVisible() {
+		if (ui.full || !ui.sheetOpen || ui.sheetDetent !== 'peek') return;
+		const r = box.getBoundingClientRect(),
+			free = window.innerHeight - ui.sheetPeek;
+		const delta = r.top + r.height / 2 - free / 2;
+		if (Math.abs(delta) > 24) window.scrollBy({ top: delta, behavior: reduceMotion() ? 'auto' : 'smooth' });
+	}
 	const focusContinentOf = (code: string) => {
 		const k = CONT[code];
 		if (k && CONT_VIEW[k]) ui.focusContinent = k;
@@ -57,15 +65,12 @@
 			isActive: () => ui.mapActive,
 			onActivate: () => (ui.mapActive = true),
 			getStartView: () => CONT_VIEW[atlas.settings.homeContinent],
-			// angetipptes Land: Kontinent-Knopf auf dessen Kontinent
+			// angetipptes Land: Kontinent-Knopf auf dessen Kontinent, Länderseite kompakt öffnen und den Globus
+			// darüber mittig zeigen (man sieht den Flug zum Land)
 			onTapCountry: (code) => {
 				focusContinentOf(code);
-				openCountry(code);
-			},
-			// erster Tipp: Land nur markieren (Umriss + Name), Detailseite erst beim nächsten Tipp
-			onFocusCountry: (code) => {
-				focusContinentOf(code);
-				ui.selected = code;
+				openCountry(code, { peek: true });
+				requestAnimationFrame(keepMapVisible);
 			},
 			onTapEmpty: () => {
 				if (ui.selected) closeSheet();
