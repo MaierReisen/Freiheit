@@ -116,7 +116,7 @@
 			</div>
 		</div>
 		<div class="cl-legend" aria-hidden="true">
-			<span><i class="t"></i>Tag/Nacht</span><span><i class="r"></i>Regen</span><span><i class="l"></i>Tageslicht</span>{#if bestSet.size}<span><i class="g"></i>{best.good ? 'beste Zeit' : 'angenehmste Zeit'}</span>{/if}
+			<span><i class="t"></i>Tag/Nacht</span><span><i class="r"></i>Regen</span><span><i class="l"></i>Tageslicht</span>{#if bestSet.size}<span><i class="g"></i>{best.good ? 'beste Zeit' : 'angenehmste Zeit'}</span>{/if}{#if hlMonths.size}<span><i class="h"></i>Highlight</span>{/if}
 		</div>
 		<div class="cl-detail">
 			<b>{MONTHS_LONG[sel]}</b>

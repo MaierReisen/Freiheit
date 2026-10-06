@@ -523,6 +523,7 @@ input,textarea,[contenteditable="true"]{-webkit-user-select:text;user-select:tex
 .cl-legend i.t{width:6px;height:11px;border-radius:3px;background:linear-gradient(#F6C445,#34D1BF)}
 .cl-legend i.r{width:8px;height:6px;border-radius:2px;background:var(--rain);opacity:.8}
 .cl-legend i.l{width:12px;height:2px;border-radius:1px;background:var(--sun)}
+.cl-legend i.h{width:6px;height:6px;border-radius:50%;background:var(--primary)}
 .cl-legend i.g{width:10px;height:11px;border-radius:3px;background:color-mix(in srgb,var(--sun) 22%,transparent);box-shadow:inset 0 2px 0 var(--sun)}
 .cl-detail{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px;margin-top:6px;font-size:13.5px;color:var(--muted)}
 .cs-tile .cl-detail b{color:var(--ink);font-size:14px;line-height:1.3}
