@@ -59,7 +59,25 @@ const PAL = {
 	label: 'rgba(7,20,31,.92)'
 };
 
-const MOVE_STEPS = [3, 6, 10]; // von fein nach grob; wird je nach Gerätegeschwindigkeit angepasst
+const MOVE_STEPS = [3, 6, 10];
+const MICRO_K = 1.6; // ab diesem Zoom alle Zwergstaaten als Punkt mit Namen (darunter nur bereiste)
+// echte Zwergstaaten (unter etwa 4.000 km²: Vatikan, Monaco, Malta, Singapur, Karibik- und Pazifikinseln …)
+const microIds = new Set(features.filter((f) => INFO[f.id].area < 0.0001).map((f) => f.id));
+// Teilflächen je Land und Detailstufe (für Umrisse, ohne jedes Mal alle Flächen zu durchsuchen)
+const polyIndex = new WeakMap<Lod, Map<string, GeoJSON.Polygon[]>>();
+function polysFor(lod: Lod, id: string) {
+	let m = polyIndex.get(lod);
+	if (!m) {
+		m = new Map();
+		for (const pg of lod.polys) {
+			const a = m.get(pg.id);
+			if (a) a.push(pg.g);
+			else m.set(pg.id, [pg.g]);
+		}
+		polyIndex.set(lod, m);
+	}
+	return m.get(id) || [];
+} // von fein nach grob; wird je nach Gerätegeschwindigkeit angepasst
 
 export function createWorldMap(o: MapOptions) {
 	const { cvB, cvT, reduce } = o;
@@ -164,7 +182,8 @@ export function createWorldMap(o: MapOptions) {
 		const m = Math.max(0, 72 - 62 / k);
 		return clamp(l, -m, m);
 	};
-	const kRange = () => (view.mode === 'globe' ? [0.8, 16] : [1, 16]);
+	const K_MAX = 1500; // so weit, dass auch der Vatikan (0,01°) als Fläche gut erkennbar wird
+	const kRange = () => (view.mode === 'globe' ? [0.8, K_MAX] : [1, K_MAX]);
 
 	function baseScale() {
 		return view.mode === 'globe' ? (Math.min(cw, ch) / 2) * 0.86 : flatBase;
@@ -176,13 +195,21 @@ export function createWorldMap(o: MapOptions) {
 				.scale(baseScale() * view.k)
 				.translate([cw / 2, ch / 2])
 				.clipAngle(90)
+				.clipExtent(view.k > 6 ? clipBox() : null)
 				.precision(prec);
 		return geoNaturalEarth1()
 			.rotate([-view.lon, 0])
 			.center([0, view.lat])
 			.scale(baseScale() * view.k)
 			.translate([cw / 2, ch / 2])
+			.clipExtent(view.k > 6 ? clipBox() : null)
 			.precision(prec);
+	}
+	function clipBox(): [[number, number], [number, number]] {
+		return [
+			[-40, -40],
+			[cw + 40, ch + 40]
+		];
 	}
 	let projKey = '',
 		projCache: GeoProjection | null = null;
@@ -446,12 +473,17 @@ export function createWorldMap(o: MapOptions) {
 			base: GeoJSON.Polygon[] = [],
 			vis: GeoJSON.Polygon[] = [],
 			soft: GeoJSON.Polygon[] = [],
-			wsh: GeoJSON.Polygon[] = [];
+			wsh: GeoJSON.Polygon[] = [],
+			// Zwergstaaten zuletzt (obenauf), damit sie nicht vom umgebenden Land (Italien → Vatikan) überdeckt werden
+			mBase: GeoJSON.Polygon[] = [],
+			mVis: GeoJSON.Polygon[] = [],
+			mSoft: GeoJSON.Polygon[] = [];
 		for (const pg of lod.polys) {
 			let ok = seenIds[pg.id];
 			if (ok === undefined) ok = seenIds[pg.id] = inView(pg.id, ci);
 			if (!ok || pg.size < minDeg) continue;
-			(visited.has(pg.id) ? (o.isCounted(pg.id) ? vis : soft) : wish.has(pg.id) ? wsh : base).push(pg.g);
+			const mi = microIds.has(pg.id);
+			(visited.has(pg.id) ? (o.isCounted(pg.id) ? (mi ? mVis : vis) : mi ? mSoft : soft) : wish.has(pg.id) ? wsh : mi ? mBase : base).push(pg.g);
 		}
 		const fillGroup = (arr: GeoJSON.Polygon[], ...fills: (string | CanvasPattern | null)[]) => {
 			if (!arr.length) return;
@@ -467,6 +499,9 @@ export function createWorldMap(o: MapOptions) {
 		fillGroup(wsh, PAL.wish);
 		fillGroup(soft, PAL.land, PAL.visitedSoft, hatchPattern(c));
 		fillGroup(vis, PAL.visited);
+		fillGroup(mBase, PAL.land);
+		fillGroup(mSoft, PAL.land, PAL.visitedSoft, hatchPattern(c));
+		fillGroup(mVis, PAL.visited);
 		c.beginPath();
 		pathQ(lod.borders);
 		c.strokeStyle = PAL.border;
@@ -552,6 +587,44 @@ export function createWorldMap(o: MapOptions) {
 		markDirty(false);
 	}
 
+	/** Namen der Zwergstaaten neben dem Punkt; bereiste zuerst, überlappende werden weggelassen */
+	function drawMicroLabels(c: CanvasRenderingContext2D, list: { id: string; x: number; y: number; been: boolean }[]) {
+		list.sort((a, b) => Number(b.been) - Number(a.been) || INFO[b.id].area - INFO[a.id].area);
+		c.font = '600 11px Figtree, system-ui, sans-serif';
+		c.textBaseline = 'middle';
+		c.textAlign = 'left';
+		c.lineJoin = 'round';
+		const taken: [number, number, number, number][] = [];
+		for (const l of list) {
+			const t = nameOf(l.id),
+				w = c.measureText(t).width;
+			// rechts vom Punkt, sonst links, darüber oder darunter – je nachdem, wo Platz ist
+			let pos: [number, number] | null = null;
+			for (const [x, y] of [
+				[l.x + 7, l.y],
+				[l.x - 7 - w, l.y],
+				[l.x - w / 2, l.y - 13],
+				[l.x - w / 2, l.y + 13]
+			] as [number, number][]) {
+				const box: [number, number, number, number] = [x - 2, y - 8, x + w + 2, y + 8];
+				if (box[0] < 4 || box[2] > cw - 4 || box[1] < 4 || box[3] > ch - 4) continue;
+				if (taken.some((b) => box[0] < b[2] && box[2] > b[0] && box[1] < b[3] && box[3] > b[1])) continue;
+				// auch keine anderen Punkte überdecken
+				if (list.some((o) => o !== l && o.x > box[0] - 3 && o.x < box[2] + 3 && o.y > box[1] - 3 && o.y < box[3] + 3)) continue;
+				taken.push(box);
+				pos = [x, y];
+				break;
+			}
+			if (!pos) continue;
+			const [x, y] = pos;
+			c.lineWidth = 3;
+			c.strokeStyle = 'rgba(7,20,31,.8)';
+			c.strokeText(t, x, y);
+			c.fillStyle = l.been ? '#7FE8DA' : 'rgba(255,255,255,.78)';
+			c.fillText(t, x, y);
+		}
+	}
+
 	function drawTop(now = performance.now()) {
 		const c = ctxT;
 		if (!c || !cw || !ch) return;
@@ -572,45 +645,88 @@ export function createWorldMap(o: MapOptions) {
 			wish = o.getWish(),
 			selected = o.getSelected();
 
-		// Länder, die auf dem Bildschirm zu klein zum Erkennen sind, als leuchtende Punkte (nur bereiste und das gewählte);
-		// beim Hineinzoomen verschwindet der Punkt und die echte Form ist zu sehen
+		// Zwergstaaten und andere winzige Länder:
+		// - unter ~7 px als Punkt (bereist: leuchtend türkis, sonst dezenter heller Ring), der beim Hineinzoomen
+		//   weich in die echte Form übergeht (bis ~13 px)
+		// - solange die Form klein ist (unter ~36 px), mit Umriss, damit sie sich vom Nachbarland abhebt
+		// - ab regionalem Zoom mit Namen (ohne Überlappung, bereiste zuerst)
 		const ppd = pxPerDeg();
+		const showMicro = view.k >= MICRO_K;
+		const labels: { id: string; x: number; y: number; been: boolean }[] = [];
+		let outlined: string[] | null = null;
 		for (const f of features) {
 			const isSel = f.id === selected,
-				been = visited.has(f.id);
-			if (!been && !isSel) continue;
-			const i = INFO[f.id];
-			if (i.size * ppd >= 7 || !onFront(i.c)) continue;
+				been = visited.has(f.id),
+				// unbereiste nur, wenn sie in der gewählten Länderliste zählen (keine Färöer, Jersey … als Extra-Punkte)
+				micro = microIds.has(f.id) && (been || o.isCounted(f.id));
+			if (!been && !isSel && !(micro && showMicro)) continue;
+			const i = INFO[f.id],
+				sz = i.size * ppd;
+			if (!onFront(i.c)) continue;
+			if (sz >= 36) {
+				if (micro) (outlined ??= []).push(f.id); // große Darstellung: nur noch Umriss
+				continue;
+			}
 			const p = P(i.c);
-			if (!p) continue;
-			const counted = o.isCounted(f.id);
-			if (been) {
-				const g = c.createRadialGradient(p[0], p[1], 0, p[0], p[1], 9);
-				g.addColorStop(0, counted ? 'rgba(52,209,191,.55)' : 'rgba(52,209,191,.3)');
-				g.addColorStop(1, 'rgba(52,209,191,0)');
-				c.fillStyle = g;
-				c.beginPath();
-				c.arc(p[0], p[1], 9, 0, TAU);
-				c.fill();
-				c.beginPath();
-				c.arc(p[0], p[1], 3, 0, TAU);
-				if (counted) {
-					c.fillStyle = PAL.visited;
+			if (!p || p[0] < -20 || p[1] < -20 || p[0] > cw + 20 || p[1] > ch + 20) continue;
+			const dotA = sz < 7 ? 1 : sz < 13 ? (13 - sz) / 6 : 0;
+			if (micro && sz >= 5) (outlined ??= []).push(f.id);
+			if (dotA > 0) {
+				const counted = o.isCounted(f.id);
+				c.globalAlpha = dotA;
+				if (been) {
+					const g = c.createRadialGradient(p[0], p[1], 0, p[0], p[1], 9);
+					g.addColorStop(0, counted ? 'rgba(52,209,191,.55)' : 'rgba(52,209,191,.3)');
+					g.addColorStop(1, 'rgba(52,209,191,0)');
+					c.fillStyle = g;
+					c.beginPath();
+					c.arc(p[0], p[1], 9, 0, TAU);
 					c.fill();
-				} else {
-					c.lineWidth = 1.5;
-					c.strokeStyle = PAL.visited;
+					c.beginPath();
+					c.arc(p[0], p[1], 3, 0, TAU);
+					if (counted) {
+						c.fillStyle = PAL.visited;
+						c.fill();
+					} else {
+						c.lineWidth = 1.5;
+						c.strokeStyle = PAL.visited;
+						c.stroke();
+					}
+				} else if (micro) {
+					c.beginPath();
+					c.arc(p[0], p[1], 2.6, 0, TAU);
+					c.fillStyle = 'rgba(255,255,255,.16)';
+					c.fill();
+					c.lineWidth = 1.2;
+					c.strokeStyle = 'rgba(255,255,255,.6)';
 					c.stroke();
 				}
+				if (isSel) {
+					c.beginPath();
+					c.arc(p[0], p[1], 6.5, 0, TAU);
+					c.lineWidth = 2;
+					c.strokeStyle = PAL.sel;
+					c.stroke();
+				}
+				c.globalAlpha = 1;
 			}
-			if (isSel) {
+			if (micro && showMicro && !isSel && hl?.code !== f.id) labels.push({ id: f.id, x: p[0], y: p[1], been });
+		}
+		// kleine Formen umranden (bereist türkis, sonst hell), damit Vatikan & Co. nicht im Nachbarland verschwinden
+		if (outlined) {
+			const lod = getLod(pickLodName(false)) || getLod('full')!;
+			const path = geoPath(P, c);
+			c.lineJoin = 'round';
+			for (const id of outlined) {
 				c.beginPath();
-				c.arc(p[0], p[1], 6.5, 0, TAU);
-				c.lineWidth = 2;
-				c.strokeStyle = PAL.sel;
+				for (const g of polysFor(lod, id)) path(g);
+				const big = INFO[id].size * ppd >= 36;
+				c.lineWidth = big ? 1.2 : 1.4;
+				c.strokeStyle = big ? 'rgba(255,255,255,.4)' : visited.has(id) ? 'rgba(160,245,232,.95)' : 'rgba(255,255,255,.55)';
 				c.stroke();
 			}
 		}
+		if (labels.length) drawMicroLabels(c, labels);
 		if (selected && INFO[selected] && hl?.code !== selected) {
 			const ctr = INFO[selected].c;
 			if (onFront(ctr)) {
@@ -665,7 +781,9 @@ export function createWorldMap(o: MapOptions) {
 		const i = INFO[code];
 		if (!i) return;
 		const f = opts.zoom ?? 1;
-		const target = view.mode === 'globe' ? clamp((90 * f) / Math.max(i.size, 6), 1.3, 10) : clamp((150 * f) / Math.max(i.size, 6), 1.5, 12);
+		let target = view.mode === 'globe' ? clamp((90 * f) / Math.max(i.size, 6), 1.3, 10) : clamp((150 * f) / Math.max(i.size, 6), 1.5, 12);
+		// Zwergstaaten: so nah, dass die Form gut erkennbar ist (mit Umgebung etwa 40 px, sonst 70 px breit)
+		if (smallIds.has(code)) target = Math.max(target, clamp((opts.zoom ? 40 : 70) / ((baseScale() / 57.2958) * Math.max(i.size, 0.004)), 1, K_MAX));
 		// mit Umgebung, aber große Länder (Australien, Brasilien …) nicht so weit draußen, dass es wie der ganze Kontinent wirkt
 		const minK = view.mode === 'globe' ? 1.8 : 2.2;
 		const k = opts.keepK ? Math.max(view.k, 1) : opts.zoom ? Math.max(target, minK) : Math.max(target, view.k);
@@ -700,7 +818,7 @@ export function createWorldMap(o: MapOptions) {
 		for (const f of features) {
 			const i = INFO[f.id],
 				sz = i.size * ppd;
-			if (sz >= 7 || !onFront(i.c)) continue; // nur Länder, die als Punkt gezeigt werden
+			if (sz >= (smallIds.has(f.id) ? 13 : 7) || !onFront(i.c)) continue; // nur Länder, die als Punkt gezeigt werden
 			const p = P(i.c);
 			if (!p) continue;
 			const dd = Math.hypot(p[0] - x, p[1] - y);
@@ -711,7 +829,7 @@ export function createWorldMap(o: MapOptions) {
 		}
 		const hit = at(x, y);
 		if (hit && smallIds.has(hit)) return hit;
-		const dotShown = (id: string) => o.getVisited().has(id) || o.getSelected() === id;
+		const dotShown = (id: string) => o.getVisited().has(id) || o.getSelected() === id || (microIds.has(id) && o.isCounted(id) && view.k >= MICRO_K);
 		if (near && (!hit || (nearD <= 4 && dotShown(near)))) return near;
 		if (hit) return hit;
 		// knapp neben einem Land: Ringe um den Tipp absuchen

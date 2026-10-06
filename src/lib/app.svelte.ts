@@ -79,7 +79,7 @@ export const ui = $state({
 	/** Kontinent, auf den die Karte zuletzt per Chip geflogen ist (null = Startregion); nur Ansicht, wird nicht gespeichert */
 	focusContinent: null as string | null,
 	/** gemeinsame Start-Animation (Globus, Zähler, Flugkurve): Zeitpunkte in performance.now() */
-	intro: { key: 0, start: 0, end: 0 },
+	intro: { key: 0, start: 0, end: 0, resume: false },
 	/** neuer Kontinent freigeschaltet: Feier-Karte (key zählt hoch) */
 	unlock: { key: 0, cont: '', n: 0 },
 	toastMsg: '',
@@ -106,9 +106,10 @@ export const INTRO_MS = 1900;
 /** schnell beginnen, zum Ende langsamer */
 export const easeOutCubic = (k: number) => 1 - Math.pow(1 - k, 3);
 /** Startsignal beim Öffnen der App (und nach längerer Pause): alle Animationen enden gleichzeitig */
-export function startIntro() {
+/** resume: Rückkehr in die App – Zähler und Flugkurve laufen erneut, der Globus behält die aktuelle Ansicht */
+export function startIntro(resume = false) {
 	const start = performance.now() + INTRO_DELAY;
-	ui.intro = { key: ui.intro.key + 1, start, end: start + INTRO_MS };
+	ui.intro = { key: ui.intro.key + 1, start, end: start + INTRO_MS, resume };
 }
 /** Fortschritt 0..1 der laufenden Start-Animation (1 = fertig bzw. keine aktiv) */
 export function introProgress(now = performance.now()) {

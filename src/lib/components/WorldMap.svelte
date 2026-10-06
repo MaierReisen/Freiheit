@@ -84,7 +84,7 @@
 	// Start-Animation: Einflug auf die Startregion, endet gleichzeitig mit Zählern und Flugkurve
 	$effect(() => {
 		const it = ui.intro;
-		if (!it.key || !map) return;
+		if (!it.key || !map || it.resume) return; // bei Rückkehr in die App kein Sprung in die Ausgangslage
 		const now = performance.now();
 		map.intro(Math.max(0, it.start - now), Math.max(200, it.end - Math.max(now, it.start)));
 	});
@@ -118,8 +118,8 @@
 		<svg class="i-close" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
 	</button>
 	<div class="map-zoom">
-		<button type="button" class="mbtn" id="zoomIn" aria-label="Hineinzoomen" onclick={() => map?.zoomBy(1.7)}>+</button>
-		<button type="button" class="mbtn" id="zoomOut" aria-label="Herauszoomen" onclick={() => map?.zoomBy(1 / 1.7)}>−</button>
+		<button type="button" class="mbtn" id="zoomIn" aria-label="Hineinzoomen" onclick={() => map?.zoomBy(2)}>+</button>
+		<button type="button" class="mbtn" id="zoomOut" aria-label="Herauszoomen" onclick={() => map?.zoomBy(1 / 2)}>−</button>
 	</div>
 	<span class="map-hint" id="mapHint">{hint}</span>
 	<div class="map-panel" id="mapPanel">

@@ -40,7 +40,28 @@ const TUVALU: CountryFeature = {
 	geometry: { type: 'Polygon', coordinates: [[[179.17, -8.56], [179.17, -8.48], [179.23, -8.48], [179.23, -8.56], [179.17, -8.56]]] }
 };
 
-export const features = [...toFeatures(WORLD).filter((f) => f.id && f.id !== 'AQ'), TUVALU];
+// Vatikan: in beiden Kartendaten zu grob (50m: rund 1,5 km nach Westen versetzt, 10m: zu einer Linie ohne Fläche
+// zusammengefallen). Eigene, genauere Form (Uhrzeigersinn, wie d3 es erwartet); seine Grenzlinien aus den Daten entfallen.
+const VATICAN: GeoJSON.Polygon = {
+	type: 'Polygon',
+	coordinates: [
+		[
+			[12.4457, 41.9015],
+			[12.4462, 41.9041],
+			[12.4489, 41.9065],
+			[12.4532, 41.9075],
+			[12.456, 41.9062],
+			[12.4585, 41.9022],
+			[12.4566, 41.9006],
+			[12.4519, 41.9003],
+			[12.4478, 41.9002],
+			[12.4457, 41.9015]
+		]
+	]
+};
+const patch = (f: CountryFeature): CountryFeature => (f.id === 'VA' ? { ...f, geometry: VATICAN } : f);
+
+export const features = [...toFeatures(WORLD).filter((f) => f.id && f.id !== 'AQ').map(patch), TUVALU];
 
 // Lage und Größe jedes Landes (größtes Teilgebiet, damit z. B. Frankreich nicht in Südamerika zentriert wird)
 function mainPoly(f: CountryFeature): GeoJSON.Feature | CountryFeature {
@@ -137,9 +158,12 @@ function polysOf(feats: CountryFeature[]): Poly[] {
 	}
 	return out;
 }
-const bordersOf = (topo: Topology) => mesh(topo, topo.objects.countries, (a, b) => a !== b) as GeoJSON.MultiLineString;
+const bordersOf = (topo: Topology) =>
+	mesh(topo, topo.objects.countries, (a, b) => a !== b && a.id !== 'VA' && b.id !== 'VA') as GeoJSON.MultiLineString;
 function makeLod(topo: Topology): Lod {
-	const feats = toFeatures(topo).filter((f) => f.id && f.id !== 'AQ' && FC[f.id]);
+	const feats = toFeatures(topo)
+		.filter((f) => f.id && f.id !== 'AQ' && FC[f.id])
+		.map(patch);
 	return { feats, polys: polysOf(feats), borders: bordersOf(topo) };
 }
 // Flächen füllen: jeden Ring einzeln ausdünnen und prüfen. Kippt die Umlaufrichtung oder schrumpft die Form stark,
@@ -203,7 +227,24 @@ export async function fetchFineLod(): Promise<Lod> {
 		g.id = NUM2A2[g.id!] || (g.properties && g.properties.name === 'Kosovo' ? 'XK' : undefined);
 	});
 	FINE_TOPO = t;
-	return (LODS.fine = makeLod(t));
+	const lod = makeLod(t);
+	// Datenfehler der feinen Karte ausgleichen: der Vatikan ist dort zu einer Linie ohne Fläche zusammengefallen.
+	// Zwergstaaten, deren feine Form deutlich kleiner ist als die mittlere, bekommen die mittlere Form.
+	const full = getLod('full');
+	if (full) {
+		const fullById = new Map(full.feats.map((f) => [f.id, f]));
+		let fixed = false;
+		lod.feats = lod.feats.map((f) => {
+			const ff = fullById.get(f.id);
+			if (!ff || INFO[f.id]?.area >= 0.0001) return f;
+			const a = geoArea(f); // bei zusammengefallenen Ringen kann d3 durch Rundung „fast die ganze Kugel“ liefern
+			if (a >= 0.4 * geoArea(ff) && a < Math.PI) return f;
+			fixed = true;
+			return { ...f, geometry: ff.geometry };
+		});
+		if (fixed) lod.polys = polysOf(lod.feats);
+	}
+	return (LODS.fine = lod);
 }
 export const fineLod = () => LODS.fine as Lod | undefined;
 /** Ist die Detailstufe schon gebaut? (so lässt sich vermeiden, sie mitten in einer Geste zu erzeugen) */

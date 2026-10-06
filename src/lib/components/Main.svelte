@@ -52,7 +52,7 @@
 		let hiddenAt = 0;
 		const onVis = () => {
 			if (document.hidden) hiddenAt = Date.now();
-			else if (hiddenAt && Date.now() - hiddenAt > 60000) startIntro(); // nach längerer Pause erneut
+			else if (hiddenAt && Date.now() - hiddenAt > 60000) startIntro(true); // nach längerer Pause erneut (Globus bleibt, wo er war)
 		};
 		document.addEventListener('visibilitychange', onVis);
 		// Beim Abmelden: offene Ansichten schließen
