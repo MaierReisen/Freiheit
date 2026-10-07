@@ -138,5 +138,10 @@
 			Deine Daten werden in deinem Konto gespeichert und auf all deinen Geräten synchronisiert. Ohne Internet arbeitet die App mit dem letzten Stand weiter und sendet Änderungen später. Der JSON-Export ist eine
 			zusätzliche Sicherung.
 		</p>
+
+		<h2>App</h2>
+		<div class="card">
+			<div class="kv"><span>Version</span><span style="text-align:right">{__APP_VERSION__}</span></div>
+		</div>
 	</div>
 </section>

@@ -16,6 +16,9 @@ Live: https://maierreisen.github.io/Freiheit/ · Repo: MaierReisen/Freiheit · n
 - Lokal ist Node 14 installiert (zu alt). Node ≥ 20 bei Bedarf als offizielles Tarball ins Scratchpad laden und in den PATH setzen. `gh` liegt in `~/.local/bin`.
 - Prüfen: `npm run check` (muss 0 Fehler haben) und `npm run build`. Kein Prettier über ganze Dateien laufen lassen (formatiert sonst alles um).
 
+## Version
+- Schema `MAJOR.MINOR.PATCH` in `package.json` (`version`), angezeigt in Einstellungen → App. **Bei jeder Änderung hochzählen**: PATCH = Fehlerkorrektur/Daten/Texte, MINOR = neue Funktion (PATCH dann 0), MAJOR = grundlegender Umbau (Rest 0).
+
 ## Aufbau
 - `src/lib/components/`: `WorldMap` (Globus/Karte, Halten = aktivieren + ziehen), `CountrySheet` (Länderseite, Schnellkacheln Hauptstadt/Einwohner/Fläche), `EntryCard` (Einreise), `ClimateCard` (Klimadiagramm, beste Reisezeit, Regenzeit/Stürme, Wassertemperatur, Sonnenzeiten, Highlights), `CountryShape` (Minikarte).
 - `src/lib/map/`: `engine.ts` (Gesten), `geo.ts` (Umrisse, Caches), `minimap.ts` (Minikarte mit Cache + Vorberechnung der Nachbarn).
