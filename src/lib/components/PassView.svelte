@@ -103,9 +103,27 @@
 	let pager = $state.raw<HTMLDivElement>(undefined as unknown as HTMLDivElement);
 	let strip = $state.raw<HTMLDivElement>(undefined as unknown as HTMLDivElement);
 	let cur = $state(0);
+	let raf = 0;
 	function onPager() {
 		const i = Math.round(pager.scrollLeft / Math.max(1, pager.clientWidth));
 		if (i !== cur) cur = i;
+		if (!raf && !reduceMotion()) raf = requestAnimationFrame(flip);
+	}
+	// Umblätter-Effekt: nur die Seiten direkt neben der aktuellen, nur transform/opacity
+	function flip() {
+		raf = 0;
+		const kids = pager?.children;
+		if (!kids || kids.length < 1) return;
+		const stride = kids.length > 1 ? (kids[1] as HTMLElement).offsetLeft - (kids[0] as HTMLElement).offsetLeft : pager.clientWidth;
+		const x = pager.scrollLeft / Math.max(1, stride);
+		const c = Math.round(x);
+		for (let i = Math.max(0, c - 1); i <= Math.min(kids.length - 1, c + 1); i++) {
+			const p = x - i; // >0: Seite wird nach links weggeblättert, <0: kommt von rechts
+			const el = kids[i] as HTMLElement;
+			if (Math.abs(p) < 0.005 || Math.abs(p) >= 0.995) el.style.cssText = '';
+			else if (p > 0) el.style.cssText = `transform-origin:0 50%;transform:perspective(900px) rotateY(${-p * 55}deg);opacity:${1 - p * 0.35}`;
+			else el.style.cssText = `transform-origin:100% 50%;transform:perspective(900px) rotateY(${-p * 14}deg) scale(${1 + p * 0.04});opacity:${1 + p * 0.3}`;
+		}
 	}
 	function goPage(i: number) {
 		i = Math.max(0, Math.min(pages.length - 1, i));

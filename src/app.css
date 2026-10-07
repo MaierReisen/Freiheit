@@ -599,7 +599,7 @@ button.pp-tile:active{transform:scale(.98)}
 .pp-ranks li.cur b{color:#0D2B3A}
 
 .pp-page{position:relative;flex:0 0 100%;scroll-snap-align:center;scroll-snap-stop:always;box-sizing:border-box;padding:18px 12px 32px;background:var(--paper);background-image:repeating-radial-gradient(circle at 50% 120%,transparent 0 9px,color-mix(in srgb,var(--line) 45%,transparent) 9px 10px),radial-gradient(var(--line) 1px,transparent 1.2px);background-size:auto,16px 16px;border:1px solid var(--line);border-radius:var(--r-sm) var(--r-lg) var(--r-lg) var(--r-sm);box-shadow:inset 10px 0 12px -8px rgba(13,43,58,.22),0 6px 18px -10px rgba(13,43,58,.35);content-visibility:auto;contain-intrinsic-size:auto 500px}
-.pp-pager{display:flex;gap:12px;margin-bottom:10px;overflow-x:auto;scroll-snap-type:x mandatory;overscroll-behavior-x:contain;scrollbar-width:none}
+.pp-pager{will-change:scroll-position;display:flex;gap:12px;margin-bottom:10px;overflow-x:auto;scroll-snap-type:x mandatory;overscroll-behavior-x:contain;scrollbar-width:none}
 .pp-pager::-webkit-scrollbar{display:none}
 .pp-strip{display:flex;gap:6px;margin:0 0 20px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
 .pp-strip::-webkit-scrollbar{display:none}
