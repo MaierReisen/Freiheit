@@ -549,20 +549,12 @@ input,textarea,[contenteditable="true"]{-webkit-user-select:text;user-select:tex
 .cl-hls:has(.cl-hl.on) .cl-hl:not(.on){opacity:.5}
 .cl-hl-ic{flex:none;width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:color-mix(in srgb,var(--primary) 14%,transparent)}
 .cs-tile .cl-hl-ic svg{width:18px;height:18px;margin:0;stroke:var(--primary);stroke-width:1.7;fill:none}
-.cl-hl-ic.meer{background:color-mix(in srgb,#2BB5A8 16%,transparent)}
-.cs-tile .cl-hl-ic.meer svg{stroke:#2BB5A8}
-.cl-hl-ic.wasser{background:color-mix(in srgb,var(--rain) 16%,transparent)}
-.cs-tile .cl-hl-ic.wasser svg{stroke:var(--rain)}
-.cl-hl-ic.winter{background:color-mix(in srgb,#6FB7E9 18%,transparent)}
-.cs-tile .cl-hl-ic.winter svg{stroke:#6FB7E9}
-.cl-hl-ic.licht{background:color-mix(in srgb,var(--sun) 18%,transparent)}
-.cs-tile .cl-hl-ic.licht svg{stroke:var(--sun)}
 .cl-hl-ic.fest{background:color-mix(in srgb,#B07CE8 16%,transparent)}
 .cs-tile .cl-hl-ic.fest svg{stroke:#B07CE8}
+.cl-hl-ic.natur{background:color-mix(in srgb,var(--sun) 18%,transparent)}
+.cs-tile .cl-hl-ic.natur svg{stroke:var(--sun)}
 .cl-hl-ic.bluete{background:color-mix(in srgb,#E879A6 16%,transparent)}
 .cs-tile .cl-hl-ic.bluete svg{stroke:#E879A6}
-.cl-hl-ic.laub{background:color-mix(in srgb,var(--warn) 15%,transparent)}
-.cs-tile .cl-hl-ic.laub svg{stroke:var(--warn)}
 .cl-hl-txt{flex:1;min-width:0;display:flex;flex-direction:column}
 .cs-tile .cl-hl-txt b{font-size:14px;line-height:1.25}
 .cl-hl-txt span{font-size:12.5px;color:var(--muted)}
