@@ -10,6 +10,7 @@ create table if not exists public.visited_countries (
   code       text not null check (code ~ '^[A-Z]{2}$'),
   name       text,
   position   integer not null default 0,          -- Reihenfolge: "Land Nr. X"
+  entered    text check (entered is null or entered ~ '^[0-9]{4}(-(0[1-9]|1[0-2]))?$'),  -- erste Einreise (Reisepass)
   created_at timestamptz not null default now(),
   primary key (user_id, code)
 );
@@ -22,7 +23,7 @@ create table if not exists public.wishlist (
   primary key (user_id, code)
 );
 
--- Länder pro Jahr (Diagramm in der Länder-Übersicht)
+-- Länder pro Jahr (früheres Diagramm, wird nicht mehr angezeigt; Daten bleiben erhalten)
 create table if not exists public.milestones (
   user_id uuid not null default auth.uid() references auth.users on delete cascade,
   year    integer not null check (year between 1900 and 2100),

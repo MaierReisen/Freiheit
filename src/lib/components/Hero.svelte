@@ -4,6 +4,7 @@
 	import { scopeTotal } from '$lib/scope';
 	import { CONT, CONT_NAMES, contOf } from '$lib/countries';
 	import { reduceMotion, dom, easeOutCubic, hooks, introProgress, openPicker, ui } from '$lib/app.svelte';
+	import { RANKS, rankIndex } from '$lib/passport';
 	import HeroFlight from './HeroFlight.svelte';
 
 	let countEl: HTMLSpanElement;
@@ -46,7 +47,8 @@
 	let bump = $state({ key: 0, from: 0, on: false });
 	let prevN = -1,
 		prevCont = -1,
-		bumpT: ReturnType<typeof setTimeout> | undefined;
+		bumpT: ReturnType<typeof setTimeout> | undefined,
+		rankT: ReturnType<typeof setTimeout> | undefined;
 	$effect(() => {
 		const now = n,
 			cont = continents;
@@ -56,9 +58,16 @@
 			prevN = now;
 			prevCont = cont;
 			if (before < 0 || now <= before || t < 1 || Date.now() - atlas.lastAddedAt > 2000) return;
-			if (cont > contBefore && contBefore >= 0) {
+			const newCont = cont > contBefore && contBefore >= 0;
+			if (newCont) {
 				const k = CONT[atlas.lastAddedCode];
-				ui.unlock = { key: ui.unlock.key + 1, cont: k ? CONT_NAMES[k] : '', n: cont };
+				ui.unlock = { key: ui.unlock.key + 1, cont: k ? CONT_NAMES[k] : '', n: cont, rank: '' };
+			}
+			// neuer Rang im Reisepass: eigene Feier-Karte (nach der Kontinent-Karte, falls beides zugleich)
+			const ri = rankIndex(now);
+			if (ri > rankIndex(before)) {
+				clearTimeout(rankT);
+				rankT = setTimeout(() => (ui.unlock = { key: ui.unlock.key + 1, cont: '', n: now, rank: RANKS[ri].name }), newCont ? 3900 : 0);
 			}
 			if (reduceMotion()) return;
 			clearTimeout(bumpT);

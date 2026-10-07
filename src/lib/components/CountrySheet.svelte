@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { addCountry, atlas, countedCountries, isCounted, removeCountry, visitedSet } from '$lib/atlas.svelte';
+	import { addCountry, atlas, countedCountries, isCounted, removeCountry, setEntered, visitedSet } from '$lib/atlas.svelte';
+	import { longDate } from '$lib/passport';
 	import { SCOPES, inScope } from '$lib/scope';
 	import { contOf, flag, nameOf } from '$lib/countries';
 	import { closeSheet, hooks, openCountry, reduceMotion, setSheetDetent, ui } from '$lib/app.svelte';
@@ -28,6 +29,7 @@
 				: 'Gebiet, zählt nicht als eigenes Land'
 	);
 	const name = $derived(nameOf(code));
+	const maxMonth = new Date().toISOString().slice(0, 7);
 
 	// Fakten (beim ersten Mal nachgeladen)
 	// svelte-ignore state_referenced_locally
@@ -138,6 +140,27 @@
 				<span class="cs-badge been"
 					><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>Bereist{counted ? ` · Land Nr. ${nr}` : ''}</span
 				>
+			{/if}
+			{#if been}
+				<!-- Erste Einreise (für den Reisepass-Stempel): Monat und Jahr über die Auswahl des Geräts -->
+				<label class="cs-badge cs-date" class:set={!!entry?.entered}
+					><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2.5" /><path d="M4 10h16M9 3v4M15 3v4" /></svg
+					>{entry?.entered ? `Einreise ${longDate(entry.entered)}` : 'Einreise eintragen'}<input
+						type="month"
+						aria-label="Monat der ersten Einreise"
+						max={maxMonth}
+						value={entry?.entered?.length === 7 ? entry.entered : ''}
+						onclick={(e) => {
+							try {
+								e.currentTarget.showPicker?.();
+							} catch {}
+						}}
+						onchange={(e) => setEntered(code, e.currentTarget.value || null)}
+					/></label
+				>
+				{#if entry?.entered}<button type="button" class="cs-date-x" aria-label="Einreisedatum löschen" onclick={() => setEntered(code, null)}
+						><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17" /></svg></button
+					>{/if}
 			{/if}
 			{#if why}<span class="cs-why">{why}</span>{/if}
 		</div>

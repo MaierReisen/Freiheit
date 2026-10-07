@@ -1,14 +1,15 @@
 <script lang="ts">
 	import { CONT_NAMES } from '$lib/countries';
 	import { reduceMotion, ui } from '$lib/app.svelte';
+	import { RANKS } from '$lib/passport';
 
-	/* Neuer Kontinent freigeschaltet: Karte gleitet von oben herein, Sonnen-Medaille mit Strahlenkranz
+	/* Neuer Kontinent freigeschaltet bzw. neuer Rang im Reisepass: Karte gleitet von oben herein, Sonnen-Medaille mit Strahlenkranz
 	   und kurzem Konfetti. Verschwindet von selbst oder per Tipp. */
 
 	const TOTAL = Object.keys(CONT_NAMES).length;
 	const COLORS = ['var(--sun)', 'var(--primary)', '#FFFFFF', '#FF8A65', 'var(--sun)'];
 
-	let shown = $state<{ key: number; cont: string; n: number } | null>(null);
+	let shown = $state<{ key: number; cont: string; n: number; rank: string } | null>(null);
 	let leaving = $state(false);
 	let pieces = $state<{ x: number; y: number; r: number; c: string; d: number; w: number }[]>([]);
 	let tShow: ReturnType<typeof setTimeout> | undefined, tHide: ReturnType<typeof setTimeout> | undefined, tGone: ReturnType<typeof setTimeout> | undefined;
@@ -44,7 +45,7 @@
 {#if shown}
 	{#key shown.key}
 		<div class="unlock" class:leaving role="status" aria-live="polite">
-			<button type="button" class="unlock-card" onclick={dismiss} aria-label="Neuer Kontinent: {shown.cont}. Schließen">
+			<button type="button" class="unlock-card" onclick={dismiss} aria-label="{shown.rank ? `Neuer Rang: ${shown.rank}` : `Neuer Kontinent: ${shown.cont}`}. Schließen">
 				<span class="unlock-medal" aria-hidden="true">
 					<span class="unlock-rays"></span>
 					<span class="unlock-disc">{shown.n}</span>
@@ -52,11 +53,19 @@
 						<i style="--x:{p.x}px;--y:{p.y}px;--r:{p.r}deg;--c:{p.c};--d:{p.d}ms;--w:{p.w}px"></i>
 					{/each}
 				</span>
-				<span class="unlock-txt">
-					<small>Neuer Kontinent</small>
-					<strong>{shown.cont}</strong>
-					<span>{shown.n} von {TOTAL} Kontinenten</span>
-				</span>
+				{#if shown.rank}
+					<span class="unlock-txt">
+						<small>Neuer Rang im Reisepass</small>
+						<strong>{RANKS.find((r) => r.name === shown!.rank)?.icon ?? ''} {shown.rank}</strong>
+						<span>{shown.n} Stempel im Pass</span>
+					</span>
+				{:else}
+					<span class="unlock-txt">
+						<small>Neuer Kontinent</small>
+						<strong>{shown.cont}</strong>
+						<span>{shown.n} von {TOTAL} Kontinenten</span>
+					</span>
+				{/if}
 			</button>
 		</div>
 	{/key}

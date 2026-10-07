@@ -85,12 +85,6 @@ a.btn.primary{color:var(--on-primary)}
 
 /* sections */
 h2{font-family:var(--display);font-size:19px;font-weight:700;margin:40px 0 14px;letter-spacing:-.01em}
-.timeline{display:flex;align-items:flex-end;gap:10px;height:150px}
-.tl{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;height:100%;justify-content:flex-end}
-.tl-bar{width:100%;max-width:56px;border-radius:var(--r-sm) var(--r-sm) 3px 3px;background:var(--chip)}
-.tl:last-child .tl-bar{background:var(--primary)}
-.tl-n{font-family:var(--display);font-weight:700;font-size:15px}
-.tl-y{color:var(--muted);font-size:13px}
 
 .search{width:100%;padding:12px 15px;border-radius:var(--r-md);border:1.5px solid var(--line);background:var(--surface);font-size:16px}
 .search::placeholder{color:var(--muted)}
@@ -562,3 +556,65 @@ input,textarea,[contenteditable="true"]{-webkit-user-select:text;user-select:tex
 .cl-hl-txt span{font-size:12.5px;color:var(--muted)}
 .cl-hl-when{flex:none;max-width:42%;display:flex;flex-direction:column;align-items:flex-end;text-align:right;font-size:12.5px;font-weight:600;color:var(--ink);line-height:1.3}
 .cl-hl-when small{font-size:11px;font-weight:500;color:var(--muted)}
+
+/* Reisepass: Kachel in der Länderliste, Pass-Ansicht mit Stempeln */
+:root{--paper:#FFFDF8;--st-blend:multiply;
+  --st-teal:#0E6E74;--st-coral:#D9573B;--st-gold:#B07800;--st-blue:#2F6FB5;--st-plum:#7A3E8E;--st-green:#2E7D4F;--st-red:#C0392B;--st-navy:#1F3F6E;--st-brown:#9A4F1E}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--paper:#112836;--st-blend:normal;
+  --st-teal:#3CC4B4;--st-coral:#FF8A65;--st-gold:#F6C445;--st-blue:#5FB8E8;--st-plum:#C99BE0;--st-green:#6FD39A;--st-red:#FF7B6E;--st-navy:#8FB5E8;--st-brown:#E0A070}}
+:root[data-theme="dark"]{--paper:#112836;--st-blend:normal;
+  --st-teal:#3CC4B4;--st-coral:#FF8A65;--st-gold:#F6C445;--st-blue:#5FB8E8;--st-plum:#C99BE0;--st-green:#6FD39A;--st-red:#FF7B6E;--st-navy:#8FB5E8;--st-brown:#E0A070}
+
+.pp-tile{width:100%;display:flex;gap:16px;align-items:center;margin:0 0 18px;padding:16px;border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface);color:var(--ink);text-align:left;-webkit-tap-highlight-color:transparent;transition:transform .15s}
+button.pp-tile:active{transform:scale(.98)}
+.pp-cover{flex:none;width:76px;height:102px;border-radius:7px 13px 13px 7px;background:linear-gradient(150deg,var(--primary),var(--primary-strong));box-shadow:inset 5px 0 0 rgba(0,0,0,.12),0 6px 14px rgba(13,43,58,.18);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:var(--sun);transform:rotate(-4deg)}
+.pp-cover svg{width:30px;height:30px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round}
+.pp-cover b{font:800 8px var(--display);letter-spacing:.12em}
+.pp-tile-txt{flex:1;min-width:0;display:flex;flex-direction:column;align-items:flex-start}
+.pp-tile-n{display:flex;align-items:baseline;flex-wrap:wrap;gap:0 6px;font:800 32px/1 var(--display);letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.pp-tile-n small{font:600 15px var(--text);letter-spacing:0}
+.pp-fresh{align-self:center;font:700 12px var(--text);font-style:normal;letter-spacing:0;color:var(--on-primary);background:var(--primary);border-radius:999px;padding:3px 8px}
+.pp-rank{display:inline-flex;align-items:center;gap:6px;background:var(--sun);color:#0D2B3A;border-radius:999px;padding:4px 11px;font-weight:700;font-size:13px;margin-top:8px}
+.pp-bar{display:block;align-self:stretch;height:8px;margin-top:10px;border-radius:99px;background:var(--chip);overflow:hidden}
+.pp-bar i{display:block;height:100%;background:var(--primary);border-radius:99px;transition:width .8s cubic-bezier(.2,.8,.2,1)}
+.pp-bar-t{font-size:12.5px;color:var(--muted);margin-top:6px}
+
+.pp-view{z-index:41}
+.pp-view:not([hidden]){animation:tabInR .3s cubic-bezier(.2,.8,.2,1)}
+.pp-view .ov-body{max-width:520px;width:100%;margin:0 auto}
+[data-motion="reduce"] .pp-view:not([hidden]){animation:none}
+.pp-defs{position:absolute;width:0;height:0;overflow:hidden}
+.pp-ranks{display:flex;gap:6px;margin:0 0 22px;padding:0;list-style:none;overflow-x:auto;scrollbar-width:none}
+.pp-ranks::-webkit-scrollbar{display:none}
+.pp-ranks li{flex:none;display:flex;flex-direction:column;align-items:center;gap:1px;min-width:74px;padding:8px 6px;border-radius:var(--r-md);background:var(--chip);color:var(--muted);opacity:.6}
+.pp-ranks li span{font-size:20px;filter:grayscale(1)}
+.pp-ranks li b{font-size:12px;color:var(--ink)}
+.pp-ranks li small{font-size:11px}
+.pp-ranks li.on{opacity:1}
+.pp-ranks li.on span{filter:none}
+.pp-ranks li.cur{background:var(--sun);color:#0D2B3A}
+.pp-ranks li.cur b{color:#0D2B3A}
+
+.pp-page{position:relative;margin-bottom:14px;padding:16px 12px 30px;background:var(--paper);background-image:radial-gradient(var(--line) 1px,transparent 1.2px);background-size:16px 16px;border:1px solid var(--line);border-radius:var(--r-sm) var(--r-lg) var(--r-lg) var(--r-sm);box-shadow:inset 8px 0 10px -8px rgba(13,43,58,.18);content-visibility:auto;contain-intrinsic-size:auto 500px}
+.pp-page-h{display:flex;justify-content:space-between;padding:0 6px 4px;font-size:12px;font-weight:700;color:var(--muted)}
+.pp-page-n{position:absolute;bottom:9px;left:0;right:0;text-align:center;font-size:12px;font-weight:700;color:var(--muted)}
+.pp-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px}
+.pp-slot{position:relative;height:150px;display:flex;align-items:center;justify-content:center;padding:0;border:0;background:none;color:var(--c,var(--muted));-webkit-tap-highlight-color:transparent}
+.pp-slot.wait .pp-stamp{opacity:0}
+.pp-stamp{display:block;width:var(--w,94%);height:auto;max-height:150px;mix-blend-mode:var(--st-blend);transition:transform .15s}
+.pp-slot:active .pp-stamp{transform:scale(1.06)}
+.pp-stamp .d{font-family:var(--display);font-weight:800;fill:currentColor;stroke:none}
+.pp-stamp .t{font-family:var(--text);font-weight:700;fill:currentColor;stroke:none}
+.pp-stamp .k{font-family:var(--text);font-weight:700;fill:var(--paper);stroke:none}
+.pp-empty{width:112px;height:112px;border-radius:50%;border:2.5px dashed var(--line);display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--muted);text-align:center;font-size:11.5px;font-weight:600;line-height:1.25}
+.pp-empty b{font:800 30px/1 var(--display);color:var(--sun);margin-bottom:4px}
+.pp-fx{position:fixed;z-index:80;pointer-events:none}
+.pp-plus{font:800 22px var(--display);color:var(--primary);white-space:nowrap}
+
+/* Länderseite: Einreisedatum */
+.cs-date{position:relative;cursor:pointer}
+.cs-date.set{color:var(--ink)}
+.cs-date svg{stroke-width:2.2}
+.cs-date input{position:absolute;inset:0;width:100%;height:100%;opacity:0;border:0;padding:0;margin:0;cursor:pointer;-webkit-appearance:none;appearance:none}
+.cs-date-x{display:grid;place-items:center;width:28px;height:28px;margin-left:-4px;border:0;border-radius:50%;background:var(--chip);color:var(--muted)}
+.cs-date-x svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round}

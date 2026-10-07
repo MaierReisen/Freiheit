@@ -15,6 +15,8 @@ export interface CountryEntry {
 	visits: Visit[];
 	/** Reihenfolge in der Datenbank ("Land Nr. X") */
 	position?: number;
+	/** Erste Einreise (für den Reisepass): "JJJJ-MM" oder "JJJJ" */
+	entered?: string;
 	[key: string]: unknown;
 }
 
@@ -52,6 +54,7 @@ const isContinent = (c: unknown): c is ContinentCode => typeof c === 'string' &&
 type Op =
 	| { t: 'addCountry'; code: string; name: string; position: number }
 	| { t: 'removeCountry'; code: string }
+	| { t: 'setEntered'; code: string; entered: string | null }
 	| { t: 'addWish'; code: string; name: string }
 	| { t: 'removeWish'; code: string }
 	| { t: 'replaceAll'; data: AtlasData }
@@ -144,6 +147,7 @@ export const visitedSet = () => new Set(atlas.data.countries.map((c) => c.code))
 export const isCounted = (code: string) => inScope(code, atlas.settings.countryScope);
 /** Bereiste Länder, die in der gewählten Liste zählen (in Reihenfolge = "Land Nr. X") */
 export const countedCountries = () => atlas.data.countries.filter((c) => isCounted(c.code));
+export const isEntered = (v: unknown): v is string => typeof v === 'string' && /^\d{4}(-(0[1-9]|1[0-2]))?$/.test(v);
 export const wishSet = () => new Set(atlas.data.wishlist.map((c) => c.code));
 
 /* ---------- Supabase ---------- */
@@ -155,6 +159,12 @@ async function runOp(op: Op, user: string) {
 		case 'addCountry':
 			ok(await supabase.from('visited_countries').upsert({ user_id: user, code: op.code, name: op.name, position: op.position }));
 			return;
+		case 'setEntered': {
+			const r = await supabase.from('visited_countries').update({ entered: op.entered }).eq('user_id', user).eq('code', op.code);
+			// Spalte noch nicht angelegt (Migration 004 fehlt): Datum bleibt lokal, Warteschlange nicht blockieren
+			if (r.error && r.error.code !== 'PGRST204' && r.error.code !== '42703') throw r.error;
+			return;
+		}
 		case 'removeCountry':
 			ok(await supabase.from('visited_countries').delete().eq('user_id', user).eq('code', op.code));
 			return;
@@ -176,8 +186,13 @@ async function runOp(op: Op, user: string) {
 		case 'replaceAll': {
 			const d = op.data;
 			for (const t of ['visited_countries', 'wishlist', 'milestones']) ok(await supabase.from(t).delete().eq('user_id', user));
-			if (d.countries.length)
-				ok(await supabase.from('visited_countries').insert(d.countries.map((c, i) => ({ user_id: user, code: c.code, name: c.name, position: i }))));
+			if (d.countries.length) {
+				const rows = d.countries.map((c, i) => ({ user_id: user, code: c.code, name: c.name, position: i, entered: isEntered(c.entered) ? c.entered : null }));
+				let r = await supabase.from('visited_countries').insert(rows);
+				// ohne Spalte „entered“ (Migration 004 fehlt) ohne Einreisedaten speichern
+				if (r.error && (r.error.code === 'PGRST204' || r.error.code === '42703')) r = await supabase.from('visited_countries').insert(rows.map(({ entered: _e, ...x }) => x));
+				ok(r);
+			}
 			if (d.wishlist.length) ok(await supabase.from('wishlist').insert(d.wishlist.map((w) => ({ user_id: user, code: w.code, name: w.name }))));
 			if (d.milestones.length)
 				ok(await supabase.from('milestones').insert(d.milestones.map((m) => ({ user_id: user, year: m.year, count: m.count }))));
@@ -213,8 +228,9 @@ export async function flush(): Promise<boolean> {
 async function pull() {
 	const user = uid;
 	if (!user || !(await flush())) return;
-	const [c, w, m, st] = await Promise.all([
-		supabase.from('visited_countries').select('code,name,position,created_at').order('position').order('created_at'),
+	const countriesQuery = (cols: string) => supabase.from('visited_countries').select(cols).order('position').order('created_at');
+	const [c0, w, m, st] = await Promise.all([
+		countriesQuery('code,name,position,created_at,entered'),
 		supabase.from('wishlist').select('code,name').order('created_at'),
 		supabase.from('milestones').select('year,count').order('year'),
 		supabase.from('user_settings').select('*').maybeSingle()
@@ -229,6 +245,12 @@ async function pull() {
 		if (JSON.stringify(next) !== JSON.stringify(atlas.settings)) atlas.settings = next;
 		writeJson(settingsKey(user), atlas.settings);
 	}
+	// Spalte „entered“ fehlt noch (Migration 004): ohne laden, Einreisedaten bleiben auf diesem Gerät
+	const noEntered = c0.error?.code === '42703' || c0.error?.code === 'PGRST204';
+	const c = (noEntered ? await countriesQuery('code,name,position,created_at') : c0) as unknown as {
+		data: { code: string; position: number; entered?: string | null }[];
+		error: unknown;
+	};
 	if (c.error || w.error || m.error) {
 		atlas.sync = navigator.onLine === false ? 'offline' : 'error';
 		return;
@@ -249,7 +271,10 @@ async function pull() {
 	}
 	const next: AtlasData = {
 		schemaVersion: 1,
-		countries: c.data.map((r) => ({ code: r.code, name: nameOf(r.code), visits: [], position: r.position })),
+		countries: c.data.map((r) => {
+			const entered = noEntered ? atlas.data.countries.find((x) => x.code === r.code)?.entered : r.entered;
+			return { code: r.code, name: nameOf(r.code), visits: [], position: r.position, ...(isEntered(entered) ? { entered } : {}) };
+		}),
 		wishlist: w.data.map((r) => ({ code: r.code, name: nameOf(r.code) })),
 		milestones: m.data.map((r) => ({ year: r.year, count: r.count }))
 	};
@@ -329,6 +354,22 @@ export function removeCountry(code: string) {
 	persist();
 	enqueue({ t: 'removeCountry', code });
 	toast(`${nameOf(code)} entfernt`);
+}
+/** Erste Einreise setzen ("JJJJ-MM" / "JJJJ") oder löschen (null) */
+export function setEntered(code: string, entered: string | null) {
+	const v = isEntered(entered) ? entered : null;
+	const s = atlas.data;
+	if (!s.countries.some((c) => c.code === code)) return;
+	atlas.data = {
+		...s,
+		countries: s.countries.map((c) => {
+			if (c.code !== code) return c;
+			const { entered: _old, ...rest } = c;
+			return v ? { ...rest, entered: v } : rest;
+		})
+	};
+	persist();
+	enqueue({ t: 'setEntered', code, entered: v });
 }
 export function addWish(code: string) {
 	const s = atlas.data;

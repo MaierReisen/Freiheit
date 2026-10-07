@@ -4,7 +4,7 @@
 	import { CONT, CONT_NAMES, contOf, flag } from '$lib/countries';
 	import { SCOPES, scopeTotal } from '$lib/scope';
 	import { reduceMotion, hooks, openCountry } from '$lib/app.svelte';
-	import Timeline from './Timeline.svelte';
+	import PassTile from './PassTile.svelte';
 	import SwipeRow from './SwipeRow.svelte';
 
 	/* Liste der bereisten Länder unter dem Globus, sortierbar. Gebiete, die nicht zählen, stehen darunter.
@@ -84,7 +84,7 @@
 
 <section class="visited" id="laender" bind:this={section} aria-labelledby="visitedTitle">
 	<h2 id="visitedTitle">Deine Länder <span class="h-count">{numbered.length} von {total}</span></h2>
-	<Timeline />
+	<PassTile />
 	<div class="seg sort-seg" role="group" aria-label="Sortierung">
 		{#each SORTS as s (s.id)}
 			<button type="button" aria-pressed={sort === s.id} onclick={() => setSort(s.id)}>{s.label}</button>

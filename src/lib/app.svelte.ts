@@ -79,14 +79,16 @@ export const ui = $state({
 	placesOpen: false,
 	full: false,
 	settingsOpen: false,
+	/** Reisepass (Vollbild, über die Kachel in der Länderliste) */
+	passOpen: false,
 	/** Globus auf der Startseite per Tipp aktiviert (Touch): dann drehen, kippen, zoomen statt Seite scrollen */
 	mapActive: false,
 	/** Kontinent, auf dem die Karte gerade steht (per Chip oder Ziehen; null = Startregion, '' = mehrere Kontinente im Bild); nur Ansicht */
 	focusContinent: null as string | null,
 	/** gemeinsame Start-Animation (Globus, Zähler, Flugkurve): Zeitpunkte in performance.now() */
 	intro: { key: 0, start: 0, end: 0, resume: false },
-	/** neuer Kontinent freigeschaltet: Feier-Karte (key zählt hoch) */
-	unlock: { key: 0, cont: '', n: 0 },
+	/** neuer Kontinent bzw. neuer Rang im Reisepass (rank gesetzt): Feier-Karte (key zählt hoch) */
+	unlock: { key: 0, cont: '', n: 0, rank: '' },
 	toastMsg: '',
 	toastShow: false
 });
@@ -187,6 +189,7 @@ export function openSettings(fromHash = false) {
 	if (ui.sheetOpen) closeSheet();
 	if (ui.full) setFull(false, true);
 	if (ui.placesOpen) hooks.places?.close(true);
+	if (ui.passOpen) closePass(true);
 	settingsReturnFocus = document.activeElement;
 	ui.settingsOpen = true;
 	document.body.classList.add('noscroll');
@@ -210,6 +213,36 @@ export function closeSettings(fromHash = false) {
 }
 const isSettingsHash = (h: string) => h === 'einstellungen' || h === 'more';
 
+/* ---------- Reisepass (Vollbild, wie die Einstellungen) ---------- */
+let pushedPass = false;
+let passReturnFocus: Element | null = null;
+export function openPass(fromHash = false) {
+	if (ui.passOpen) return;
+	if (ui.sheetOpen) closeSheet();
+	if (ui.full) setFull(false, true);
+	passReturnFocus = document.activeElement;
+	ui.passOpen = true;
+	document.body.classList.add('noscroll');
+	if (!fromHash) {
+		pushedPass = true;
+		location.hash = 'pass';
+	}
+	tick().then(() => document.getElementById('passClose')?.focus({ preventScroll: true }));
+}
+export function closePass(fromHash = false) {
+	if (!ui.passOpen) return;
+	ui.passOpen = false;
+	if (ui.sheetOpen) closeSheet();
+	if (!ui.settingsOpen) document.body.classList.remove('noscroll');
+	if (!fromHash) {
+		if (pushedPass && location.hash === '#pass') {
+			pushedPass = false;
+			history.back();
+		} else if (location.hash === '#pass') location.hash = 'home';
+	} else pushedPass = false;
+	if (passReturnFocus instanceof HTMLElement) passReturnFocus.focus({ preventScroll: true });
+}
+
 /* ---------- Tabs ---------- */
 function showTab(t: Tab, dir: number) {
 	ui.tab = t;
@@ -230,6 +263,7 @@ export function goTab(tab: string, push = true, dir?: number) {
 	if (ui.full) setFull(false, true);
 	if (ui.placesOpen) hooks.places?.close(true);
 	if (ui.settingsOpen) closeSettings(true);
+	if (ui.passOpen) closePass(true);
 	if (dir === undefined) dir = Math.sign(TABS.indexOf(t) - TABS.indexOf(ui.tab));
 	showTab(t, dir);
 	if (push && location.hash !== '#' + t) location.hash = t;
@@ -248,6 +282,9 @@ export function initFromHash() {
 	} else if (isSettingsHash(h)) {
 		showTab('home', 0);
 		openSettings(true);
+	} else if (h === 'pass') {
+		showTab('home', 0);
+		openPass(true);
 	} else goTab(h || 'home', false, 0);
 	requestAnimationFrame(() => hooks.map?.resize());
 }
@@ -261,6 +298,10 @@ export function onHashChange() {
 		setFull(true, true);
 	} else if (isSettingsHash(h)) {
 		openSettings(true);
+	} else if (h === 'pass') {
+		if (ui.settingsOpen) closeSettings(true);
+		if (ui.full) setFull(false, true);
+		openPass(true);
 	} else if (h === 'laender' || h === 'places') {
 		if (ui.settingsOpen) closeSettings(true);
 		if (ui.full) setFull(false, true);
@@ -270,6 +311,7 @@ export function onHashChange() {
 		if (ui.full) setFull(false, true);
 		if (ui.placesOpen) hooks.places?.close(true);
 		if (ui.settingsOpen) closeSettings(true);
+		if (ui.passOpen) closePass(true);
 		if (h !== ui.tab) goTab(h, false);
 	}
 }

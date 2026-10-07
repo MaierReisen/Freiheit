@@ -1,11 +1,12 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { TABS, closeSettings, closeSheet, goTab, hooks, initFromHash, onHashChange, setFull, startIntro, ui } from '$lib/app.svelte';
+	import { TABS, closePass, closeSettings, closeSheet, goTab, hooks, initFromHash, onHashChange, setFull, startIntro, ui } from '$lib/app.svelte';
 	import ContinentChips from './ContinentChips.svelte';
 	import Hero from './Hero.svelte';
 	import SettingsView from './SettingsView.svelte';
 	import Sheet from './Sheet.svelte';
 	import ContinentUnlock from './ContinentUnlock.svelte';
+	import PassView from './PassView.svelte';
 	import TabBar from './TabBar.svelte';
 	import VisitedList from './VisitedList.svelte';
 	import WorldMap from './WorldMap.svelte';
@@ -17,6 +18,10 @@
 			closeSettings(false);
 			return;
 		}
+		if (ui.passOpen && !ui.sheetOpen) {
+			closePass(false);
+			return;
+		}
 		if (ui.full && !ui.sheetOpen) setFull(false);
 		closeSheet();
 		if (ui.placesOpen && !ui.sheetOpen) hooks.places?.close(false);
@@ -26,7 +31,7 @@
 	let swipe: { x: number; y: number; t: number } | null = null;
 	function onTouchStart(e: TouchEvent) {
 		swipe = null;
-		if (TABS.length < 2 || e.touches.length !== 1 || ui.full || ui.placesOpen || ui.sheetOpen || ui.settingsOpen) return;
+		if (TABS.length < 2 || e.touches.length !== 1 || ui.full || ui.placesOpen || ui.sheetOpen || ui.settingsOpen || ui.passOpen) return;
 		const target = e.target as Element | null;
 		if (target?.closest?.('#mapBox,input,textarea,select,.continents,.chips,.tabbar,.sheet,.count-btn,.hero-add')) return;
 		const t = e.touches[0];
@@ -60,6 +65,7 @@
 			document.removeEventListener('visibilitychange', onVis);
 			closeSheet();
 			if (ui.settingsOpen) closeSettings(true);
+			if (ui.passOpen) closePass(true);
 			ui.focusContinent = null;
 			if (ui.full) setFull(false, true);
 			ui.placesOpen = false;
@@ -87,5 +93,6 @@
 
 {#if TABS.length > 1}<TabBar />{/if}
 <SettingsView />
+<PassView />
 <Sheet />
 <ContinentUnlock />
