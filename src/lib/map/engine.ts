@@ -80,7 +80,10 @@ const dotAlpha = (id: string, ppd: number) => {
 const LABEL_PPD = 14; // Namen erst bei regionalem Zoom (etwa doppelte Europa-Startansicht), sonst wirkt die Karte überladen
 // Ländernamen: Platz tief im Land und Radius des größten Innenkreises (Grad), vorberechnet (scripts/build-labels.mjs);
 // nach Größe sortiert, damit große Länder zuerst Platz bekommen und die Suche früh abbrechen kann
-const NAME_PPD = 3; // vorher sieht man fast die halbe Erde – da helfen Namen nicht
+// erst näher als die Kontinentansicht (Europa: Zoom 2,4 auf dem Globus), sonst wirkt die Übersicht überladen;
+// gemessen als Globus-Zoom, damit Karte und jede Bildschirmgröße gleich reagieren, weich eingeblendet bis NAME_K1
+const NAME_K0 = 2.9,
+	NAME_K1 = 3.5;
 const NAME_FIT = 3; // Name darf so breit sein wie das Dreifache des Innenkreis-Radius
 const NAMES = Object.entries(LABEL_JSON as unknown as Record<string, [[number, number], number]>)
 	.filter(([id]) => INFO[id])
@@ -794,7 +797,9 @@ export function createWorldMap(o: MapOptions) {
 		taken: [number, number, number, number][],
 		dots: { x: number; y: number }[]
 	) {
-		if (ppd < NAME_PPD) return;
+		const kG = (ppd * 57.2958) / ((Math.min(cw, ch) / 2) * 0.86);
+		if (kG <= NAME_K0) return;
+		const zoomA = Math.min(1, (kG - NAME_K0) / (NAME_K1 - NAME_K0));
 		const globe = view.mode === 'globe';
 		c.textAlign = 'center';
 		c.textBaseline = 'middle';
@@ -804,11 +809,11 @@ export function createWorldMap(o: MapOptions) {
 			const room = NAME_FIT * n.r * ppd;
 			if (room < 22) break; // sortiert: alle weiteren sind noch kleiner
 			if (skip(n.id)) continue;
-			let a = 1;
+			let a = zoomA;
 			if (globe) {
 				// zum Rand der Kugel hin ausblenden
 				const d = geoDistance(n.p, [view.lon, view.lat]);
-				a = clamp((Math.PI / 2 - 0.08 - d) / 0.2, 0, 1);
+				a *= clamp((Math.PI / 2 - 0.08 - d) / 0.2, 0, 1);
 				if (!a) continue;
 			}
 			const p = P(n.p);
