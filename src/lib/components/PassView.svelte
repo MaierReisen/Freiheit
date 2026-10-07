@@ -99,37 +99,153 @@
 	const allRanks = $derived(ranks(total));
 	const ri = $derived(rankIndex(stamps.length, total));
 
-	/* ---------- Blättern: Wischen oder Seitenleiste ---------- */
-	let pager = $state.raw<HTMLDivElement>(undefined as unknown as HTMLDivElement);
+	/* ---------- Blättern: Seite klappt um die Heftung (links), folgt dem Finger, rastet mit Federschwung ein ---------- */
+	let book = $state.raw<HTMLDivElement>(undefined as unknown as HTMLDivElement);
 	let strip = $state.raw<HTMLDivElement>(undefined as unknown as HTMLDivElement);
 	let cur = $state(0);
-	let raf = 0;
-	function onPager() {
-		const i = Math.round(pager.scrollLeft / Math.max(1, pager.clientWidth));
-		if (i !== cur) cur = i;
-		if (!raf && !reduceMotion()) raf = requestAnimationFrame(flip);
+	// laufendes Umblättern: from → to, p = 0 (Start) … 1 (umgeblättert), v = Tempo in p/ms
+	let turn: { from: number; to: number; p: number; v: number; goal: number } | null = null;
+	let raf = 0,
+		last = 0;
+	const ease = (p: number) => p * (2 - Math.abs(p)); // schnell ablösen, sanft an die Kante
+
+	function paint() {
+		const kids = book?.children;
+		if (!kids || !turn) return;
+		const { from, to, p } = turn;
+		if (from === to) { // erste/letzte Seite: lässt sich nur kurz anheben und fällt zurück
+			(kids[from] as HTMLElement).style.cssText = `display:block;transform:perspective(1100px) rotateY(${p * 60}deg)`;
+			return;
+		}
+		const fwd = to > from,
+			top = kids[fwd ? from : to] as HTMLElement, // die Seite, die sich dreht
+			under = kids[fwd ? to : from] as HTMLElement; // die Seite darunter
+		const q = fwd ? p : 1 - p; // wie weit die drehende Seite weggeklappt ist (0 = flach)
+		const ang = -88 * ease(Math.max(-0.08, q));
+		top.style.cssText = `display:block;z-index:2;transform:perspective(1100px) rotateY(${ang}deg) scale(${1 + 0.035 * Math.sin(Math.PI * Math.min(1, Math.max(0, q)))})`;
+		top.style.setProperty('--sh', String(Math.max(0, q) * 0.75));
+		top.dataset.r = 'turn';
+		under.style.cssText = `display:block;z-index:1`;
+		under.style.setProperty('--sh', String(Math.max(0, 1 - Math.max(0, q)) * 0.55));
+		under.dataset.r = 'under';
 	}
-	// Umblätter-Effekt: nur die Seiten direkt neben der aktuellen, nur transform/opacity
-	function flip() {
+	function clearTurn(t: { from: number; to: number }) {
+		for (const i of [t.from, t.to]) {
+			const el = book?.children[i] as HTMLElement | undefined;
+			if (el) { el.style.cssText = ''; delete el.dataset.r; }
+		}
+	}
+	// Feder (leicht unterdämpft): rastet sicher ein, beim Zurückfallen kleiner Nachschwung
+	function spring() {
 		raf = 0;
-		const kids = pager?.children;
-		if (!kids || kids.length < 1) return;
-		const stride = kids.length > 1 ? (kids[1] as HTMLElement).offsetLeft - (kids[0] as HTMLElement).offsetLeft : pager.clientWidth;
-		const x = pager.scrollLeft / Math.max(1, stride);
-		const c = Math.round(x);
-		for (let i = Math.max(0, c - 1); i <= Math.min(kids.length - 1, c + 1); i++) {
-			const p = x - i; // >0: Seite wird nach links weggeblättert, <0: kommt von rechts
-			const el = kids[i] as HTMLElement;
-			if (Math.abs(p) < 0.005 || Math.abs(p) >= 0.995) el.style.cssText = '';
-			else if (p > 0) el.style.cssText = `transform-origin:0 50%;transform:perspective(900px) rotateY(${-p * 55}deg);opacity:${1 - p * 0.35}`;
-			else el.style.cssText = `transform-origin:100% 50%;transform:perspective(900px) rotateY(${-p * 14}deg) scale(${1 + p * 0.04});opacity:${1 + p * 0.3}`;
+		const t = turn;
+		if (!t) return;
+		const now = performance.now(),
+			dt = Math.min(32, now - last || 16);
+		last = now;
+		const w = 0.016, k = w * w, c = 2 * 0.72 * w;
+		for (let s = 0; s < dt; s += 4) {
+			t.v += (k * (t.goal - t.p) - c * t.v) * Math.min(4, dt - s);
+			t.p += t.v * Math.min(4, dt - s);
+		}
+		if (t.goal === 1 && t.p >= 1) return done(true);
+		if (t.goal === 0 && Math.abs(t.p) < 0.002 && Math.abs(t.v) < 0.00005) return done(false);
+		paint();
+		raf = requestAnimationFrame(spring);
+	}
+	function run(goal: 0 | 1) {
+		if (!turn) return;
+		turn.goal = goal;
+		cancelAnimationFrame(raf);
+		last = performance.now();
+		raf = requestAnimationFrame(spring);
+	}
+	function done(ok: boolean) {
+		const t = turn!;
+		turn = null;
+		clearTurn(t);
+		if (ok) {
+			cur = t.to;
+			navigator.vibrate?.(8);
+			// neue Seite liegt kurz „auf“ und setzt sich
+			(book.children[t.to] as HTMLElement | undefined)?.animate(
+				[{ transform: 'translateY(-3px) scale(1.01)' }, { transform: 'translateY(1px)' }, { transform: 'none' }],
+				{ duration: 280, easing: 'ease-out' }
+			);
 		}
 	}
 	function goPage(i: number) {
 		i = Math.max(0, Math.min(pages.length - 1, i));
-		const far = Math.abs(i - cur) > 2 || reduceMotion();
-		pager.scrollTo({ left: i * pager.clientWidth, behavior: far ? 'auto' : 'smooth' });
-		cur = i;
+		if (turn) { const t = turn; turn = null; cancelAnimationFrame(raf); clearTurn(t); cur = t.goal === 1 ? t.to : t.from; }
+		if (i === cur) return;
+		if (reduceMotion()) return void (cur = i);
+		turn = { from: cur, to: i, p: 0, v: 0.006, goal: 1 };
+		paint();
+		run(1);
+	}
+
+	/* Wischen: Richtung früh festlegen, waagerecht = blättern, senkrecht = Seite scrollt normal */
+	let drag: { x0: number; y0: number; id: number; on: boolean | null; lx: number; lt: number; vx: number; w: number } | null = null;
+	let swallowClick = false;
+	function pDown(e: PointerEvent) {
+		if (pages.length < 2 || (e.pointerType === 'mouse' && e.button !== 0)) return;
+		if (turn) { // laufende Animation mit dem Finger auffangen
+			cancelAnimationFrame(raf);
+			raf = 0;
+		}
+		drag = { x0: e.clientX, y0: e.clientY, id: e.pointerId, on: null, lx: e.clientX, lt: e.timeStamp, vx: 0, w: book.clientWidth };
+		swallowClick = false;
+	}
+	function pMove(e: PointerEvent) {
+		const d = drag;
+		if (!d || e.pointerId !== d.id) return;
+		const dx = e.clientX - d.x0,
+			dy = e.clientY - d.y0;
+		if (d.on === null) {
+			if (Math.abs(dx) < 7 && Math.abs(dy) < 7) return;
+			d.on = Math.abs(dx) > Math.abs(dy) * 1.1;
+			if (!d.on) { drag = null; if (turn) run(turn.goal as 0 | 1); return; }
+			try { book.setPointerCapture(e.pointerId); } catch { /* Zeiger schon weg */ }
+			swallowClick = true;
+			if (!turn) {
+				const to = cur + (dx < 0 ? 1 : -1);
+				turn = { from: cur, to: Math.max(0, Math.min(pages.length - 1, to)), p: 0, v: 0, goal: 0 };
+			}
+			// Startpunkt so verschieben, dass eine aufgefangene Seite nicht springt
+			const sign = turn.to > turn.from ? -1 : 1;
+			d.x0 = e.clientX - (sign * turn.p * d.w * 0.85);
+		}
+		const t = turn;
+		if (!t) return;
+		const dt = e.timeStamp - d.lt;
+		if (dt >= 10) {
+			d.vx = 0.7 * ((e.clientX - d.lx) / dt) + 0.3 * d.vx;
+			d.lx = e.clientX;
+			d.lt = e.timeStamp;
+		}
+		const sign = t.to > t.from ? -1 : 1;
+		let p = ((e.clientX - d.x0) * sign) / (d.w * 0.85);
+		if (t.to === t.from) p = Math.max(-0.15, Math.min(0.12, p * 0.25)); // erste/letzte Seite: nur leicht anheben
+		t.p = Math.max(-0.15, Math.min(0.995, p));
+		if (!raf) raf = requestAnimationFrame(() => { raf = 0; paint(); });
+	}
+	function pUp(e: PointerEvent) {
+		const d = drag;
+		if (!d || e.pointerId !== d.id) return;
+		drag = null;
+		const t = turn;
+		if (!d.on || !t) { if (t) run(t.goal as 0 | 1); return; }
+		const sign = t.to > t.from ? -1 : 1;
+		t.v = (d.vx * sign) / (d.w * 0.85);
+		const go = t.to !== t.from && e.type === 'pointerup' && (t.p > 0.4 || (t.v > 0.0006 && t.p > 0.04)) && !(t.v < -0.0006);
+		run(go ? 1 : 0);
+	}
+	function onClickCapture(e: MouseEvent) {
+		if (swallowClick) { e.stopPropagation(); e.preventDefault(); swallowClick = false; }
+	}
+	function onKey(e: KeyboardEvent) {
+		if (e.key === 'ArrowRight') goPage(cur + 1);
+		else if (e.key === 'ArrowLeft') goPage(cur - 1);
 	}
 	// aktive Seitenzahl in der Leiste mittig halten
 	$effect(() => {
@@ -172,7 +288,7 @@
 			const fresh = seen ? codes.filter((c) => !seen.includes(c)).slice(-3) : [];
 			markSeen(codes);
 			body?.scrollTo(0, 0);
-			pager?.scrollTo(0, 0);
+			if (turn) { cancelAnimationFrame(raf); clearTurn(turn); turn = null; }
 			cur = 0;
 			if (!fresh.length || reduceMotion()) return;
 			pending = fresh;
@@ -189,8 +305,10 @@
 		for (const code of codes) {
 			const slot = body?.querySelector<HTMLElement>(`[data-stamp="${code}"]`);
 			if (!slot || !ui.passOpen) break;
-			slot.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
-			await wait(600);
+			const pi = Math.floor(stamps.findIndex((s) => s.code === code) / PER_PAGE);
+			if (pi !== cur) { goPage(pi); await wait(450); }
+			slot.scrollIntoView({ behavior: 'smooth', block: 'center' });
+			await wait(500);
 			pending = pending.filter((c) => c !== code);
 			await tick();
 			const el = slot.querySelector<HTMLElement>('.pp-stamp');
@@ -284,9 +402,22 @@
 				<p class="empty">Noch keine Stempel. Für jedes bereiste Land kommt hier ein Stempel in deinen Pass.</p>
 			{/if}
 			{#if pages.length}
-				<div class="pp-pager" bind:this={pager} onscroll={onPager}>
+				<!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->
+				<div
+					class="pp-book"
+					bind:this={book}
+					role="region"
+					aria-label="Stempelseiten, wischen zum Blättern"
+					tabindex="0"
+					onpointerdown={pDown}
+					onpointermove={pMove}
+					onpointerup={pUp}
+					onpointercancel={pUp}
+					onclickcapture={onClickCapture}
+					onkeydown={onKey}
+				>
 					{#each pages as pg, pi (pi)}
-						<div class="pp-page" aria-label="Seite {pi + 1} von {pages.length}">
+						<div class="pp-page" class:on={pi === cur} aria-hidden={pi !== cur} aria-label="Seite {pi + 1} von {pages.length}">
 							<div class="pp-page-h"><span>Stempel · Seite {pi + 1}</span><span>{pg.years}</span></div>
 							<div class="pp-grid">
 								{#each pg.slots as sl (sl.kind + (sl.kind === 'stamp' ? sl.st.code : sl.code))}
@@ -307,6 +438,7 @@
 									{/if}
 								{/each}
 							</div>
+							<i class="pp-shade" aria-hidden="true"></i>
 						</div>
 					{/each}
 				</div>
