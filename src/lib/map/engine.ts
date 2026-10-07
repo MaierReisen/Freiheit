@@ -82,18 +82,20 @@ const LABEL_PPD = 14; // Namen erst bei regionalem Zoom (etwa doppelte Europa-St
 // Ländernamen: Platz tief im Land und Radius des größten Innenkreises (Grad), vorberechnet (scripts/build-labels.mjs);
 // nach Größe sortiert, damit große Länder zuerst Platz bekommen und die Suche früh abbrechen kann
 // erst näher als die Kontinentansicht (Europa: Zoom 2,4 auf dem Globus), sonst wirkt die Übersicht überladen;
-// gemessen als Globus-Zoom, damit Karte und jede Bildschirmgröße gleich reagieren, weich eingeblendet bis NAME_K1
-const NAME_K0 = 2.9,
-	NAME_K1 = 3.5;
+// gemessen als Globus-Zoom, damit Karte und jede Bildschirmgröße gleich reagieren. Ohne Einblenden über den Zoom:
+// ein Name ist ganz da oder gar nicht (halb durchsichtige Namen wirken blass und unscharf)
+const NAME_K = 3.2;
+// alle Namen (Länder, Zwergstaaten) sehen gleich aus, egal ob bereist
+const NAME_FILL = '#EEF6F9',
+	NAME_HALO = 'rgba(7,20,31,.6)';
 const NAME_FIT = 3; // Name darf so breit sein wie das Dreifache des Innenkreis-Radius
 const NAMES = Object.entries(LABEL_JSON as unknown as Record<string, [[number, number], number]>)
 	.filter(([id]) => INFO[id])
 	.map(([id, [p, r]]) => ({ id, p, r }))
 	.sort((a, b) => b.r - a.r);
-// Hauptstädte: erst bei Länder-Zoom (weich eingeblendet), nur für Länder, die groß genug zu sehen sind;
+// Hauptstädte: erst bei Länder-Zoom, nur für Länder, die groß genug zu sehen sind;
 // Lage aus facts.json (wird erst nachgeladen, wenn so weit hineingezoomt wird)
-const CAP_K0 = 4,
-	CAP_K1 = 4.8,
+const CAP_K = 4.4,
 	CAP_AREA = 2500; // Landfläche auf dem Bildschirm in px²
 let CAPS: { id: string; p: [number, number]; t: string }[] | null = null;
 // echte Zwergstaaten (unter etwa 4.000 km²: Vatikan, Monaco, Malta, Singapur, Karibik- und Pazifikinseln …)
@@ -150,6 +152,7 @@ export function createWorldMap(o: MapOptions) {
 	let cw = 0,
 		ch = 0,
 		dpr = 1,
+		tdpr = 1, // Beschriftungsebene: volle Bildschirmauflösung (iPhone 3×), sonst wird die Schrift unscharf hochskaliert
 		flatBase = 1;
 	let interacting = false,
 		lastTs = 0,
@@ -287,21 +290,23 @@ export function createWorldMap(o: MapOptions) {
 
 	function resize() {
 		const ndpr = Math.min(2, window.devicePixelRatio || 1),
+			ntdpr = Math.min(3, window.devicePixelRatio || 1),
 			ncw = cvB.clientWidth,
 			nch = cvB.clientHeight;
 		if (!ncw || !nch) return;
 		// iOS meldet beim Scrollen (Leisten ein/aus) und beim Zurückwechseln in die App „resize“, oft ohne echte Änderung.
 		// Die Zeichenfläche neu anzulegen löscht sie – dann blitzt kurz der Hintergrund auf. Nur bei echter Änderung.
-		const changed = ncw !== cw || nch !== ch || ndpr !== dpr;
+		const changed = ncw !== cw || nch !== ch || ndpr !== dpr || ntdpr !== tdpr;
 		if (!changed && !pendingIntro) return;
 		dpr = ndpr;
+		tdpr = ntdpr;
 		cw = ncw;
 		ch = nch;
 		if (changed) {
-			for (const c of [cvB, cvT]) {
-				c.width = Math.round(cw * dpr);
-				c.height = Math.round(ch * dpr);
-			}
+			cvB.width = Math.round(cw * dpr);
+			cvB.height = Math.round(ch * dpr);
+			cvT.width = Math.round(cw * tdpr);
+			cvT.height = Math.round(ch * tdpr);
 			flatBase = geoNaturalEarth1().fitWidth(cw * 0.98, { type: 'Sphere' }).scale();
 		}
 		if (pendingIntro) {
@@ -761,9 +766,9 @@ export function createWorldMap(o: MapOptions) {
 			if (!pos) continue;
 			const [x, y] = pos;
 			c.lineWidth = 3;
-			c.strokeStyle = 'rgba(7,20,31,.8)';
+			c.strokeStyle = NAME_HALO;
 			c.strokeText(t, x, y);
-			c.fillStyle = l.been ? '#7FE8DA' : 'rgba(255,255,255,.78)';
+			c.fillStyle = NAME_FILL;
 			c.fillText(t, x, y);
 		}
 	}
@@ -799,14 +804,11 @@ export function createWorldMap(o: MapOptions) {
 		c: CanvasRenderingContext2D,
 		P: GeoProjection,
 		ppd: number,
-		visited: Set<string>,
 		skip: (id: string) => boolean,
 		taken: [number, number, number, number][],
 		dots: { x: number; y: number }[]
 	) {
-		const kG = globeK(ppd);
-		if (kG <= NAME_K0) return;
-		const zoomA = Math.min(1, (kG - NAME_K0) / (NAME_K1 - NAME_K0));
+		if (globeK(ppd) <= NAME_K) return;
 		const globe = view.mode === 'globe';
 		c.textAlign = 'center';
 		c.textBaseline = 'middle';
@@ -816,7 +818,7 @@ export function createWorldMap(o: MapOptions) {
 			const room = NAME_FIT * n.r * ppd;
 			if (room < 22) break; // sortiert: alle weiteren sind noch kleiner
 			if (skip(n.id)) continue;
-			let a = zoomA;
+			let a = 1;
 			if (globe) {
 				// zum Rand der Kugel hin ausblenden
 				const d = geoDistance(n.p, [view.lon, view.lat]);
@@ -828,8 +830,7 @@ export function createWorldMap(o: MapOptions) {
 			const fs = room > 160 ? 13 : 11;
 			if (fs !== font) c.font = `600 ${(font = fs)}px Figtree, system-ui, sans-serif`;
 			const { lines, w } = measureName(c, n.id, fs);
-			a *= clamp((room / w - 1) / 0.15, 0, 1);
-			if (!a) continue;
+			if (w > room) continue;
 			const lh = fs * 1.15,
 				h = lh * lines.length;
 			// liegt ein Punkt (Zwergstaat, Hauptstadt) im Weg: etwas darüber oder darunter versuchen, solange es ins Land passt
@@ -848,8 +849,8 @@ export function createWorldMap(o: MapOptions) {
 			const cy = (box[1] + box[3]) / 2;
 			c.globalAlpha = a;
 			c.lineWidth = 3;
-			c.strokeStyle = 'rgba(7,20,31,.55)';
-			c.fillStyle = visited.has(n.id) ? 'rgba(255,255,255,.95)' : 'rgba(235,244,248,.8)';
+			c.strokeStyle = NAME_HALO;
+			c.fillStyle = NAME_FILL;
 			lines.forEach((l, i) => {
 				const y = cy + (i - (lines.length - 1) / 2) * lh;
 				c.strokeText(l, p[0], y);
@@ -866,7 +867,7 @@ export function createWorldMap(o: MapOptions) {
 	/** Hauptstadt-Zeichen (vor den Ländernamen bestimmt, damit die Namen ihnen ausweichen) */
 	function placeCaps(P: GeoProjection, ppd: number, taken: [number, number, number, number][]) {
 		const kG = globeK(ppd);
-		if (kG <= CAP_K0) return null;
+		if (kG <= CAP_K) return null;
 		if (!CAPS) {
 			if (!capsLoading) {
 				capsLoading = true;
@@ -882,12 +883,11 @@ export function createWorldMap(o: MapOptions) {
 			}
 			return null;
 		}
-		const zoomA = Math.min(1, (kG - CAP_K0) / (CAP_K1 - CAP_K0));
 		const globe = view.mode === 'globe';
 		const out: { x: number; y: number; a: number; t: string }[] = [];
 		for (const m of CAPS) {
 			if (pxArea(m.id, ppd) < CAP_AREA) continue;
-			let a = zoomA;
+			let a = 1;
 			if (globe) {
 				a *= clamp((Math.PI / 2 - 0.08 - geoDistance(m.p, [view.lon, view.lat])) / 0.2, 0, 1);
 				if (!a) continue;
@@ -953,7 +953,7 @@ export function createWorldMap(o: MapOptions) {
 				// Nur die Kugel bzw. Kartenfläche überblenden: der halbtransparente Lichtschein drumherum würde sich sonst
 				// mit dem neuen Bild addieren und kurz weiß aufleuchten
 				if (fadeMode === view.mode) {
-					c.setTransform(dpr, 0, 0, dpr, 0, 0);
+					c.setTransform(tdpr, 0, 0, tdpr, 0, 0);
 					c.beginPath();
 					if (view.mode === 'globe') c.arc(cw / 2, ch / 2, Math.max(0, curProj().scale() - 1), 0, TAU);
 					else geoPath(curProj(), c)({ type: 'Sphere' });
@@ -961,11 +961,11 @@ export function createWorldMap(o: MapOptions) {
 					c.setTransform(1, 0, 0, 1, 0, 0);
 				}
 				c.globalAlpha = a * a;
-				c.drawImage(fadeCv, 0, 0);
+				c.drawImage(fadeCv, 0, 0, cv.width, cv.height);
 				c.restore();
 			}
 		}
-		c.setTransform(dpr, 0, 0, dpr, 0, 0);
+		c.setTransform(tdpr, 0, 0, tdpr, 0, 0);
 		const P = curProj();
 		if (hl && now >= hl.t0) drawHighlight(c, P, (now - hl.t0) / HL_MS);
 		const visited = o.getVisited(),
@@ -1068,7 +1068,7 @@ export function createWorldMap(o: MapOptions) {
 		const taken = avoidRects();
 		if (labels.length) drawMicroLabels(c, labels, taken);
 		const caps = placeCaps(P, ppd, taken);
-		drawCountryNames(c, P, ppd, visited, (id) => id === selected || id === hl?.code || dotAlpha(id, ppd) > 0, taken, dotPts);
+		drawCountryNames(c, P, ppd, (id) => id === selected || id === hl?.code || dotAlpha(id, ppd) > 0, taken, dotPts);
 		if (caps?.length) drawCaps(c, caps, taken);
 		if (selected && INFO[selected] && hl?.code !== selected) {
 			const ctr = INFO[selected].c;
