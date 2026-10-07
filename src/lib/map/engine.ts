@@ -63,13 +63,7 @@ const PAL = {
 	visitedSoft: 'rgba(52,209,191,.32)', // bereist, zählt nicht (Grundfarbe unter der Schraffur)
 	wish: '#F6C445',
 	sel: '#FFFFFF',
-	label: 'rgba(7,20,31,.92)',
-	// Gewässer: Flüsse hell (heben sich von den dunklen Grenzen ab), Seen etwas heller als das Meer
-	river: '#5AB4E6',
-	lake: '#1F6A96',
-	lakeEdge: 'rgba(110,190,235,.75)',
-	riverOnBeen: '#1C6E9C',
-	lakeOnBeen: '#1F6A96'
+	label: 'rgba(7,20,31,.92)'
 };
 
 const MOVE_STEPS = [3, 6, 10];
@@ -85,14 +79,11 @@ const dotAlpha = (id: string, ppd: number) => {
 	const a = pxArea(id, ppd);
 	return a < DOT_FULL ? 1 : a < DOT_NONE ? (DOT_NONE - a) / (DOT_NONE - DOT_FULL) : 0;
 };
-/* Flüsse und Seen (Rang aus Natural Earth, 0 = am bedeutendsten), als Globus-Zoom ab dem sie erscheinen:
-   Flüsse nur die großen Ströme und erst ab regionalem Zoom (Nil, Amazonas, Donau ab 3,2; Rhein, Oder ab 6;
-   Elbe, Loire ab 9), weich eingeblendet bis zum 1,3-Fachen. Seen zur Orientierung: die ganz großen (Victoria-,
-   Baikal-, Ladogasee, Große Seen) immer, mittlere ab Länder-Zoom (Bodensee, Genfersee), kleine erst ganz nah. */
-const RIVER_K = [3.2, 3.2, 3.2, 4.5, 6, 9],
-	LAKE_K = [0, 0, 3, 3, 6, 6, 14, 14, 30],
-	LAKE_PX = 14, // Ausdehnung in px, ab der ein See erscheint
-	WATER_K = 0.8; // ab hier Gewässerdaten nachladen (also immer: große Seen sind schon auf dem ganzen Globus zu sehen)
+/* Große Seen gehören zur Wasserfläche (in der Farbe des Meeres, ohne Rand): die bedeutendsten (Rang 0–1 in Natural
+   Earth: Große Seen, Victoria-, Baikal-, Ladogasee …) immer, mittlere (Rang 2–5, z. B. Bodensee) erst bei starkem Zoom.
+   Flüsse bleiben der Minikarte vorbehalten – auf der Weltkarte würden sie mit den Grenzen konkurrieren. */
+const LAKE_K = [0, 0, 12, 12, 12, 12],
+	LAKE_PX = 8; // Ausdehnung in px, ab der ein See erscheint
 const LABEL_PPD = 14; // Namen erst bei regionalem Zoom (etwa doppelte Europa-Startansicht), sonst wirkt die Karte überladen
 // Ländernamen: Platz tief im Land und Radius des größten Innenkreises (Grad), vorberechnet (scripts/build-labels.mjs);
 // nach Größe sortiert, damit große Länder zuerst Platz bekommen und die Suche früh abbrechen kann
@@ -670,8 +661,8 @@ export function createWorldMap(o: MapOptions) {
 		c.strokeStyle = PAL.border;
 		c.lineWidth = 0.7;
 		c.stroke();
-		// Gewässer über den Grenzen: viele Grenzen folgen Flüssen (Donau, Rhein, Mekong), dort würde der Fluss sonst verschwinden
-		drawWater(c, moving, ci, path, [...vis, ...soft, ...mVis, ...mSoft]);
+		// Seen über den Grenzen (wie auf dem Meer verlaufen dort keine Grenzlinien)
+		drawLakes(c, moving, ci);
 
 		if (globe) {
 			c.save();
@@ -725,73 +716,14 @@ export function createWorldMap(o: MapOptions) {
 		}
 	}
 
-	/** Flüsse und Seen auf die Landflächen (unter den Grenzen); erst ab WATER_K, nur Sichtbares, Detailstufe nach Maßstab */
-	function drawWaterPass(
-		c: CanvasRenderingContext2D,
-		kG: number,
-		ppd: number,
-		li: number,
-		ci: Cull,
-		path: ReturnType<typeof geoPath>,
-		river: string,
-		lake: string,
-		lakeEdge: string
-	) {
-		const wl = waterLayer()!;
-		// Flüsse: je Rang ein Strich, hell und kräftiger als die dunklen Grenzlinien (Breite und Deckkraft nach Rang und Zoom)
-		let r = -1;
-		const flush = () => {
-			if (r < 0) return;
-			const t = kG / RIVER_K[r];
-			c.globalAlpha = clamp((t - 1) / 0.3, 0, 1);
-			c.lineWidth = (r <= 2 ? 1.7 : r <= 3 ? 1.45 : 1.2) * clamp(1 + Math.log2(t) * 0.2, 1, 1.6);
-			c.strokeStyle = river;
-			c.stroke();
-		};
-		for (const w of wl.rivers) {
-			if (w.r >= RIVER_K.length || kG <= RIVER_K[w.r]) break; // nach Rang sortiert: alle weiteren sind noch unwichtiger
-			if (w.r !== r) {
-				flush();
-				r = w.r;
-				c.beginPath();
-			}
-			if (waterInView(w, ci, view.lon, view.lat)) path(w.lv[li]);
-		}
-		flush();
-		// Seen: nach Rang und Größe auf dem Bildschirm; ein Füllvorgang für alle, Uferlinie nur bei größeren
-		const R = ppd * 57.2958,
-			lakes: GeoJSON.Polygon[] = [],
-			edged: GeoJSON.Polygon[] = [];
-		for (const w of wl.lakes) {
-			const d = 2 * w.sz * R;
-			if (d < LAKE_PX || kG < LAKE_K[Math.min(w.r, 8)] || !waterInView(w, ci, view.lon, view.lat)) continue;
-			lakes.push(...w.lv[li]);
-			if (d >= 30) edged.push(...w.lv[li]);
-		}
-		c.globalAlpha = 1;
-		if (lakes.length) {
-			c.beginPath();
-			for (const g of lakes) path(g);
-			c.fillStyle = lake;
-			c.fill('evenodd');
-		}
-		if (edged.length) {
-			c.beginPath();
-			for (const g of edged) path(g);
-			c.lineWidth = 0.7;
-			c.strokeStyle = lakeEdge;
-			c.stroke();
-		}
-		c.globalAlpha = 1;
-	}
-
-	function drawWater(c: CanvasRenderingContext2D, moving: boolean, ci: Cull, landPath: ReturnType<typeof geoPath>, been: GeoJSON.Polygon[]) {
-		const ppd = pxPerDeg(),
-			kG = globeK(ppd);
-		if (kG < WATER_K) return;
+	/** Große Seen wie Meer auf die Landflächen: nur Sichtbares, Detailstufe nach Maßstab */
+	function drawLakes(c: CanvasRenderingContext2D, moving: boolean, ci: Cull) {
 		const wl = waterLayer();
 		// erst laden, wenn die Karte ruht (nicht mitten im Einflug beim Start)
 		if (!wl) return void (moving || loadWaterLayer(idle, () => markDirty(true)));
+		const ppd = pxPerDeg(),
+			kG = globeK(ppd),
+			R = ppd * 57.2958;
 		// gröbste Stufe, deren Abweichung unter ~1,2 px bleibt; auf langsamen Geräten in Bewegung eine Stufe gröber
 		let li = WATER_TOL.length - 1;
 		for (let i = 0; i < WATER_TOL.length - 1; i++)
@@ -800,20 +732,28 @@ export function createWorldMap(o: MapOptions) {
 				break;
 			}
 		if (moving && stepIdx > 0) li = Math.max(0, li - 1);
-		// ohne Nachglätten (precision 0): die Linien sind schon fein genug, das spart viel Rechenzeit
+		// ohne Nachglätten (precision 0): die Ufer sind schon fein genug, das spart Rechenzeit
 		const path = geoPath(makeProj(0), c);
-		c.lineCap = c.lineJoin = 'round';
-		// zweimal zeichnen: hell auf normalem Land, dunkelblau auf bereisten (türkisen) Ländern, wo Hellblau kaum auffällt
-		drawWaterPass(c, kG, ppd, li, ci, path, PAL.river, PAL.lake, PAL.lakeEdge);
-		if (been.length) {
-			c.save();
-			c.beginPath();
-			for (const g of been) landPath(g);
-			c.clip();
-			drawWaterPass(c, kG, ppd, li, ci, path, PAL.riverOnBeen, PAL.lakeOnBeen, PAL.lakeOnBeen);
-			c.restore();
+		let any = false;
+		c.beginPath();
+		for (const w of wl.lakes) {
+			if (w.r >= LAKE_K.length) break; // nach Rang sortiert
+			if (kG < LAKE_K[w.r] || 2 * w.sz * R < LAKE_PX || !waterInView(w, ci, view.lon, view.lat)) continue;
+			for (const g of w.lv[li]) path(g);
+			any = true;
 		}
-		c.globalAlpha = 1;
+		if (!any) return;
+		if (view.mode === 'globe') {
+			// derselbe Verlauf wie das Meer auf der Kugel, damit die Seen nahtlos dazu passen
+			const cx = cw / 2,
+				cy = ch / 2,
+				Rg = baseScale() * view.k,
+				g = c.createRadialGradient(cx - Rg * 0.35, cy - Rg * 0.4, Rg * 0.05, cx, cy, Rg);
+			g.addColorStop(0, PAL.oceanA);
+			g.addColorStop(1, PAL.oceanB);
+			c.fillStyle = g;
+		} else c.fillStyle = PAL.oceanFlat;
+		c.fill('evenodd');
 	}
 
 	function drawHighlight(c: CanvasRenderingContext2D, P: GeoProjection, t: number) {

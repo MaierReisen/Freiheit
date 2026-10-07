@@ -2,8 +2,8 @@ import { geoArea, geoDistance } from 'd3-geo';
 import { loadWater, type WaterFeature } from '../facts';
 import { wrapLon } from './geo';
 
-/* Flüsse und Seen für Globus und Karte (dieselben Daten wie die Minikarte). Einmal nach dem Laden vorbereitet:
-   je Gewässer drei Detailstufen (formerhaltend ausgedünnt), Lage/Ausdehnung zum schnellen Weglassen. */
+/* Große Seen für Globus und Karte (dieselben Daten wie die Minikarte). Einmal nach dem Laden vorbereitet:
+   je See mehrere Detailstufen (formerhaltend ausgedünnt), Lage/Ausdehnung zum schnellen Weglassen. */
 
 type Line = [number, number][];
 export interface WaterItem {
@@ -18,15 +18,16 @@ export interface WaterItem {
 	cLat: number;
 	wLon: number;
 	wLat: number;
-	/** Detailstufen grob → fein: Flüsse als Linien, Seen als einzelne Ringe (je Ring ein Polygon) */
-	lv: GeoJSON.MultiLineString[] | GeoJSON.Polygon[][];
+	/** Detailstufen grob → fein, je Ring ein Polygon */
+	lv: GeoJSON.Polygon[][];
 }
 export interface WaterLayer {
 	/** nach Rang sortiert (wichtigste zuerst) */
-	rivers: (WaterItem & { lv: GeoJSON.MultiLineString[] })[];
-	lakes: (WaterItem & { lv: GeoJSON.Polygon[][] })[];
+	lakes: WaterItem[];
 }
-/** Toleranz der Stufen in Grad; die letzte Stufe sind die Originaldaten (0,025°) */
+/** nur Seen bis zu diesem Rang (kleinere zeigt die Weltkarte nie) */
+const MAX_RANK = 5;
+/** Toleranz der Stufen in Grad; die letzte Stufe sind die Originaldaten (0,019°) */
 export const WATER_TOL = [0.4, 0.15, 0.06, 0];
 
 /** Douglas-Peucker ohne Rekursion */
@@ -102,34 +103,23 @@ function base(f: WaterFeature) {
 let layer: WaterLayer | null = null,
 	loading = false;
 export const waterLayer = () => layer;
-/** Gewässer laden und vorbereiten (in Häppchen, damit nichts ruckelt); `done` wird danach aufgerufen */
+/** Seen laden und vorbereiten (in Häppchen, damit nichts ruckelt); `done` wird danach aufgerufen */
 export function loadWaterLayer(idle: (f: () => void) => void, done: () => void) {
 	if (layer || loading) return;
 	loading = true;
 	loadWater()
 		.then((w) => {
-			const rivers: WaterLayer['rivers'] = [],
-				lakes: WaterLayer['lakes'] = [];
-			const rs = [...w.rivers].sort((a, b) => a.r - b.r),
-				ls = [...w.lakes].sort((a, b) => a.r - b.r);
+			const lakes: WaterItem[] = [];
+			const ls = w.lakes.filter((f) => f.r <= MAX_RANK).sort((a, b) => a.r - b.r);
 			let i = 0;
 			const step = () => {
 				const t0 = performance.now();
-				while (i < rs.length + ls.length && performance.now() - t0 < 8) {
-					if (i < rs.length) {
-						const f = rs[i];
-						rivers.push({ ...base(f), lv: WATER_TOL.map((t) => ({ type: 'MultiLineString', coordinates: f.c.map((l) => dp(l, t)) })) });
-					} else {
-						const f = ls[i - rs.length];
-						lakes.push({
-							...base(f),
-							lv: WATER_TOL.map((t) => f.c.map((r) => dpRing(r, t)).filter((r): r is Line => !!r).map(poly))
-						});
-					}
-					i++;
+				for (; i < ls.length && performance.now() - t0 < 8; i++) {
+					const f = ls[i];
+					lakes.push({ ...base(f), lv: WATER_TOL.map((t) => f.c.map((r) => dpRing(r, t)).filter((r): r is Line => !!r).map(poly)) });
 				}
-				if (i < rs.length + ls.length) return idle(step);
-				layer = { rivers, lakes };
+				if (i < ls.length) return idle(step);
+				layer = { lakes };
 				done();
 			};
 			idle(step);
