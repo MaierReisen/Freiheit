@@ -430,6 +430,8 @@ input,textarea,[contenteditable="true"]{-webkit-user-select:text;user-select:tex
 .cs-river{fill:none;stroke:#2F86BD;stroke-linecap:round;stroke-linejoin:round}
 .cs-water:not(.dim) .cs-river{filter:drop-shadow(0 0 1.5px rgba(255,255,255,.45))}
 .cs-lake{fill:#1B5F86;stroke:#3C95C9;stroke-width:.8;stroke-linejoin:round}
+.cs-spot{fill:#FFB23E;stroke:#fff;stroke-width:1.6}
+.cs-spot-ring{fill:none;stroke:#FFB23E;stroke-width:1.2;opacity:.55}
 .cs-cap{fill:#fff;stroke:rgba(7,20,31,.9);stroke-width:1.4}
 .cs-peak circle{fill:rgba(10,32,48,.6);stroke:rgba(246,196,69,.7);stroke-width:1}
 .cs-peak path{fill:none;stroke:#F6C445;stroke-width:1.1;stroke-linejoin:round;stroke-linecap:round;opacity:.9}
@@ -546,7 +548,7 @@ input,textarea,[contenteditable="true"]{-webkit-user-select:text;user-select:tex
 .cl-hls{display:flex;flex-direction:column;gap:2px;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
 .cl-hls .lbl{margin-bottom:4px}
 .cl-hl{display:flex;align-items:center;gap:10px;padding:6px 0;transition:opacity .2s}
-.cl-hls:has(.cl-hl.on) .cl-hl:not(.on){opacity:.5}
+.cl-hl.off{opacity:.45}
 .cl-hl-ic{flex:none;width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:color-mix(in srgb,var(--primary) 14%,transparent)}
 .cs-tile .cl-hl-ic svg{width:18px;height:18px;margin:0;stroke:var(--primary);stroke-width:1.7;fill:none}
 .cl-hl-ic.fest{background:color-mix(in srgb,#B07CE8 16%,transparent)}

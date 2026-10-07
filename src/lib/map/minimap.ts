@@ -20,6 +20,8 @@ export interface MiniMap {
 	cap: [number, number] | null;
 	peak: [number, number] | null;
 	peakDir: number | null;
+	/** Länge/Breite → Punkt auf der Minikarte (null, wenn nicht sichtbar) */
+	proj: (ll: [number, number]) => [number, number] | null;
 }
 
 const inside = (p: [number, number] | null) => !!p && p[0] >= 0 && p[0] <= W && p[1] >= 0 && p[1] <= H;
@@ -330,7 +332,7 @@ function build(code: string, facts: Facts | null, water: Water): MiniMap | null 
 	for (const l of lakeLabels.slice(0, 2)) place(l.at[0], l.at[1], l.n, 'lb-water', 9, { center: true });
 	for (const r of cand) r.spots.some((p) => place(p.at[0], p.at[1], r.n, 'lb-water', 9, { rot: p.rot, center: true }));
 
-	return { land, grat: path(geoGraticule10()) ?? '', around, rivers, lakes, labels, cap, peak, peakDir };
+	return { land, grat: path(geoGraticule10()) ?? '', around, rivers, lakes, labels, cap, peak, peakDir, proj: (ll) => P(ll) as [number, number] | null };
 }
 
 let lakesSorted: Water['lakes'] | null = null;

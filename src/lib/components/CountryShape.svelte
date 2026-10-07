@@ -7,7 +7,7 @@
 	   Umriss), Nachbarn gedämpft, dazu die wichtigsten Flüsse und Seen, Hauptstadt und höchster Berg (Berechnung in
 	   map/minimap.ts). Schon berechnete Karten (z. B. vorab berechnete Nachbarn) erscheinen sofort. */
 
-	let { code, been = false, facts = null }: { code: string; been?: boolean; facts?: Facts | null } = $props();
+	let { code, been = false, facts = null, spot = null }: { code: string; been?: boolean; facts?: Facts | null; spot?: [number, number] | null } = $props();
 
 	const uid = 'cs' + Math.random().toString(36).slice(2, 8); // eigene ID für den Zuschnitt aufs Land
 
@@ -38,6 +38,8 @@
 		loadWater().then((w) => prefetchMiniMaps(nb.map((c) => ({ code: c, facts: factsNow(c) })), w));
 	});
 
+	// gewählter Klima-Ort (Länge, Breite) als Punkt auf der Karte
+	const spotXY = $derived(map && spot ? map.proj(spot) : null);
 	const visited = $derived(visitedSet());
 	// Nachbarschaft getrennt nach bereist (türkis) und nicht bereist (Landfarbe) – wie auf dem Globus
 	const around = $derived.by(() => {
@@ -84,6 +86,10 @@
 		{/if}
 		{#if map.cap}
 			<rect class="cs-cap" x={map.cap[0] - 3} y={map.cap[1] - 3} width="6" height="6" rx="1.4" />
+		{/if}
+		{#if spotXY}
+			<circle class="cs-spot-ring" cx={spotXY[0]} cy={spotXY[1]} r="8" />
+			<circle class="cs-spot" cx={spotXY[0]} cy={spotXY[1]} r="4" />
 		{/if}
 		{#each map.labels as l, i (i)}
 			<text

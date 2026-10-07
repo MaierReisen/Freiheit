@@ -32,6 +32,7 @@
 	// Fakten (beim ersten Mal nachgeladen)
 	// svelte-ignore state_referenced_locally
 	let facts = $state<Facts | null>(factsNow(code));
+	let spot = $state<[number, number] | null>(null);
 	$effect(() => {
 		if (facts) return;
 		// Einreise und Klima gleich mitladen: alle Kacheln erscheinen zusammen, nichts springt nachträglich
@@ -180,12 +181,12 @@
 
 <div class="cs-body">
 	<!-- Gebiete ohne eigene Umrisse in den Kartendaten (z. B. Réunion, in Frankreich enthalten): keine leere Karte -->
-	{#if INFO[code]}<div class="cs-map"><CountryShape {code} {been} {facts} /></div>{/if}
+	{#if INFO[code]}<div class="cs-map"><CountryShape {code} {been} {facts} {spot} /></div>{/if}
 
 	{#if facts}
 		<div class="cs-grid">
 			{#if code !== 'DE'}<EntryCard {code} />{/if}
-			<ClimateCard {code} />
+			<ClimateCard {code} bind:spot />
 			{#if curs.length}
 				<div class="cs-tile wide cs-fx">
 					<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" /><path d="M14.8 9.2c-.6-.8-1.6-1.2-2.8-1.2-1.7 0-3 .9-3 2.2 0 2.9 6 1.4 6 4.4 0 1.3-1.3 2.2-3 2.2-1.3 0-2.4-.5-3-1.4M12 6v2M12 16.8V18" /></svg>
