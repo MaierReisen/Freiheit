@@ -83,7 +83,7 @@
 			</g>
 		{/if}
 		{#if map.cap}
-			<rect class="cs-cap" x={map.cap[0] - 3.5} y={map.cap[1] - 3.5} width="7" height="7" rx="1.6" />
+			<rect class="cs-cap" x={map.cap[0] - 3} y={map.cap[1] - 3} width="6" height="6" rx="1.4" />
 		{/if}
 		{#each map.labels as l, i (i)}
 			<text

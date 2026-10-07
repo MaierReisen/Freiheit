@@ -430,7 +430,7 @@ input,textarea,[contenteditable="true"]{-webkit-user-select:text;user-select:tex
 .cs-river{fill:none;stroke:#2F86BD;stroke-linecap:round;stroke-linejoin:round}
 .cs-water:not(.dim) .cs-river{filter:drop-shadow(0 0 1.5px rgba(255,255,255,.45))}
 .cs-lake{fill:#1B5F86;stroke:#3C95C9;stroke-width:.8;stroke-linejoin:round}
-.cs-cap{fill:#fff;stroke:rgba(7,20,31,.9);stroke-width:1.6}
+.cs-cap{fill:#fff;stroke:rgba(7,20,31,.9);stroke-width:1.4}
 .cs-peak circle{fill:rgba(10,32,48,.6);stroke:rgba(246,196,69,.7);stroke-width:1}
 .cs-peak path{fill:none;stroke:#F6C445;stroke-width:1.1;stroke-linejoin:round;stroke-linecap:round;opacity:.9}
 .cs-peak .cs-peak-dir{stroke-width:1.4;opacity:.8}

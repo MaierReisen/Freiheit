@@ -907,9 +907,9 @@ export function createWorldMap(o: MapOptions) {
 		for (const m of list) {
 			c.globalAlpha = m.a;
 			c.beginPath();
-			if (c.roundRect) c.roundRect(m.x - 3.5, m.y - 3.5, 7, 7, 1.6);
-			else c.rect(m.x - 3.5, m.y - 3.5, 7, 7);
-			c.lineWidth = 1.6;
+			if (c.roundRect) c.roundRect(m.x - 3, m.y - 3, 6, 6, 1.4);
+			else c.rect(m.x - 3, m.y - 3, 6, 6);
+			c.lineWidth = 1.4;
 			c.strokeStyle = 'rgba(7,20,31,.9)';
 			c.stroke();
 			c.fillStyle = '#fff';
