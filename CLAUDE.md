@@ -30,7 +30,7 @@ Live: https://maierreisen.github.io/Freiheit/ · Repo: MaierReisen/Freiheit · n
 - `entry.json` ← `build-entry.py` (Auswärtiges Amt OpenData) + Handeinordnung `scripts/entry-curated.json`. Ändert das AA Texte, erkennt die Signatur das und die App zeigt den AA-Satz; nach Prüfung mit `--accept` übernehmen.
 - `climate.json` ← `build-climate.py` (TerraClimate 1991–2020, Meerestemperatur NOAA OISST, Sturmsaisons kuratiert). Cache in `.climate-cache/` (ignoriert).
 - `water.json` ← `build-water.py` (Natural Earth Flüsse/Seen, Namen korrigiert und eingedeutscht).
-- `highlights.json` (in der App „Besonders zur Reisezeit“): von Hand gepflegt, max. 5 je Land, NUR zeitgebundene Dinge zur Wahl des Reisezeitraums (Feste, Blüte, Laub, Tierzüge/-saisonen, Polarlicht/Mitternachtssonne, Wasserstände). Keine ganzjährigen Sehenswürdigkeiten, keine Sportevents, keine Bauwerke. Format `{c, t, r?, m:[0-11], v?, d?, y?}`.
+- `highlights.json` (in der App „Besonders zur Reisezeit“): von Hand gepflegt, max. 5 je Land, lieber weniger – nur absolute Highlights (Must-sees), NUR zeitgebundene Dinge zur Wahl des Reisezeitraums (Feste, Blüte, Laub, Tierzüge/-saisonen, Polarlicht/Mitternachtssonne, Wasserstände). Keine ganzjährigen Sehenswürdigkeiten, keine Sportevents, keine Bauwerke. Format `{c, t, r?, m:[0-11], v?, d?}`; Kategorien c: fest, bluete (auch Ernte), laub, tier, meer, licht (Polarlicht/Mitternachtssonne), winter, wasser, natur.
 
 ## Stil
 - Optik der App beibehalten: Farben/Abstände über Tokens in `src/app.css`, hell + dunkel, Handybreite zuerst.

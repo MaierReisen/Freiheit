@@ -333,11 +333,11 @@ export function rainSeason(ppt: number[]) {
 export const MONSOON = new Set(['IN', 'PK', 'NP', 'BT', 'BD', 'LK', 'MV', 'MM', 'TH', 'LA', 'KH', 'VN', 'PH']);
 
 /* Saisonale Highlights je Land (von Hand zusammengestellt und geprüft, siehe data/highlights.json):
-   c: Art (tier, meer, bluete, laub, natur, fest), t: Titel, r: Ort/Region, m: Monate (0–11),
+   c: Art (fest, bluete, laub, tier, meer, licht, winter, wasser, natur), t: Titel, r: Ort/Region, m: Monate (0–11),
    v: Termin wechselt je nach Jahr (Mondkalender u. Ä.), d: fester Termin als Text,
    y: ganzjährig möglich (m dann: besonders gute Monate, falls es sie gibt) */
 export interface Highlight {
-	c: 'tier' | 'meer' | 'bluete' | 'laub' | 'natur' | 'fest';
+	c: 'tier' | 'meer' | 'bluete' | 'laub' | 'natur' | 'fest' | 'licht' | 'winter' | 'wasser';
 	t: string;
 	r?: string;
 	m: number[];
