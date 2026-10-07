@@ -17,6 +17,67 @@
 	let body: HTMLDivElement;
 	let lastScroll = 0; // Scrollposition beim Verlassen merken
 
+	/* Nach unten ziehen schließt den Pass (nur wenn die Seite ganz oben steht) */
+	let root: HTMLElement;
+	let pg: { y0: number; x0: number; lt: number; ly: number; vy: number; dy: number; on: boolean | null } | null = null;
+	function tStart(e: TouchEvent) {
+		if (e.touches.length !== 1 || !ui.passOpen) return (pg = null);
+		const t = e.touches[0];
+		pg = { y0: t.clientY, x0: t.clientX, lt: e.timeStamp, ly: t.clientY, vy: 0, dy: 0, on: null };
+	}
+	function tMove(e: TouchEvent) {
+		if (!pg) return;
+		const t = e.touches[0],
+			dy = t.clientY - pg.y0,
+			dx = t.clientX - pg.x0;
+		if (pg.on === null) {
+			if (Math.abs(dy) < 6 && Math.abs(dx) < 6) return;
+			pg.on = dy > 0 && Math.abs(dy) > Math.abs(dx) && body.scrollTop <= 0;
+			if (pg.on) { pg.ly = t.clientY; pg.lt = e.timeStamp; }
+		}
+		if (!pg.on) return;
+		e.preventDefault();
+		const dt = e.timeStamp - pg.lt;
+		if (dt >= 12) {
+			pg.vy = 0.6 * ((t.clientY - pg.ly) / dt) + 0.4 * pg.vy;
+			pg.ly = t.clientY;
+			pg.lt = e.timeStamp;
+		}
+		pg.dy = Math.max(0, dy);
+		root.style.transition = 'none';
+		root.style.transform = `translateY(${pg.dy}px)`;
+	}
+	function tEnd() {
+		if (!pg) return;
+		const d = pg;
+		pg = null;
+		if (!d.on) return;
+		if (d.dy > 140 || (d.vy > 0.6 && d.dy > 40)) {
+			root.style.transition = 'transform .18s cubic-bezier(.4,0,1,1)';
+			root.style.transform = 'translateY(100%)';
+			setTimeout(() => {
+				closePass(false);
+				root.style.transition = '';
+				root.style.transform = '';
+			}, 180);
+		} else {
+			root.style.transition = 'transform .2s cubic-bezier(.2,.8,.2,1)';
+			root.style.transform = '';
+		}
+	}
+	$effect(() => {
+		root.addEventListener('touchstart', tStart, { passive: true });
+		root.addEventListener('touchmove', tMove, { passive: false });
+		root.addEventListener('touchend', tEnd);
+		root.addEventListener('touchcancel', tEnd);
+		return () => {
+			root.removeEventListener('touchstart', tStart);
+			root.removeEventListener('touchmove', tMove);
+			root.removeEventListener('touchend', tEnd);
+			root.removeEventListener('touchcancel', tEnd);
+		};
+	});
+
 	const stamps = $derived(countedCountries().map((c, i) => ({ code: c.code, name: c.name, nr: i + 1, entered: c.entered, s: stamp(c.code, i + 1, c.entered) })));
 	const wishes = $derived(atlas.data.wishlist.slice(0, 4));
 	const pages = $derived.by(() => {
@@ -167,7 +228,7 @@
 </script>
 
 <!-- svelte-ignore a11y_no_noninteractive_element_to_interactive_role -->
-<section class="ov pp-view" id="passView" role="dialog" aria-modal="true" aria-labelledby="passTitle" hidden={!ui.passOpen}>
+<section class="ov pp-view" id="passView" bind:this={root} role="dialog" aria-modal="true" aria-labelledby="passTitle" hidden={!ui.passOpen}>
 	<svg class="pp-defs" aria-hidden="true" focusable="false"><defs>{@html INK_FILTERS}</defs></svg>
 	<div class="ov-head">
 		<button type="button" class="ov-close" id="passClose" aria-label="Reisepass schließen" onclick={() => closePass(false)}
