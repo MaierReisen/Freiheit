@@ -99,39 +99,63 @@
 	const allRanks = $derived(ranks(total));
 	const ri = $derived(rankIndex(stamps.length, total));
 
-	/* ---------- Blättern: Seite hängt 1:1 am Finger, hebt sich zur Heftung hin ab und gleitet weg; schnelle Feder ---------- */
+	/* ---------- Blättern ----------
+	   Flüssig auf jedem Gerät: Die Nachbarseiten liegen schon fertig gezeichnet (eigene Grafik-Ebene) unter der aktuellen
+	   Seite. Während der Bewegung ändern sich nur transform/opacity – nichts wird neu gezeichnet oder neu gesetzt. */
 	let book = $state.raw<HTMLDivElement>(undefined as unknown as HTMLDivElement);
 	let strip = $state.raw<HTMLDivElement>(undefined as unknown as HTMLDivElement);
 	let cur = $state(0);
+	let near = $state<number[]>([0, 1]); // vorbereitete Seiten (aktuelle ± 1), wird nach dem Blättern im Leerlauf nachgezogen
+	$effect(() => {
+		const c = cur;
+		const id = setTimeout(() => (near = [c - 1, c, c + 1]), 180);
+		return () => clearTimeout(id);
+	});
 	// laufendes Umblättern: from → to, p = 0 (Start) … 1 (umgeblättert), v = Tempo in p/ms
-	let turn: { from: number; to: number; p: number; v: number; goal: 0 | 1 } | null = null;
+	type Turn = { from: number; to: number; p: number; v: number; goal: 0 | 1; w: number; top?: HTMLElement; under?: HTMLElement; sTop?: HTMLElement; sUnder?: HTMLElement };
+	let turn: Turn | null = null;
 	let raf = 0,
 		last = 0;
-	const span = () => book.clientWidth + 24; // Weg, bis die Seite ganz draußen ist
 
-	function paint() {
-		const kids = book?.children;
-		if (!kids || !turn) return;
-		const { from, to, p } = turn;
-		if (from === to) { // erste/letzte Seite: gummiartig, federt zurück
-			(kids[from] as HTMLElement).style.cssText = `display:block;transform:translateX(${p * span()}px)`;
+	// einmal zu Beginn: Ebenen festlegen, Maße lesen – danach im Takt nur noch transform/opacity
+	function begin(t: Turn) {
+		const kids = book.children;
+		t.w = book.clientWidth + 24; // Weg, bis die Seite ganz draußen ist
+		if (t.from === t.to) {
+			t.top = kids[t.from] as HTMLElement;
 			return;
 		}
-		const fwd = to > from,
-			top = kids[fwd ? from : to] as HTMLElement, // die Seite, die gleitet
-			under = kids[fwd ? to : from] as HTMLElement; // die Seite darunter
-		const q = fwd ? p : 1 - p; // 0 = liegt, 1 = links draußen
-		top.style.cssText = `display:block;z-index:2;transform:perspective(1200px) translateX(${-q * span()}px) rotateY(${-q * 32}deg)`;
-		top.style.setProperty('--sh', String(Math.max(0, q) * 0.7));
-		top.dataset.r = 'turn';
-		under.style.cssText = `display:block;z-index:1;transform-origin:50% 50%;transform:scale(${0.92 + 0.08 * Math.min(1, Math.max(0, q))})`;
-		under.style.setProperty('--sh', String(Math.max(0, 1 - q) * 0.6));
-		under.dataset.r = 'under';
+		const fwd = t.to > t.from;
+		t.top = kids[fwd ? t.from : t.to] as HTMLElement; // die Seite, die gleitet
+		t.under = kids[fwd ? t.to : t.from] as HTMLElement; // die Seite darunter
+		t.top.style.cssText = 'display:block;z-index:3';
+		t.under.style.cssText = 'display:block;z-index:2';
+		t.top.dataset.r = 'turn';
+		t.under.dataset.r = 'under';
+		t.sTop = t.top.lastElementChild as HTMLElement;
+		t.sUnder = t.under.lastElementChild as HTMLElement;
+		if (!fwd) t.top.style.transform = `perspective(1400px) translate3d(${-t.w}px,0,0) rotateY(-32deg)`; // startet draußen
 	}
-	function clearTurn(t: { from: number; to: number }) {
-		for (const i of [t.from, t.to]) {
-			const el = book?.children[i] as HTMLElement | undefined;
-			if (el) { el.style.cssText = ''; delete el.dataset.r; }
+	function paint() {
+		const t = turn;
+		if (!t?.top) return;
+		if (t.from === t.to) { // erste/letzte Seite: gummiartig, federt zurück
+			t.top.style.transform = `translate3d(${t.p * t.w}px,0,0)`;
+			return;
+		}
+		const q = Math.min(1, Math.max(-0.04, t.to > t.from ? t.p : 1 - t.p)), // 0 = liegt, 1 = links draußen
+			qc = Math.max(0, q);
+		t.top.style.transform = `perspective(1400px) translate3d(${-q * t.w}px,0,0) rotateY(${-q * 32}deg)`;
+		t.under!.style.transform = `scale(${0.94 + 0.06 * qc})`;
+		t.sTop!.style.opacity = String(qc * 0.7);
+		t.sUnder!.style.opacity = String((1 - qc) * 0.55);
+	}
+	function clearTurn(t: Turn) {
+		for (const el of [t.top, t.under]) {
+			if (!el) continue;
+			el.style.cssText = '';
+			delete el.dataset.r;
+			(el.lastElementChild as HTMLElement).style.opacity = '';
 		}
 	}
 	// straffe Feder: ~200 ms, nimmt den Schwung vom Finger mit; zurück mit kleinem Nachfedern
@@ -162,8 +186,12 @@
 	function done(ok: boolean) {
 		const t = turn!;
 		turn = null;
-		clearTurn(t);
-		if (ok) { cur = t.to; navigator.vibrate?.(6); }
+		if (ok) {
+			cur = t.to;
+			navigator.vibrate?.(6);
+		}
+		// Ebenen erst lösen, wenn Svelte die neue aktuelle Seite markiert hat (sonst blitzt die alte kurz auf)
+		tick().then(() => clearTurn(t));
 	}
 	function stopTurn() {
 		cancelAnimationFrame(raf);
@@ -178,18 +206,22 @@
 		i = Math.max(0, Math.min(pages.length - 1, i));
 		stopTurn();
 		if (i === cur) return;
-		if (reduceMotion()) return void (cur = i);
-		turn = { from: cur, to: i, p: 0, v: 0.005, goal: 1 };
+		if (reduceMotion() || !book) return void (cur = i);
+		const t: Turn = { from: cur, to: i, p: 0, v: 0.005, goal: 1, w: 0 };
+		turn = t;
+		begin(t);
 		paint();
-		run(1);
+		// weiter entfernte Seite war noch nicht gezeichnet: erst einen Frame zeichnen lassen, dann losfedern
+		if (!near.includes(i)) requestAnimationFrame(() => turn === t && run(1));
+		else run(1);
 	}
 
 	/* Wischen (Finger + Maus): Richtung nach wenigen Pixeln festlegen, waagerecht = blättern, senkrecht = Seite scrollt */
 	let drag: { x0: number; y0: number; on: boolean | null; lx: number; lt: number; vx: number } | null = null;
 	let swallowClick = false;
-	const pOf = (t: NonNullable<typeof turn>, dx: number) =>
-		t.from === t.to ? Math.max(-0.12, Math.min(0.12, (dx * 0.3) / span())) : Math.max(-0.04, Math.min(1, ((t.to > t.from ? -dx : dx) / span())));
-	const dxOf = (t: NonNullable<typeof turn>) => (t.from === t.to ? (t.p * span()) / 0.3 : (t.to > t.from ? -t.p : t.p) * span());
+	const pOf = (t: Turn, dx: number) =>
+		t.from === t.to ? Math.max(-0.12, Math.min(0.12, (dx * 0.3) / t.w)) : Math.max(-0.04, Math.min(1, (t.to > t.from ? -dx : dx) / t.w));
+	const dxOf = (t: Turn) => (t.from === t.to ? (t.p * t.w) / 0.3 : (t.to > t.from ? -t.p : t.p) * t.w);
 	function gStart(x: number, y: number, ts: number) {
 		if (pages.length < 2) return;
 		if (turn) { cancelAnimationFrame(raf); raf = 0; } // laufende Seite auffangen
@@ -206,8 +238,11 @@
 			d.on = Math.abs(dx) > Math.abs(dy) * 0.8;
 			if (!d.on) { drag = null; if (turn) run(turn.goal); return false; }
 			swallowClick = true;
-			if (!turn) turn = { from: cur, to: Math.max(0, Math.min(pages.length - 1, cur + (dx < 0 ? 1 : -1))), p: 0, v: 0, goal: 0 };
-			else d.x0 = x - dxOf(turn); // aufgefangene Seite springt nicht
+			book.classList.add('drag');
+			if (!turn) {
+				turn = { from: cur, to: Math.max(0, Math.min(pages.length - 1, cur + (dx < 0 ? 1 : -1))), p: 0, v: 0, goal: 0, w: 0 };
+				begin(turn);
+			} else d.x0 = x - dxOf(turn); // aufgefangene Seite springt nicht
 			d.lx = x;
 			d.lt = ts;
 		}
@@ -227,6 +262,7 @@
 	function gEnd(ok: boolean, ts: number) {
 		const d = drag;
 		drag = null;
+		book?.classList.remove('drag');
 		const t = turn;
 		if (!d || !t) return;
 		if (!d.on) return run(t.goal);
@@ -234,7 +270,7 @@
 		const fwd = t.to > t.from,
 			vx = ts - d.lt > 80 ? 0 : d.vx, // Finger stand zuletzt still: kein Schwung
 			vDir = fwd ? -vx : vx; // px/ms in Blätterrichtung
-		t.v = Math.max(-0.012, Math.min(0.012, vDir / span()));
+		t.v = Math.max(-0.012, Math.min(0.012, vDir / t.w));
 		const go = ok && t.from !== t.to && (vDir > 0.25 || (vDir > -0.25 && t.p > 0.35));
 		run(go ? 1 : 0);
 	}
@@ -290,13 +326,79 @@
 		facts ? badges({ codes: stamps.map((s) => s.code), facts, entered: Object.fromEntries(stamps.map((s) => [s.code, s.entered])) }, atlas.settings.countryScope) : []
 	);
 	let picked = $state<string | null>(null);
-	async function choose(id: string | null) {
-		picked = id;
-		await tick();
-		body?.querySelector('.pp-detail')?.scrollIntoView({ behavior: reduceMotion() ? 'auto' : 'smooth', block: 'nearest' });
-	}
 	const pick = $derived(bs.find((b) => b.id === picked) ?? null);
-	const tierClass = (b: Badge) => (b.level ? ['t1', 't2', 't3'][b.level - 1 + 3 - b.tiers.length] : '');
+	// Stufen-Klasse t1–t3 (Bronze/Silber/Gold) zu Stufe 1..n des Abzeichens
+	const tc = (b: Badge, level: number) => (level > 0 && level <= b.tiers.length ? 't' + (level + 3 - b.tiers.length) : '');
+	const tierClass = (b: Badge) => tc(b, b.level);
+	/* Details als Blatt von unten; erneutes Antippen oder Runterziehen schließt */
+	let sheet = $state<HTMLDivElement>();
+	let sheetH = $state(0);
+	let sOff = 0; // aktuelle Zieh-Verschiebung (für das Wegschieben ab dieser Stelle)
+	async function choose(id: string | null) {
+		sOff = 0;
+		picked = id;
+		if (!id) return;
+		await tick();
+		// angetipptes Abzeichen nicht vom Blatt verdecken lassen
+		const btn = body?.querySelector<HTMLElement>(`[data-badge="${id}"]`);
+		if (!btn || !sheet) return;
+		const over = btn.getBoundingClientRect().bottom + 12 - (window.innerHeight - sheet.offsetHeight);
+		if (over > 0) body.scrollBy({ top: over, behavior: reduceMotion() ? 'auto' : 'smooth' });
+	}
+	function slideUp(node: HTMLElement) {
+		const h = node.offsetHeight + 24,
+			o = sOff;
+		return { duration: reduceMotion() ? 0 : o ? 160 : 240, css: (t: number) => `transform:translateY(${o + (1 - t) * (h - o)}px)`, easing: (t: number) => 1 - (1 - t) ** 3 };
+	}
+	$effect(() => {
+		const el = sheet;
+		if (!el) return;
+		let d: { y0: number; ly: number; lt: number; vy: number; dy: number } | null = null;
+		const ts = (e: TouchEvent) => {
+			e.stopPropagation();
+			if (e.touches.length !== 1) return (d = null);
+			const y = e.touches[0].clientY;
+			d = { y0: y, ly: y, lt: e.timeStamp, vy: 0, dy: 0 };
+		};
+		const tm = (e: TouchEvent) => {
+			e.stopPropagation();
+			if (!d) return;
+			e.preventDefault();
+			const y = e.touches[0].clientY,
+				dt = e.timeStamp - d.lt;
+			if (dt >= 12) {
+				d.vy = 0.6 * ((y - d.ly) / dt) + 0.4 * d.vy;
+				d.ly = y;
+				d.lt = e.timeStamp;
+			}
+			d.dy = Math.max(0, y - d.y0);
+			el.style.transition = 'none';
+			el.style.transform = `translateY(${d.dy}px)`;
+		};
+		const te = (e: TouchEvent) => {
+			e.stopPropagation();
+			if (!d) return;
+			const { dy, vy } = d;
+			d = null;
+			if (dy > 70 || (vy > 0.5 && dy > 20)) {
+				sOff = dy;
+				picked = null;
+			} else {
+				el.style.transition = 'transform .2s cubic-bezier(.2,.8,.2,1)';
+				el.style.transform = '';
+			}
+		};
+		el.addEventListener('touchstart', ts, { passive: true });
+		el.addEventListener('touchmove', tm, { passive: false });
+		el.addEventListener('touchend', te);
+		el.addEventListener('touchcancel', te);
+		return () => {
+			el.removeEventListener('touchstart', ts);
+			el.removeEventListener('touchmove', tm);
+			el.removeEventListener('touchend', te);
+			el.removeEventListener('touchcancel', te);
+		};
+	});
 
 	/* ---------- Stempel-Animation beim Öffnen ---------- */
 	// Stempel, die gerade noch auf ihren Auftritt warten (unsichtbar)
@@ -305,6 +407,7 @@
 	$effect(() => {
 		if (!ui.passOpen) {
 			opened = false;
+			picked = null;
 			return;
 		}
 		if (opened) return;
@@ -415,7 +518,7 @@
 		>
 		<h1 class="set-title" id="passTitle">Reisepass</h1>
 	</div>
-	<div class="ov-body" bind:this={body} onscroll={() => { if (ui.passOpen) lastScroll = body.scrollTop; }}>
+	<div class="ov-body" bind:this={body} style:padding-bottom={pick ? sheetH + 16 + 'px' : null} onscroll={() => { if (ui.passOpen) lastScroll = body.scrollTop; }}>
 		{#if ui.passOpen}
 			<div style="margin-top:20px"><PassTile inPass /></div>
 			<ol class="pp-ranks" aria-label="Ränge">
@@ -444,7 +547,7 @@
 					onkeydown={onKey}
 				>
 					{#each pages as pg, pi (pi)}
-						<div class="pp-page" class:on={pi === cur} aria-hidden={pi !== cur} aria-label="Seite {pi + 1} von {pages.length}">
+						<div class="pp-page" class:on={pi === cur} class:nb={pi !== cur && near.includes(pi)} aria-hidden={pi !== cur} inert={pi !== cur} aria-label="Seite {pi + 1} von {pages.length}">
 							<div class="pp-page-h"><span>Stempel · Seite {pi + 1}</span><span>{pg.years}</span></div>
 							<div class="pp-grid">
 								{#each pg.slots as sl (sl.kind + (sl.kind === 'stamp' ? sl.st.code : sl.code))}
@@ -484,22 +587,23 @@
 					<div class="pp-page-h"><span>Abzeichen</span><span>{badgeLevels(bs)} / {bs.reduce((s, b) => s + b.tiers.length, 0)}</span></div>
 					<div class="pp-badges">
 						{#each bs as b (b.id)}
-							<button type="button" class="pp-badge {tierClass(b)}" class:sel={picked === b.id} aria-pressed={picked === b.id} onclick={() => choose(picked === b.id ? null : b.id)}>
-								<span class="pp-medal" style="--p:{b.level < b.tiers.length ? b.p : 1}" aria-hidden="true"><span>{b.icon}</span></span>
+							{@const max = b.level >= b.tiers.length}
+							<button
+								type="button"
+								class="pp-badge {tierClass(b)}"
+								class:max
+								class:sel={picked === b.id}
+								data-badge={b.id}
+								aria-pressed={picked === b.id}
+								onclick={() => choose(picked === b.id ? null : b.id)}
+							>
+								<span class="pp-medal {max ? '' : 'n' + tc(b, b.level + 1)}" style="--p:{max ? 1 : b.p}" aria-hidden="true"><span><i>{b.icon}</i></span></span>
 								<b>{b.name}</b>
-								<small>{b.level ? tierName(b, b.level) : b.prog}</small>
+								<span class="pp-pips" aria-hidden="true">{#each b.tiers as t, i (t)}<i class="{tc(b, i + 1)}" class:on={b.level > i}></i>{/each}</span>
+								<small>{max ? tierName(b, b.level) + ' ✓' : b.prog}</small>
 							</button>
 						{/each}
 					</div>
-					{#if pick}
-						<div class="pp-detail" role="status">
-							<b>{pick.icon} {pick.name}</b>
-							<span>{pick.fmt(pick.v)} {pick.what}</span>
-							<span class="pp-tiers"
-								>{#each pick.tiers as t, i (t)}<i class:on={pick.level > i} class={'t' + (i + 1 + 3 - pick.tiers.length)}>{tierName(pick, i + 1)}: {pick.fmt(t)}</i>{/each}</span
-							>
-						</div>
-					{/if}
 				</div>
 			{/if}
 			{#if stamps.length}
@@ -507,4 +611,28 @@
 			{/if}
 		{/if}
 	</div>
+	{#if pick}
+		{@const max = pick.level >= pick.tiers.length}
+		<div class="pp-sheet {tierClass(pick)}" class:max bind:this={sheet} bind:offsetHeight={sheetH} transition:slideUp role="status">
+			<button type="button" class="pp-grab" aria-label="Details schließen" onclick={() => choose(null)}><i></i></button>
+			<div class="pp-sh-top">
+				<span class="pp-medal {max ? '' : 'n' + tc(pick, pick.level + 1)}" style="--p:{max ? 1 : pick.p}" aria-hidden="true"><span><i>{pick.icon}</i></span></span>
+				<div>
+					<b>{pick.name}</b>
+					<span>{pick.fmt(pick.v)} {pick.what}</span>
+				</div>
+			</div>
+			{#if !max}
+				<div class="pp-next {tc(pick, pick.level + 1)}">
+					<div class="pp-next-t"><span>Noch {pick.fmt(pick.tiers[pick.level] - pick.v)} bis <b>{tierName(pick, pick.level + 1)}</b></span><span>{Math.floor(pick.p * 100)} %</span></div>
+					<div class="pp-bar"><i style="width:{Math.max(3, pick.p * 100)}%"></i></div>
+				</div>
+			{:else}
+				<p class="pp-done">Höchste Stufe erreicht 🎉</p>
+			{/if}
+			<span class="pp-tiers"
+				>{#each pick.tiers as t, i (t)}<i class:on={pick.level > i} class={tc(pick, i + 1)}>{pick.level > i ? '✓ ' : ''}{tierName(pick, i + 1)}: {pick.fmt(t)}</i>{/each}</span
+			>
+		</div>
+	{/if}
 </section>
