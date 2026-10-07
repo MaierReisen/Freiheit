@@ -52,7 +52,7 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -60,5 +60,7 @@ jobs:
       - id: deployment
         uses: actions/deploy-pages@v5
         with:
-          # Wartezeit auf die Veröffentlichung begrenzen (Standard: 10 Minuten)
-          timeout: 300000
+          # Normal dauert die Veröffentlichung 10 s bis 2 min. Bei GitHub-Störungen hängt sie manchmal länger; nach Ablauf
+          # bricht GitHub sie ab, und ein Neustart desselben Laufs scheitert dann sofort („Deployment cancelled“) –
+          # deshalb großzügig warten. Hilft das nicht: Workflow von Hand neu starten (gh workflow run deploy.yml).
+          timeout: 900000
