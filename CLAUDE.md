@@ -20,7 +20,7 @@ Live: https://maierreisen.github.io/Freiheit/ · Repo: MaierReisen/Freiheit · n
 - Schema `MAJOR.MINOR.PATCH` in `package.json` (`version`), angezeigt in Einstellungen → App. **Bei jeder Änderung hochzählen**: PATCH = Fehlerkorrektur/Daten/Texte, MINOR = neue Funktion (PATCH dann 0), MAJOR = grundlegender Umbau (Rest 0).
 
 ## Aufbau
-- `src/lib/components/`: `WorldMap` (Globus/Karte, Halten = aktivieren + ziehen), `CountrySheet` (Länderseite, Schnellkacheln Hauptstadt/Einwohner/Fläche), `EntryCard` (Einreise), `ClimateCard` (Klimadiagramm, beste Reisezeit, Regenzeit/Stürme, Wassertemperatur, Sonnenzeiten, Highlights), `CountryShape` (Minikarte).
+- `src/lib/components/`: `WorldMap` (Globus/Karte, Halten = aktivieren + ziehen; ab Länder-Zoom Hauptstadt + höchster Berg aus `facts.json`, nachgeladen), `CountrySheet` (Länderseite, Schnellkacheln Hauptstadt/Einwohner/Fläche), `EntryCard` (Einreise), `ClimateCard` (Klimadiagramm, beste Reisezeit, Regenzeit/Stürme, Wassertemperatur, Sonnenzeiten, Highlights), `CountryShape` (Minikarte).
 - `src/lib/map/`: `engine.ts` (Gesten), `geo.ts` (Umrisse, Caches), `minimap.ts` (Minikarte mit Cache + Vorberechnung der Nachbarn).
 - `src/lib/facts.ts`: Datentypen, Lader und Berechnungen (Ortszeit, beste Monate, Regenzeit, Sonnenauf-/-untergang).
 - `src/lib/countries.ts`: `nameOf()` – Ländernamen zuerst aus `data/names.json` (feste deutsche Namen).
