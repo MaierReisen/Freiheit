@@ -83,8 +83,7 @@
 			</g>
 		{/if}
 		{#if map.cap}
-			<circle class="cs-cap" cx={map.cap[0]} cy={map.cap[1]} r="4.2" />
-			<circle cx={map.cap[0]} cy={map.cap[1]} r="1.6" fill="#0A2030" />
+			<rect class="cs-cap" x={map.cap[0] - 3.5} y={map.cap[1] - 3.5} width="7" height="7" rx="1.6" />
 		{/if}
 		{#each map.labels as l, i (i)}
 			<text

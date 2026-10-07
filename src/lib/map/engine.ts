@@ -863,7 +863,7 @@ export function createWorldMap(o: MapOptions) {
 	const globeK = (ppd: number) => (ppd * 57.2958) / ((Math.min(cw, ch) / 2) * 0.86);
 
 	let capsLoading = false;
-	/** Hauptstadt-Sterne (vor den Ländernamen bestimmt, damit die Namen ihnen ausweichen) */
+	/** Hauptstadt-Zeichen (vor den Ländernamen bestimmt, damit die Namen ihnen ausweichen) */
 	function placeCaps(P: GeoProjection, ppd: number, taken: [number, number, number, number][]) {
 		const kG = globeK(ppd);
 		if (kG <= CAP_K0) return null;
@@ -894,32 +894,28 @@ export function createWorldMap(o: MapOptions) {
 			}
 			const p = P(m.p);
 			if (!p || p[0] < 8 || p[1] < 8 || p[0] > cw - 8 || p[1] > ch - 8) continue;
-			const b: [number, number, number, number] = [p[0] - 6, p[1] - 6, p[0] + 6, p[1] + 6];
+			const b: [number, number, number, number] = [p[0] - 5, p[1] - 5, p[0] + 5, p[1] + 5];
 			if (taken.some((t) => b[0] < t[2] && b[2] > t[0] && b[1] < t[3] && b[3] > t[1])) continue;
 			taken.push(b);
 			out.push({ x: p[0], y: p[1], a, t: m.t });
 		}
 		return out;
 	}
-	/** Hauptstadt als kleiner weißer Stern (deutlich anders als die runden Punkte der Zwergstaaten), Name daneben, wo Platz ist */
+	/** Hauptstadt als kleines weißes Quadrat wie in der Minikarte (deutlich anders als die runden Punkte der Zwergstaaten), Name daneben, wo Platz ist */
 	function drawCaps(c: CanvasRenderingContext2D, list: { x: number; y: number; a: number; t: string }[], taken: [number, number, number, number][]) {
 		c.lineJoin = 'round';
 		for (const m of list) {
 			c.globalAlpha = m.a;
 			c.beginPath();
-			for (let i = 0; i < 10; i++) {
-				const r = i % 2 ? 2.4 : 5.6,
-					w = (i * Math.PI) / 5 - Math.PI / 2;
-				c.lineTo(m.x + r * Math.cos(w), m.y + 0.5 + r * Math.sin(w));
-			}
-			c.closePath();
-			c.lineWidth = 2;
+			if (c.roundRect) c.roundRect(m.x - 3.5, m.y - 3.5, 7, 7, 1.6);
+			else c.rect(m.x - 3.5, m.y - 3.5, 7, 7);
+			c.lineWidth = 1.6;
 			c.strokeStyle = 'rgba(7,20,31,.9)';
 			c.stroke();
 			c.fillStyle = '#fff';
 			c.fill();
 		}
-		// Beschriftung: rechts vom Stern, sonst links; überlappt sie, bleibt nur der Stern
+		// Beschriftung: rechts vom Zeichen, sonst links; überlappt sie, bleibt nur das Zeichen
 		c.textBaseline = 'middle';
 		c.textAlign = 'left';
 		c.lineWidth = 3;
@@ -929,7 +925,7 @@ export function createWorldMap(o: MapOptions) {
 		for (const m of list) {
 			const w = c.measureText(m.t).width;
 			let x0: number | null = null;
-			for (const x of [m.x + 8, m.x - 8 - w]) {
+			for (const x of [m.x + 7, m.x - 7 - w]) {
 				const b: [number, number, number, number] = [x - 2, m.y - 7, x + w + 2, m.y + 7];
 				if (b[0] < 4 || b[2] > cw - 4 || b[1] < 4 || b[3] > ch - 4) continue;
 				if (taken.some((t) => b[0] < t[2] && b[2] > t[0] && b[1] < t[3] && b[3] > t[1])) continue;
