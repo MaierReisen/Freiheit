@@ -204,10 +204,17 @@ export const SIMP_W = [0.1, 0.03, 0.01, 0.003, 0.001, 0.0003, 0.0001]; // 50m-Da
 export const FINE_W = [0.0003, 0.0001, 0.00003, 0.00001, 0.000003, 0.000001]; // 10m-Daten: 'w0' … 'w5'
 let PRE: Topology | null = null,
 	PRE_FINE: Topology | null = null;
-function simpLod(pre: Topology, w: number): Lod {
+function simpLod(pre: Topology, w: number, keep?: Lod): Lod {
 	const lod = makeLod(simplify(pre, w));
 	// sehr kleine Ringe können beim Vereinfachen die Umlaufrichtung verlieren; d3 würde dann „alles außer der Insel“ füllen
 	for (const pg of lod.polys) if (geoArea(pg.g) > 2 * Math.PI) pg.g = { type: 'Polygon', coordinates: pg.g.coordinates.map((r) => [...r].reverse()) };
+	// Die Antarktis umschließt den Südpol: die Vereinfachung (ebene Dreiecksflächen) lässt ihr Festland zu einem Punkt
+	// zusammenfallen. Sie behält deshalb die unvereinfachte Form (50m: rund 260 Punkte, kostet beim Zeichnen nichts).
+	if (keep) {
+		lod.polys = [...lod.polys.filter((pg) => pg.id !== 'AQ'), ...keep.polys.filter((pg) => pg.id === 'AQ')];
+		const aq = keep.feats.find((f) => f.id === 'AQ');
+		if (aq) lod.feats = lod.feats.map((f) => (f.id === 'AQ' ? aq : f));
+	}
 	return lod;
 }
 
@@ -217,7 +224,7 @@ export function getLod(name: string): Lod | null {
 	if (LODS[name]) return LODS[name];
 	if (/^v\d$/.test(name)) {
 		PRE ??= presimplify(WORLD);
-		return (LODS[name] = simpLod(PRE, SIMP_W[Number(name[1])]));
+		return (LODS[name] = simpLod(PRE, SIMP_W[Number(name[1])], getLod('full')!));
 	}
 	if (/^w\d$/.test(name)) {
 		if (!FINE_TOPO) return null;

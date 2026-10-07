@@ -194,8 +194,14 @@ export function createWorldMap(o: MapOptions) {
 		markDirty(true);
 	}
 
+	// Karte nur so weit nach Norden/Süden schieben, bis der Kartenrand (Pol) am Bildrand liegt – so ist auch die
+	// Antarktis ganz zu sehen, und unter oder über der Karte bleibt kein leerer Streifen
+	const NE1 = geoNaturalEarth1().scale(1).translate([0, 0]),
+		NE_POLE = -NE1([0, 90])![1];
 	const clampFlatLat = (l: number, k = view.k) => {
-		const m = Math.max(0, 72 - 62 / k);
+		const free = NE_POLE - ch / 2 / (flatBase * k);
+		if (free <= 0) return 0;
+		const m = Math.abs(NE1.invert!([0, -free])![1]);
 		return clamp(l, -m, m);
 	};
 	const K_MAX = 1500; // so weit, dass auch der Vatikan (0,01°) als Fläche gut erkennbar wird
