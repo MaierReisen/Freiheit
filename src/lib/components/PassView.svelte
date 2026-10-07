@@ -10,7 +10,7 @@
 	import { markSeen, passSeen } from '$lib/passSeen.svelte';
 	import PassTile from './PassTile.svelte';
 
-	/* Reisepass (Vollbild): Seiten mit je 6 Stempeln in der Reihenfolge „Land Nr. X“, danach „?“-Plätze für
+	/* Reisepass (Vollbild): Seiten zum Blättern mit je 6 Stempeln in der Reihenfolge „Land Nr. X“, danach „?“-Plätze für
 	   Wunschziele. Neue Länder seit dem letzten Öffnen werden beim Öffnen sichtbar gestempelt. */
 
 	const PER_PAGE = 6;
@@ -99,20 +99,34 @@
 	const allRanks = $derived(ranks(total));
 	const ri = $derived(rankIndex(stamps.length, total));
 
-	/* ---------- Visa-Seiten: Abzeichen ---------- */
+	/* ---------- Blättern: Wischen oder Seitenleiste ---------- */
+	let pager = $state.raw<HTMLDivElement>(undefined as unknown as HTMLDivElement);
+	let strip = $state.raw<HTMLDivElement>(undefined as unknown as HTMLDivElement);
+	let cur = $state(0);
+	function onPager() {
+		const i = Math.round(pager.scrollLeft / Math.max(1, pager.clientWidth));
+		if (i !== cur) cur = i;
+	}
+	function goPage(i: number) {
+		i = Math.max(0, Math.min(pages.length - 1, i));
+		const far = Math.abs(i - cur) > 2 || reduceMotion();
+		pager.scrollTo({ left: i * pager.clientWidth, behavior: far ? 'auto' : 'smooth' });
+		cur = i;
+	}
+	// aktive Seitenzahl in der Leiste mittig halten
+	$effect(() => {
+		const i = cur;
+		const el = strip?.children[i + 1] as HTMLElement | undefined; // [0] = Zurück-Pfeil
+		if (el) strip.scrollTo({ left: el.offsetLeft - strip.clientWidth / 2 + el.clientWidth / 2, behavior: 'auto' });
+	});
+
+	/* ---------- Abzeichen (Leiste unter der Seite) ---------- */
 	let facts = $state.raw<Record<string, Facts> | null>(null);
 	$effect(() => {
 		if (ui.passOpen && !facts) loadFacts().then((f) => (facts = f));
 	});
 	const bs = $derived(
 		facts ? badges({ codes: stamps.map((s) => s.code), facts, entered: Object.fromEntries(stamps.map((s) => [s.code, s.entered])) }, atlas.settings.countryScope) : []
-	);
-	// am nächsten an der nächsten Stufe (Ansporn); Einreise-Abzeichen erst, wenn Daten eingetragen sind
-	const nextUp = $derived(
-		bs
-			.filter((b) => b.level < b.tiers.length && b.p > 0)
-			.sort((a, b) => b.p - a.p)
-			.slice(0, 2)
 	);
 	let picked = $state<string | null>(null);
 	async function choose(id: string | null) {
@@ -140,6 +154,8 @@
 			const fresh = seen ? codes.filter((c) => !seen.includes(c)).slice(-3) : [];
 			markSeen(codes);
 			body?.scrollTo(0, 0);
+			pager?.scrollTo(0, 0);
+			cur = 0;
 			if (!fresh.length || reduceMotion()) return;
 			pending = fresh;
 			play(fresh);
@@ -155,8 +171,8 @@
 		for (const code of codes) {
 			const slot = body?.querySelector<HTMLElement>(`[data-stamp="${code}"]`);
 			if (!slot || !ui.passOpen) break;
-			slot.scrollIntoView({ behavior: 'smooth', block: 'center' });
-			await wait(500);
+			slot.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+			await wait(600);
 			pending = pending.filter((c) => c !== code);
 			await tick();
 			const el = slot.querySelector<HTMLElement>('.pp-stamp');
@@ -249,44 +265,46 @@
 			{#if !stamps.length}
 				<p class="empty">Noch keine Stempel. Für jedes bereiste Land kommt hier ein Stempel in deinen Pass.</p>
 			{/if}
-			{#each pages as pg, pi (pi)}
-				<div class="pp-page">
-					<div class="pp-page-h"><span>Stempel</span><span>{pg.years}</span></div>
-					<div class="pp-grid">
-						{#each pg.slots as sl (sl.kind + (sl.kind === 'stamp' ? sl.st.code : sl.code))}
-							{#if sl.kind === 'stamp'}
-								<button
-									type="button"
-									class="pp-slot"
-									data-stamp={sl.st.code}
-									class:wait={pending.includes(sl.st.code)}
-									style="transform:translateY({sl.st.s.dy}px) rotate({sl.st.s.rot}deg);--c:{sl.st.s.color};--w:{sl.st.s.w}%"
-									aria-label="{sl.st.name}, Land Nr. {sl.st.nr}"
-									onclick={() => openCountry(sl.st.code)}>{@html sl.st.s.svg}</button
-								>
-							{:else}
-								<button type="button" class="pp-slot" aria-label="Wunschziel {sl.name}" onclick={() => openCountry(sl.code)}
-									><span class="pp-empty"><b>?</b>Wunschziel<br />{flag(sl.code)} {sl.name}</span></button
-								>
-							{/if}
-						{/each}
-					</div>
-					<div class="pp-page-n">{pi + 1}</div>
-				</div>
-			{/each}
-			{#if bs.length}
-				<div class="pp-page pp-visa">
-					<div class="pp-page-h"><span>Visa · Abzeichen</span><span>{badgeLevels(bs)} / {bs.reduce((s, b) => s + b.tiers.length, 0)}</span></div>
-					{#if nextUp.length}
-						<div class="pp-next">
-							<small>Fast geschafft</small>
-							{#each nextUp as b (b.id)}
-								<button type="button" onclick={() => choose(b.id)}
-									><span aria-hidden="true">{b.icon}</span><b>{b.name}</b><em>{b.prog}</em><span class="pp-bar"><i style="width:{b.p * 100}%"></i></span></button
-								>
-							{/each}
+			{#if pages.length}
+				<div class="pp-pager" bind:this={pager} onscroll={onPager}>
+					{#each pages as pg, pi (pi)}
+						<div class="pp-page" aria-label="Seite {pi + 1} von {pages.length}">
+							<div class="pp-page-h"><span>Stempel · Seite {pi + 1}</span><span>{pg.years}</span></div>
+							<div class="pp-grid">
+								{#each pg.slots as sl (sl.kind + (sl.kind === 'stamp' ? sl.st.code : sl.code))}
+									{#if sl.kind === 'stamp'}
+										<button
+											type="button"
+											class="pp-slot"
+											data-stamp={sl.st.code}
+											class:wait={pending.includes(sl.st.code)}
+											style="transform:translateY({sl.st.s.dy}px) rotate({sl.st.s.rot}deg);--c:{sl.st.s.color};--w:{sl.st.s.w}%"
+											aria-label="{sl.st.name}, Land Nr. {sl.st.nr}"
+											onclick={() => openCountry(sl.st.code)}>{@html sl.st.s.svg}</button
+										>
+									{:else}
+										<button type="button" class="pp-slot" aria-label="Wunschziel {sl.name}" onclick={() => openCountry(sl.code)}
+											><span class="pp-empty"><b>?</b>Wunschziel<br />{flag(sl.code)} {sl.name}</span></button
+										>
+									{/if}
+								{/each}
+							</div>
 						</div>
-					{/if}
+					{/each}
+				</div>
+				{#if pages.length > 1}
+					<div class="pp-strip" bind:this={strip} role="group" aria-label="Seite wählen">
+						<button type="button" class="pp-arrow" aria-label="Vorherige Seite" disabled={cur <= 0} onclick={() => goPage(cur - 1)}>‹</button>
+						{#each pages as _, pi (pi)}
+							<button type="button" class:on={pi === cur} aria-label="Seite {pi + 1}" aria-current={pi === cur ? 'page' : undefined} onclick={() => goPage(pi)}>{pi + 1}</button>
+						{/each}
+						<button type="button" class="pp-arrow" aria-label="Nächste Seite" disabled={cur >= pages.length - 1} onclick={() => goPage(cur + 1)}>›</button>
+					</div>
+				{/if}
+			{/if}
+			{#if bs.length}
+				<div class="pp-visa">
+					<div class="pp-page-h"><span>Abzeichen</span><span>{badgeLevels(bs)} / {bs.reduce((s, b) => s + b.tiers.length, 0)}</span></div>
 					<div class="pp-badges">
 						{#each bs as b (b.id)}
 							<button type="button" class="pp-badge {tierClass(b)}" class:sel={picked === b.id} aria-pressed={picked === b.id} onclick={() => choose(picked === b.id ? null : b.id)}>
@@ -305,7 +323,6 @@
 							>
 						</div>
 					{/if}
-					<div class="pp-page-n">{pages.length + 1}</div>
 				</div>
 			{/if}
 			{#if stamps.length}
