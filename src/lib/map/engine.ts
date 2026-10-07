@@ -1,5 +1,6 @@
 import { geoContains, geoDistance, geoGraticule10, geoNaturalEarth1, geoOrthographic, geoPath, type GeoProjection } from 'd3-geo';
 import { CONT_VIEW, nameOf, type ContinentCode } from '../countries';
+import LABEL_JSON from '../data/labels.json';
 import { FC, FINE_W, INFO, SIMP_W, features, fetchFineLod, fineLod, getLod, lodReady, smallIds, wrapLon, type Lod } from './geo';
 
 /* Weltkarte auf zwei Canvas-Ebenen: Globus (orthografisch) und flache Karte (Natural Earth).
@@ -77,6 +78,14 @@ const dotAlpha = (id: string, ppd: number) => {
 	return a < DOT_FULL ? 1 : a < DOT_NONE ? (DOT_NONE - a) / (DOT_NONE - DOT_FULL) : 0;
 };
 const LABEL_PPD = 14; // Namen erst bei regionalem Zoom (etwa doppelte Europa-Startansicht), sonst wirkt die Karte überladen
+// Ländernamen: Platz tief im Land und Radius des größten Innenkreises (Grad), vorberechnet (scripts/build-labels.mjs);
+// nach Größe sortiert, damit große Länder zuerst Platz bekommen und die Suche früh abbrechen kann
+const NAME_PPD = 3; // vorher sieht man fast die halbe Erde – da helfen Namen nicht
+const NAME_FIT = 3; // Name darf so breit sein wie das Dreifache des Innenkreis-Radius
+const NAMES = Object.entries(LABEL_JSON as unknown as Record<string, [[number, number], number]>)
+	.filter(([id]) => INFO[id])
+	.map(([id, [p, r]]) => ({ id, p, r }))
+	.sort((a, b) => b.r - a.r);
 // echte Zwergstaaten (unter etwa 4.000 km²: Vatikan, Monaco, Malta, Singapur, Karibik- und Pazifikinseln …)
 const microIds = new Set(features.filter((f) => INFO[f.id].area < 0.0001).map((f) => f.id));
 // Teilflächen je Land und Detailstufe (für Umrisse, ohne jedes Mal alle Flächen zu durchsuchen)
@@ -713,16 +722,12 @@ export function createWorldMap(o: MapOptions) {
 
 	let avoidCache: { t: number; r: [number, number, number, number][] } | null = null;
 	/** Namen der Zwergstaaten neben dem Punkt; bereiste zuerst, überlappende werden weggelassen */
-	function drawMicroLabels(c: CanvasRenderingContext2D, list: { id: string; x: number; y: number; been: boolean }[]) {
+	function drawMicroLabels(c: CanvasRenderingContext2D, list: { id: string; x: number; y: number; been: boolean }[], taken: [number, number, number, number][]) {
 		list.sort((a, b) => Number(b.been) - Number(a.been) || INFO[b.id].area - INFO[a.id].area);
 		c.font = '600 11px Figtree, system-ui, sans-serif';
 		c.textBaseline = 'middle';
 		c.textAlign = 'left';
 		c.lineJoin = 'round';
-		// Bedienelemente nicht in jedem Bild neu ausmessen (Layout-Abfragen kosten Zeit)
-		const now = performance.now();
-		if (!avoidCache || now - avoidCache.t > 500) avoidCache = { t: now, r: o.getAvoid?.() ?? [] };
-		const taken: [number, number, number, number][] = [...avoidCache.r];
 		for (const l of list) {
 			const t = nameOf(l.id),
 				w = c.measureText(t).width;
@@ -751,6 +756,86 @@ export function createWorldMap(o: MapOptions) {
 			c.fillStyle = l.been ? '#7FE8DA' : 'rgba(255,255,255,.78)';
 			c.fillText(t, x, y);
 		}
+	}
+
+	/** Bereiche, die Namen freilassen: Bedienelemente (nicht in jedem Bild neu ausmessen, Layout-Abfragen kosten Zeit) */
+	function avoidRects(): [number, number, number, number][] {
+		const now = performance.now();
+		if (!avoidCache || now - avoidCache.t > 500) avoidCache = { t: now, r: o.getAvoid?.() ?? [] };
+		return [...avoidCache.r];
+	}
+
+	// Textbreite und Zeilen je Name nur einmal messen
+	const nameBox = new Map<string, { lines: string[]; w: number }>();
+	function measureName(c: CanvasRenderingContext2D, id: string, fs: number) {
+		const key = id + fs;
+		let m = nameBox.get(key);
+		if (m) return m;
+		const t = nameOf(id);
+		let lines = [t];
+		// lange Namen mit Leerzeichen zweizeilig, an der Stelle, die die Zeilen am gleichmäßigsten teilt
+		if (t.length > 13 && t.includes(' ')) {
+			let best = -1;
+			for (let i = t.indexOf(' '); i >= 0; i = t.indexOf(' ', i + 1)) if (best < 0 || Math.abs(i - t.length / 2) < Math.abs(best - t.length / 2)) best = i;
+			lines = [t.slice(0, best), t.slice(best + 1)];
+		}
+		m = { lines, w: Math.max(...lines.map((l) => c.measureText(l).width)) };
+		nameBox.set(key, m);
+		return m;
+	}
+	/** Ländernamen ab regionalem Zoom: erst, wenn der Name ins Land passt (blendet dabei weich ein), große Länder zuerst,
+	    ohne Überlappung mit anderen Namen, Punkten und Bedienelementen */
+	function drawCountryNames(
+		c: CanvasRenderingContext2D,
+		P: GeoProjection,
+		ppd: number,
+		visited: Set<string>,
+		skip: (id: string) => boolean,
+		taken: [number, number, number, number][],
+		dots: { x: number; y: number }[]
+	) {
+		if (ppd < NAME_PPD) return;
+		const globe = view.mode === 'globe';
+		c.textAlign = 'center';
+		c.textBaseline = 'middle';
+		c.lineJoin = 'round';
+		let font = 0;
+		for (const n of NAMES) {
+			const room = NAME_FIT * n.r * ppd;
+			if (room < 22) break; // sortiert: alle weiteren sind noch kleiner
+			if (skip(n.id)) continue;
+			let a = 1;
+			if (globe) {
+				// zum Rand der Kugel hin ausblenden
+				const d = geoDistance(n.p, [view.lon, view.lat]);
+				a = clamp((Math.PI / 2 - 0.08 - d) / 0.2, 0, 1);
+				if (!a) continue;
+			}
+			const p = P(n.p);
+			if (!p || p[0] < -60 || p[1] < -30 || p[0] > cw + 60 || p[1] > ch + 30) continue;
+			const fs = room > 160 ? 13 : 11;
+			if (fs !== font) c.font = `600 ${(font = fs)}px Figtree, system-ui, sans-serif`;
+			const { lines, w } = measureName(c, n.id, fs);
+			a *= clamp((room / w - 1) / 0.15, 0, 1);
+			if (!a) continue;
+			const lh = fs * 1.15,
+				h = lh * lines.length;
+			const box: [number, number, number, number] = [p[0] - w / 2 - 3, p[1] - h / 2 - 1, p[0] + w / 2 + 3, p[1] + h / 2 + 1];
+			if (box[0] < 4 || box[2] > cw - 4 || box[1] < 4 || box[3] > ch - 4) continue;
+			if (taken.some((b) => box[0] < b[2] && box[2] > b[0] && box[1] < b[3] && box[3] > b[1])) continue;
+			if (dots.some((d) => d.x > box[0] - 4 && d.x < box[2] + 4 && d.y > box[1] - 4 && d.y < box[3] + 4)) continue;
+			taken.push(box);
+			c.globalAlpha = a;
+			c.lineWidth = 3;
+			c.strokeStyle = 'rgba(7,20,31,.55)';
+			c.fillStyle = visited.has(n.id) ? 'rgba(255,255,255,.95)' : 'rgba(235,244,248,.8)';
+			lines.forEach((l, i) => {
+				const y = p[1] + (i - (lines.length - 1) / 2) * lh;
+				c.strokeText(l, p[0], y);
+				c.fillText(l, p[0], y);
+			});
+		}
+		c.globalAlpha = 1;
 	}
 
 	function drawTop(now = performance.now()) {
@@ -791,7 +876,8 @@ export function createWorldMap(o: MapOptions) {
 		// - erst bei regionalem Zoom (LABEL_PPD) mit Namen (ohne Überlappung, bereiste zuerst)
 		const ppd = pxPerDeg();
 		const wide = wideView(ppd);
-		const labels: { id: string; x: number; y: number; been: boolean }[] = [];
+		const labels: { id: string; x: number; y: number; been: boolean }[] = [],
+			dotPts: { x: number; y: number }[] = [];
 		let outlined: string[] | null = null;
 		for (const f of features) {
 			const isSel = f.id === selected,
@@ -814,6 +900,7 @@ export function createWorldMap(o: MapOptions) {
 			if (!p || p[0] < -20 || p[1] < -20 || p[0] > cw + 20 || p[1] > ch + 20) continue;
 			if (micro && sz >= 5) (outlined ??= []).push(f.id);
 			if (dotA > 0) {
+				dotPts.push({ x: p[0], y: p[1] });
 				const counted = o.isCounted(f.id);
 				c.globalAlpha = dotA;
 				if (been) {
@@ -875,7 +962,9 @@ export function createWorldMap(o: MapOptions) {
 				c.stroke();
 			}
 		}
-		if (labels.length) drawMicroLabels(c, labels);
+		const taken = avoidRects();
+		if (labels.length) drawMicroLabels(c, labels, taken);
+		drawCountryNames(c, P, ppd, visited, (id) => id === selected || id === hl?.code || dotAlpha(id, ppd) > 0, taken, dotPts);
 		if (selected && INFO[selected] && hl?.code !== selected) {
 			const ctr = INFO[selected].c;
 			if (onFront(ctr)) {
