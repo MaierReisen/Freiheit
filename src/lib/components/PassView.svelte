@@ -99,34 +99,33 @@
 	const allRanks = $derived(ranks(total));
 	const ri = $derived(rankIndex(stamps.length, total));
 
-	/* ---------- Blättern: Seite klappt um die Heftung (links), folgt dem Finger, rastet mit Federschwung ein ---------- */
+	/* ---------- Blättern: Seite hängt 1:1 am Finger, hebt sich zur Heftung hin ab und gleitet weg; schnelle Feder ---------- */
 	let book = $state.raw<HTMLDivElement>(undefined as unknown as HTMLDivElement);
 	let strip = $state.raw<HTMLDivElement>(undefined as unknown as HTMLDivElement);
 	let cur = $state(0);
 	// laufendes Umblättern: from → to, p = 0 (Start) … 1 (umgeblättert), v = Tempo in p/ms
-	let turn: { from: number; to: number; p: number; v: number; goal: number } | null = null;
+	let turn: { from: number; to: number; p: number; v: number; goal: 0 | 1 } | null = null;
 	let raf = 0,
 		last = 0;
-	const ease = (p: number) => p * (2 - Math.abs(p)); // schnell ablösen, sanft an die Kante
+	const span = () => book.clientWidth + 24; // Weg, bis die Seite ganz draußen ist
 
 	function paint() {
 		const kids = book?.children;
 		if (!kids || !turn) return;
 		const { from, to, p } = turn;
-		if (from === to) { // erste/letzte Seite: lässt sich nur kurz anheben und fällt zurück
-			(kids[from] as HTMLElement).style.cssText = `display:block;transform:perspective(1100px) rotateY(${p * 60}deg)`;
+		if (from === to) { // erste/letzte Seite: gummiartig, federt zurück
+			(kids[from] as HTMLElement).style.cssText = `display:block;transform:translateX(${p * span()}px)`;
 			return;
 		}
 		const fwd = to > from,
-			top = kids[fwd ? from : to] as HTMLElement, // die Seite, die sich dreht
+			top = kids[fwd ? from : to] as HTMLElement, // die Seite, die gleitet
 			under = kids[fwd ? to : from] as HTMLElement; // die Seite darunter
-		const q = fwd ? p : 1 - p; // wie weit die drehende Seite weggeklappt ist (0 = flach)
-		const ang = -88 * ease(Math.max(-0.08, q));
-		top.style.cssText = `display:block;z-index:2;transform:perspective(1100px) rotateY(${ang}deg) scale(${1 + 0.035 * Math.sin(Math.PI * Math.min(1, Math.max(0, q)))})`;
-		top.style.setProperty('--sh', String(Math.max(0, q) * 0.75));
+		const q = fwd ? p : 1 - p; // 0 = liegt, 1 = links draußen
+		top.style.cssText = `display:block;z-index:2;transform:perspective(1200px) translateX(${-q * span()}px) rotateY(${-q * 32}deg)`;
+		top.style.setProperty('--sh', String(Math.max(0, q) * 0.7));
 		top.dataset.r = 'turn';
-		under.style.cssText = `display:block;z-index:1`;
-		under.style.setProperty('--sh', String(Math.max(0, 1 - Math.max(0, q)) * 0.55));
+		under.style.cssText = `display:block;z-index:1;transform-origin:50% 50%;transform:scale(${0.92 + 0.08 * Math.min(1, Math.max(0, q))})`;
+		under.style.setProperty('--sh', String(Math.max(0, 1 - q) * 0.6));
 		under.dataset.r = 'under';
 	}
 	function clearTurn(t: { from: number; to: number }) {
@@ -135,110 +134,138 @@
 			if (el) { el.style.cssText = ''; delete el.dataset.r; }
 		}
 	}
-	// Feder (leicht unterdämpft): rastet sicher ein, beim Zurückfallen kleiner Nachschwung
-	function spring() {
+	// straffe Feder: ~200 ms, nimmt den Schwung vom Finger mit; zurück mit kleinem Nachfedern
+	function step(now: number) {
 		raf = 0;
 		const t = turn;
 		if (!t) return;
-		const now = performance.now(),
-			dt = Math.min(32, now - last || 16);
+		const dt = Math.min(34, Math.max(1, now - last));
 		last = now;
-		const w = 0.016, k = w * w, c = 2 * 0.72 * w;
+		const w = 0.032, z = t.goal ? 1 : 0.78;
 		for (let s = 0; s < dt; s += 4) {
-			t.v += (k * (t.goal - t.p) - c * t.v) * Math.min(4, dt - s);
-			t.p += t.v * Math.min(4, dt - s);
+			const h = Math.min(4, dt - s);
+			t.v += (w * w * (t.goal - t.p) - 2 * z * w * t.v) * h;
+			t.p += t.v * h;
 		}
-		if (t.goal === 1 && t.p >= 1) return done(true);
-		if (t.goal === 0 && Math.abs(t.p) < 0.002 && Math.abs(t.v) < 0.00005) return done(false);
+		if (t.goal && t.p >= 0.985) return done(true);
+		if (!t.goal && Math.abs(t.p) < 0.003 && Math.abs(t.v) < 0.0001) return done(false);
 		paint();
-		raf = requestAnimationFrame(spring);
+		raf = requestAnimationFrame(step);
 	}
 	function run(goal: 0 | 1) {
 		if (!turn) return;
 		turn.goal = goal;
 		cancelAnimationFrame(raf);
 		last = performance.now();
-		raf = requestAnimationFrame(spring);
+		raf = requestAnimationFrame(step);
 	}
 	function done(ok: boolean) {
 		const t = turn!;
 		turn = null;
 		clearTurn(t);
-		if (ok) {
-			cur = t.to;
-			navigator.vibrate?.(8);
-			// neue Seite liegt kurz „auf“ und setzt sich
-			(book.children[t.to] as HTMLElement | undefined)?.animate(
-				[{ transform: 'translateY(-3px) scale(1.01)' }, { transform: 'translateY(1px)' }, { transform: 'none' }],
-				{ duration: 280, easing: 'ease-out' }
-			);
-		}
+		if (ok) { cur = t.to; navigator.vibrate?.(6); }
+	}
+	function stopTurn() {
+		cancelAnimationFrame(raf);
+		raf = 0;
+		if (!turn) return;
+		const t = turn;
+		turn = null;
+		clearTurn(t);
+		cur = t.goal ? t.to : t.from;
 	}
 	function goPage(i: number) {
 		i = Math.max(0, Math.min(pages.length - 1, i));
-		if (turn) { const t = turn; turn = null; cancelAnimationFrame(raf); clearTurn(t); cur = t.goal === 1 ? t.to : t.from; }
+		stopTurn();
 		if (i === cur) return;
 		if (reduceMotion()) return void (cur = i);
-		turn = { from: cur, to: i, p: 0, v: 0.006, goal: 1 };
+		turn = { from: cur, to: i, p: 0, v: 0.005, goal: 1 };
 		paint();
 		run(1);
 	}
 
-	/* Wischen: Richtung früh festlegen, waagerecht = blättern, senkrecht = Seite scrollt normal */
-	let drag: { x0: number; y0: number; id: number; on: boolean | null; lx: number; lt: number; vx: number; w: number } | null = null;
+	/* Wischen (Finger + Maus): Richtung nach wenigen Pixeln festlegen, waagerecht = blättern, senkrecht = Seite scrollt */
+	let drag: { x0: number; y0: number; on: boolean | null; lx: number; lt: number; vx: number } | null = null;
 	let swallowClick = false;
-	function pDown(e: PointerEvent) {
-		if (pages.length < 2 || (e.pointerType === 'mouse' && e.button !== 0)) return;
-		if (turn) { // laufende Animation mit dem Finger auffangen
-			cancelAnimationFrame(raf);
-			raf = 0;
-		}
-		drag = { x0: e.clientX, y0: e.clientY, id: e.pointerId, on: null, lx: e.clientX, lt: e.timeStamp, vx: 0, w: book.clientWidth };
+	const pOf = (t: NonNullable<typeof turn>, dx: number) =>
+		t.from === t.to ? Math.max(-0.12, Math.min(0.12, (dx * 0.3) / span())) : Math.max(-0.04, Math.min(1, ((t.to > t.from ? -dx : dx) / span())));
+	const dxOf = (t: NonNullable<typeof turn>) => (t.from === t.to ? (t.p * span()) / 0.3 : (t.to > t.from ? -t.p : t.p) * span());
+	function gStart(x: number, y: number, ts: number) {
+		if (pages.length < 2) return;
+		if (turn) { cancelAnimationFrame(raf); raf = 0; } // laufende Seite auffangen
+		drag = { x0: x, y0: y, on: null, lx: x, lt: ts, vx: 0 };
 		swallowClick = false;
 	}
-	function pMove(e: PointerEvent) {
+	/** true = Geste gehört dem Blättern (Scrollen verhindern) */
+	function gMove(x: number, y: number, ts: number) {
 		const d = drag;
-		if (!d || e.pointerId !== d.id) return;
-		const dx = e.clientX - d.x0,
-			dy = e.clientY - d.y0;
+		if (!d) return false;
 		if (d.on === null) {
-			if (Math.abs(dx) < 7 && Math.abs(dy) < 7) return;
-			d.on = Math.abs(dx) > Math.abs(dy) * 1.1;
-			if (!d.on) { drag = null; if (turn) run(turn.goal as 0 | 1); return; }
-			try { book.setPointerCapture(e.pointerId); } catch { /* Zeiger schon weg */ }
+			const dx = x - d.x0, dy = y - d.y0;
+			if (Math.abs(dx) < 5 && Math.abs(dy) < 5) return false;
+			d.on = Math.abs(dx) > Math.abs(dy) * 0.8;
+			if (!d.on) { drag = null; if (turn) run(turn.goal); return false; }
 			swallowClick = true;
-			if (!turn) {
-				const to = cur + (dx < 0 ? 1 : -1);
-				turn = { from: cur, to: Math.max(0, Math.min(pages.length - 1, to)), p: 0, v: 0, goal: 0 };
-			}
-			// Startpunkt so verschieben, dass eine aufgefangene Seite nicht springt
-			const sign = turn.to > turn.from ? -1 : 1;
-			d.x0 = e.clientX - (sign * turn.p * d.w * 0.85);
+			if (!turn) turn = { from: cur, to: Math.max(0, Math.min(pages.length - 1, cur + (dx < 0 ? 1 : -1))), p: 0, v: 0, goal: 0 };
+			else d.x0 = x - dxOf(turn); // aufgefangene Seite springt nicht
+			d.lx = x;
+			d.lt = ts;
 		}
 		const t = turn;
-		if (!t) return;
-		const dt = e.timeStamp - d.lt;
-		if (dt >= 10) {
-			d.vx = 0.7 * ((e.clientX - d.lx) / dt) + 0.3 * d.vx;
-			d.lx = e.clientX;
-			d.lt = e.timeStamp;
+		if (!t) return true;
+		const dt = ts - d.lt;
+		if (dt > 0) {
+			const v = (x - d.lx) / dt;
+			d.vx = dt > 40 ? v : 0.65 * v + 0.35 * d.vx;
+			d.lx = x;
+			d.lt = ts;
 		}
-		const sign = t.to > t.from ? -1 : 1;
-		let p = ((e.clientX - d.x0) * sign) / (d.w * 0.85);
-		if (t.to === t.from) p = Math.max(-0.15, Math.min(0.12, p * 0.25)); // erste/letzte Seite: nur leicht anheben
-		t.p = Math.max(-0.15, Math.min(0.995, p));
+		t.p = pOf(t, x - d.x0);
 		if (!raf) raf = requestAnimationFrame(() => { raf = 0; paint(); });
+		return true;
 	}
-	function pUp(e: PointerEvent) {
+	function gEnd(ok: boolean, ts: number) {
 		const d = drag;
-		if (!d || e.pointerId !== d.id) return;
 		drag = null;
 		const t = turn;
-		if (!d.on || !t) { if (t) run(t.goal as 0 | 1); return; }
-		const sign = t.to > t.from ? -1 : 1;
-		t.v = (d.vx * sign) / (d.w * 0.85);
-		const go = t.to !== t.from && e.type === 'pointerup' && (t.p > 0.4 || (t.v > 0.0006 && t.p > 0.04)) && !(t.v < -0.0006);
+		if (!d || !t) return;
+		if (!d.on) return run(t.goal);
+		cancelAnimationFrame(raf);
+		const fwd = t.to > t.from,
+			vx = ts - d.lt > 80 ? 0 : d.vx, // Finger stand zuletzt still: kein Schwung
+			vDir = fwd ? -vx : vx; // px/ms in Blätterrichtung
+		t.v = Math.max(-0.012, Math.min(0.012, vDir / span()));
+		const go = ok && t.from !== t.to && (vDir > 0.25 || (vDir > -0.25 && t.p > 0.35));
 		run(go ? 1 : 0);
+	}
+	$effect(() => {
+		const b = book;
+		if (!b) return;
+		const ts = (e: TouchEvent) => (e.touches.length === 1 ? gStart(e.touches[0].clientX, e.touches[0].clientY, e.timeStamp) : drag && gEnd(false, e.timeStamp));
+		const tm = (e: TouchEvent) => { if (e.touches.length === 1 && gMove(e.touches[0].clientX, e.touches[0].clientY, e.timeStamp)) e.preventDefault(); };
+		const te = (e: TouchEvent) => gEnd(e.type === 'touchend', e.timeStamp);
+		b.addEventListener('touchstart', ts, { passive: true });
+		b.addEventListener('touchmove', tm, { passive: false });
+		b.addEventListener('touchend', te);
+		b.addEventListener('touchcancel', te);
+		return () => {
+			b.removeEventListener('touchstart', ts);
+			b.removeEventListener('touchmove', tm);
+			b.removeEventListener('touchend', te);
+			b.removeEventListener('touchcancel', te);
+		};
+	});
+	// Maus (Rechner): gleiche Geste über Pointer-Events
+	function pDown(e: PointerEvent) {
+		if (e.pointerType !== 'mouse' || e.button !== 0) return;
+		gStart(e.clientX, e.clientY, e.timeStamp);
+		try { book.setPointerCapture(e.pointerId); } catch { /* egal */ }
+	}
+	function pMove(e: PointerEvent) {
+		if (e.pointerType === 'mouse' && drag) gMove(e.clientX, e.clientY, e.timeStamp);
+	}
+	function pUp(e: PointerEvent) {
+		if (e.pointerType === 'mouse' && drag) gEnd(e.type === 'pointerup', e.timeStamp);
 	}
 	function onClickCapture(e: MouseEvent) {
 		if (swallowClick) { e.stopPropagation(); e.preventDefault(); swallowClick = false; }
@@ -288,7 +315,7 @@
 			const fresh = seen ? codes.filter((c) => !seen.includes(c)).slice(-3) : [];
 			markSeen(codes);
 			body?.scrollTo(0, 0);
-			if (turn) { cancelAnimationFrame(raf); clearTurn(turn); turn = null; }
+			stopTurn();
 			cur = 0;
 			if (!fresh.length || reduceMotion()) return;
 			pending = fresh;
@@ -306,7 +333,7 @@
 			const slot = body?.querySelector<HTMLElement>(`[data-stamp="${code}"]`);
 			if (!slot || !ui.passOpen) break;
 			const pi = Math.floor(stamps.findIndex((s) => s.code === code) / PER_PAGE);
-			if (pi !== cur) { goPage(pi); await wait(450); }
+			if (pi !== cur) { goPage(pi); await wait(350); }
 			slot.scrollIntoView({ behavior: 'smooth', block: 'center' });
 			await wait(500);
 			pending = pending.filter((c) => c !== code);

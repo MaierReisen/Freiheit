@@ -598,13 +598,14 @@ button.pp-tile:active{transform:scale(.98)}
 .pp-ranks li.cur{background:var(--sun);color:#0D2B3A;box-shadow:0 4px 12px -4px rgba(244,180,0,.55)}
 .pp-ranks li.cur b{color:#0D2B3A}
 
-.pp-page{position:relative;display:none;grid-area:1/1;transform-origin:0 50%;backface-visibility:hidden;will-change:transform;box-sizing:border-box;padding:18px 12px 32px;background:var(--paper);background-image:repeating-radial-gradient(circle at 50% 120%,transparent 0 9px,color-mix(in srgb,var(--line) 45%,transparent) 9px 10px),radial-gradient(var(--line) 1px,transparent 1.2px);background-size:auto,16px 16px;border:1px solid var(--line);border-radius:var(--r-sm) var(--r-lg) var(--r-lg) var(--r-sm);box-shadow:inset 10px 0 12px -8px rgba(13,43,58,.22),0 6px 18px -10px rgba(13,43,58,.35)}
+.pp-page{position:relative;display:none;grid-area:1/1;transform-origin:0 50%;backface-visibility:hidden;box-sizing:border-box;padding:18px 12px 32px;background:var(--paper);background-image:repeating-radial-gradient(circle at 50% 120%,transparent 0 9px,color-mix(in srgb,var(--line) 45%,transparent) 9px 10px),radial-gradient(var(--line) 1px,transparent 1.2px);background-size:auto,16px 16px;border:1px solid var(--line);border-radius:var(--r-sm) var(--r-lg) var(--r-lg) var(--r-sm);box-shadow:inset 10px 0 12px -8px rgba(13,43,58,.22),0 6px 18px -10px rgba(13,43,58,.35)}
 .pp-page.on{display:block}
+.pp-view .ov-body{overflow-x:hidden}
 .pp-shade{position:absolute;inset:0;border-radius:inherit;pointer-events:none;opacity:var(--sh,0);display:none}
 .pp-page[data-r] .pp-shade{display:block}
-.pp-page[data-r=turn] .pp-shade{background:linear-gradient(90deg,rgba(255,255,255,.18),rgba(13,43,58,.08) 45%,rgba(13,43,58,.55))}
-.pp-page[data-r=under] .pp-shade{background:linear-gradient(90deg,rgba(13,43,58,.55),rgba(13,43,58,.15) 35%,transparent 70%)}
-.pp-book{display:grid;margin-bottom:10px;touch-action:pan-y;user-select:none;-webkit-user-select:none;outline:none}
+.pp-page[data-r=turn] .pp-shade{background:linear-gradient(90deg,rgba(13,43,58,.5),rgba(255,255,255,.14) 55%,rgba(13,43,58,.35))}
+.pp-page[data-r=under] .pp-shade{background:rgba(13,43,58,.7)}
+.pp-book{display:grid;margin-bottom:10px;user-select:none;-webkit-user-select:none;outline:none}
 .pp-book:focus-visible{outline:2px solid var(--primary);outline-offset:3px;border-radius:var(--r-lg)}
 .pp-strip{display:flex;gap:6px;margin:0 0 20px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
 .pp-strip::-webkit-scrollbar{display:none}
