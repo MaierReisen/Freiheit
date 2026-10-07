@@ -21,7 +21,8 @@
 		><svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="16" /><ellipse cx="20" cy="20" rx="7" ry="16" /><path d="M4 20h32" /></svg><b>REISEPASS</b></span
 	>
 	<span class="pp-tile-txt">
-		<span class="pp-tile-n">{n}<small>Stempel</small>{#if fresh && !inPass}<em class="pp-fresh">+{fresh} neu</em>{/if}</span>
+		<span class="pp-tile-n">{n}<small>Stempel</small></span>
+		{#if fresh && !inPass}<span class="pp-new"><i aria-hidden="true">✨</i>{fresh === 1 ? 'Neuer Stempel' : `${fresh} neue Stempel`} warten<u aria-hidden="true">›</u></span>{/if}
 		{#if info.rank}<span class="pp-rank">{info.rank.icon} {info.rank.name}</span>{/if}
 		<span class="pp-bar"><i style="width:{info.p * 100}%"></i></span>
 		<span class="pp-bar-t"
@@ -33,5 +34,5 @@
 {#if inPass}
 	<div class="pp-tile">{@render body()}</div>
 {:else}
-	<button type="button" class="pp-tile" aria-label="Reisepass öffnen: {n} Stempel{info.rank ? `, Rang ${info.rank.name}` : ''}" onclick={() => openPass()}>{@render body()}</button>
+	<button type="button" class="pp-tile" class:fresh={fresh > 0} aria-label="Reisepass öffnen: {n} Stempel{fresh ? `, ${fresh} neu` : ''}{info.rank ? `, Rang ${info.rank.name}` : ''}" onclick={() => openPass()}>{@render body()}</button>
 {/if}

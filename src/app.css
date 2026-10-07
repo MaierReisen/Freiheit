@@ -559,11 +559,11 @@ input,textarea,[contenteditable="true"]{-webkit-user-select:text;user-select:tex
 
 /* Reisepass: Kachel in der Länderliste, Pass-Ansicht mit Stempeln */
 :root{--paper:#FFFDF8;--st-blend:multiply;
-  --st-teal:#0E6E74;--st-coral:#D9573B;--st-gold:#B07800;--st-blue:#2F6FB5;--st-plum:#7A3E8E;--st-green:#2E7D4F;--st-red:#C0392B;--st-navy:#1F3F6E;--st-brown:#9A4F1E}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--paper:#112836;--st-blend:normal;
-  --st-teal:#3CC4B4;--st-coral:#FF8A65;--st-gold:#F6C445;--st-blue:#5FB8E8;--st-plum:#C99BE0;--st-green:#6FD39A;--st-red:#FF7B6E;--st-navy:#8FB5E8;--st-brown:#E0A070}}
-:root[data-theme="dark"]{--paper:#112836;--st-blend:normal;
-  --st-teal:#3CC4B4;--st-coral:#FF8A65;--st-gold:#F6C445;--st-blue:#5FB8E8;--st-plum:#C99BE0;--st-green:#6FD39A;--st-red:#FF7B6E;--st-navy:#8FB5E8;--st-brown:#E0A070}
+  --st-teal:#0E6E74;--st-coral:#D9573B;--st-gold:#B07800;--st-blue:#2F6FB5;--st-plum:#7A3E8E;--st-green:#2E7D4F;--st-red:#C0392B;--st-navy:#1F3F6E;--st-brown:#9A4F1E;--pp-glow:rgba(176,120,0,.10)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--paper:#17252D;--st-blend:normal;--pp-glow:rgba(244,180,0,.12);
+  --st-teal:#5FAFA5;--st-coral:#D98B72;--st-gold:#D4AE58;--st-blue:#7FA9C8;--st-plum:#B396C2;--st-green:#7FB896;--st-red:#D4837A;--st-navy:#92A8CC;--st-brown:#C4966E}}
+:root[data-theme="dark"]{--paper:#17252D;--st-blend:normal;--pp-glow:rgba(244,180,0,.12);
+  --st-teal:#5FAFA5;--st-coral:#D98B72;--st-gold:#D4AE58;--st-blue:#7FA9C8;--st-plum:#B396C2;--st-green:#7FB896;--st-red:#D4837A;--st-navy:#92A8CC;--st-brown:#C4966E}
 
 .pp-tile{width:100%;display:flex;gap:16px;align-items:center;margin:0 0 18px;padding:16px;border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface);color:var(--ink);text-align:left;-webkit-tap-highlight-color:transparent;transition:transform .15s}
 button.pp-tile:active{transform:scale(.98)}
@@ -592,16 +592,17 @@ button.pp-tile:active{transform:scale(.98)}
 .pp-ranks li small{font-size:11px}
 .pp-ranks li.on{opacity:1}
 .pp-ranks li.on span{filter:none}
-.pp-ranks li.cur{background:var(--sun);color:#0D2B3A}
+.pp-ranks li.cur{background:var(--sun);color:#0D2B3A;box-shadow:0 4px 12px -4px rgba(244,180,0,.55)}
 .pp-ranks li.cur b{color:#0D2B3A}
 
-.pp-page{position:relative;margin-bottom:14px;padding:16px 12px 30px;background:var(--paper);background-image:radial-gradient(var(--line) 1px,transparent 1.2px);background-size:16px 16px;border:1px solid var(--line);border-radius:var(--r-sm) var(--r-lg) var(--r-lg) var(--r-sm);box-shadow:inset 8px 0 10px -8px rgba(13,43,58,.18);content-visibility:auto;contain-intrinsic-size:auto 500px}
-.pp-page-h{display:flex;justify-content:space-between;padding:0 6px 4px;font-size:12px;font-weight:700;color:var(--muted)}
+.pp-page{position:relative;margin-bottom:16px;padding:18px 12px 32px;background:radial-gradient(120% 70% at 50% 0%,var(--pp-glow),transparent 70%),var(--paper);background-image:radial-gradient(120% 70% at 50% 0%,var(--pp-glow),transparent 70%),repeating-radial-gradient(circle at 50% 120%,transparent 0 9px,color-mix(in srgb,var(--line) 45%,transparent) 9px 10px),radial-gradient(var(--line) 1px,transparent 1.2px);background-size:auto,auto,16px 16px;border:1px solid var(--line);border-top:3px solid color-mix(in srgb,var(--sun) 70%,var(--line));border-radius:var(--r-sm) var(--r-lg) var(--r-lg) var(--r-sm);box-shadow:inset 10px 0 12px -8px rgba(13,43,58,.22),0 6px 18px -10px rgba(13,43,58,.35);content-visibility:auto;contain-intrinsic-size:auto 500px}
+.pp-page-h{display:flex;justify-content:space-between;padding:0 6px 6px;font:700 11px var(--text);letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
 .pp-page-n{position:absolute;bottom:9px;left:0;right:0;text-align:center;font-size:12px;font-weight:700;color:var(--muted)}
 .pp-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px}
 .pp-slot{position:relative;height:150px;display:flex;align-items:center;justify-content:center;padding:0;border:0;background:none;color:var(--c,var(--muted));-webkit-tap-highlight-color:transparent}
 .pp-slot.wait .pp-stamp{opacity:0}
-.pp-stamp{display:block;width:var(--w,94%);height:auto;max-height:150px;mix-blend-mode:var(--st-blend);transition:transform .15s}
+:root{--st-op:1}@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--st-op:.88}}:root[data-theme="dark"]{--st-op:.88}
+.pp-stamp{display:block;width:var(--w,94%);height:auto;max-height:150px;mix-blend-mode:var(--st-blend);opacity:var(--st-op,1);transition:transform .15s}
 .pp-slot:active .pp-stamp{transform:scale(1.06)}
 .pp-stamp .d{font-family:var(--display);font-weight:800;fill:currentColor;stroke:none}
 .pp-stamp .t{font-family:var(--text);font-weight:700;fill:currentColor;stroke:none}
@@ -618,3 +619,17 @@ button.pp-tile:active{transform:scale(.98)}
 .cs-date input{position:absolute;inset:0;width:100%;height:100%;opacity:0;border:0;padding:0;margin:0;cursor:pointer;-webkit-appearance:none;appearance:none}
 .cs-date-x{display:grid;place-items:center;width:28px;height:28px;margin-left:-4px;border:0;border-radius:50%;background:var(--chip);color:var(--muted)}
 .cs-date-x svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round}
+
+/* Reisepass-Kachel: neue Stempel – leuchtet, wippt, lädt zum Antippen ein */
+.pp-tile.fresh{position:relative;overflow:hidden;border-color:color-mix(in srgb,var(--sun) 75%,var(--line));box-shadow:0 0 0 0 color-mix(in srgb,var(--sun) 55%,transparent);animation:ppRing 2.2s ease-out infinite}
+.pp-tile.fresh::after{content:"";position:absolute;top:0;bottom:0;width:60px;left:-80px;background:linear-gradient(100deg,transparent,rgba(255,255,255,.35),transparent);transform:skewX(-18deg);animation:ppShine 3.4s ease-in-out infinite;pointer-events:none}
+.pp-tile.fresh .pp-cover{animation:ppWiggle 2.6s ease-in-out infinite;transform-origin:50% 90%}
+.pp-new{display:inline-flex;align-items:center;gap:6px;align-self:stretch;margin-top:10px;padding:8px 12px;border-radius:999px;background:var(--sun);color:#0D2B3A;font:800 13.5px var(--text);box-shadow:0 3px 10px -3px rgba(244,180,0,.6)}
+.pp-new i{font-style:normal;display:inline-block;animation:ppPop 1.3s ease-in-out infinite}
+.pp-new u{margin-left:auto;text-decoration:none;font-size:18px;line-height:1;animation:ppNudge 1.3s ease-in-out infinite}
+@keyframes ppRing{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--sun) 55%,transparent)}70%,100%{box-shadow:0 0 0 12px transparent}}
+@keyframes ppShine{0%,55%{left:-80px}100%{left:115%}}
+@keyframes ppWiggle{0%,60%,100%{transform:rotate(-4deg)}70%{transform:rotate(-9deg) scale(1.05)}80%{transform:rotate(1deg) scale(1.05)}90%{transform:rotate(-6deg)}}
+@keyframes ppPop{0%,100%{transform:scale(1) rotate(0)}50%{transform:scale(1.3) rotate(15deg)}}
+@keyframes ppNudge{0%,100%{transform:translateX(0)}50%{transform:translateX(4px)}}
+[data-motion="reduce"] .pp-tile.fresh,[data-motion="reduce"] .pp-tile.fresh::after,[data-motion="reduce"] .pp-tile.fresh .pp-cover,[data-motion="reduce"] .pp-new i,[data-motion="reduce"] .pp-new u{animation:none}
