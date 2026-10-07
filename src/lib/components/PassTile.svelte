@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { countedCountries } from '$lib/atlas.svelte';
+	import { atlas, countedCountries } from '$lib/atlas.svelte';
+	import { scopeTotal } from '$lib/scope';
 	import { openPass } from '$lib/app.svelte';
 	import { rankInfo } from '$lib/passport';
 	import { passSeen } from '$lib/passSeen.svelte';
@@ -11,7 +12,7 @@
 
 	const codes = $derived(countedCountries().map((c) => c.code));
 	const n = $derived(codes.length);
-	const info = $derived(rankInfo(n));
+	const info = $derived(rankInfo(n, scopeTotal(atlas.settings.countryScope)));
 	// neue Stempel seit dem letzten Blick in den Pass
 	const fresh = $derived(passSeen.codes ? codes.filter((c) => !passSeen.codes!.includes(c)).length : 0);
 </script>
@@ -21,8 +22,7 @@
 		><svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="16" /><ellipse cx="20" cy="20" rx="7" ry="16" /><path d="M4 20h32" /></svg><b>REISEPASS</b></span
 	>
 	<span class="pp-tile-txt">
-		<span class="pp-tile-n">{n}<small>Stempel</small></span>
-		{#if fresh && !inPass}<span class="pp-new"><i aria-hidden="true">✨</i>{fresh === 1 ? 'Neuer Stempel' : `${fresh} neue Stempel`} warten<u aria-hidden="true">›</u></span>{/if}
+		<span class="pp-tile-n">{n}<small>Stempel</small>{#if fresh && !inPass}<em class="pp-new">✨ {fresh} neu</em>{/if}</span>
 		{#if info.rank}<span class="pp-rank">{info.rank.icon} {info.rank.name}</span>{/if}
 		<span class="pp-bar"><i style="width:{info.p * 100}%"></i></span>
 		<span class="pp-bar-t"

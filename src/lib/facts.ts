@@ -15,6 +15,8 @@ export interface Facts {
 	tzn?: number;
 	nb?: string[];
 	land?: boolean;
+	/** Mittelpunkt [lat, lon] */
+	ll?: [number, number];
 	/** höchster Punkt: Name, Höhe in m */
 	peak?: [string, number];
 	/** Lage des höchsten Punkts [lon, lat] */

@@ -4,7 +4,9 @@
 	import { scopeTotal } from '$lib/scope';
 	import { CONT, CONT_NAMES, contOf } from '$lib/countries';
 	import { reduceMotion, dom, easeOutCubic, hooks, introProgress, openPicker, ui } from '$lib/app.svelte';
-	import { RANKS, rankIndex } from '$lib/passport';
+	import { rankIndex, ranks } from '$lib/passport';
+	import { badges, tierName } from '$lib/badges';
+	import { loadFacts } from '$lib/facts';
 	import HeroFlight from './HeroFlight.svelte';
 
 	let countEl: HTMLSpanElement;
@@ -61,14 +63,34 @@
 			const newCont = cont > contBefore && contBefore >= 0;
 			if (newCont) {
 				const k = CONT[atlas.lastAddedCode];
-				ui.unlock = { key: ui.unlock.key + 1, cont: k ? CONT_NAMES[k] : '', n: cont, rank: '' };
+				ui.unlock = { key: ui.unlock.key + 1, cont: k ? CONT_NAMES[k] : '', n: cont, rank: '', badge: '', icon: '', sub: '' };
 			}
+			let delay = newCont ? 3900 : 0;
 			// neuer Rang im Reisepass: eigene Feier-Karte (nach der Kontinent-Karte, falls beides zugleich)
-			const ri = rankIndex(now);
-			if (ri > rankIndex(before)) {
+			const ri = rankIndex(now, total);
+			if (ri > rankIndex(before, total)) {
 				clearTimeout(rankT);
-				rankT = setTimeout(() => (ui.unlock = { key: ui.unlock.key + 1, cont: '', n: now, rank: RANKS[ri].name }), newCont ? 3900 : 0);
+				const r = ranks(total)[ri];
+				rankT = setTimeout(() => (ui.unlock = { key: ui.unlock.key + 1, cont: '', n: now, rank: r.name, badge: '', icon: r.icon, sub: '' }), delay);
+				delay += 3900;
 			}
+			// neues Abzeichen bzw. neue Stufe: vorher/nachher vergleichen (Länderfakten werden dafür nachgeladen)
+			const added = atlas.lastAddedCode,
+				list = counted;
+			loadFacts().then((facts) => {
+				const scope = atlas.settings.countryScope,
+					entered = Object.fromEntries(list.map((c) => [c.code, c.entered]));
+				const codes = list.map((c) => c.code);
+				const was = badges({ codes: codes.filter((c) => c !== added), facts, entered }, scope);
+				const up = badges({ codes, facts, entered }, scope).filter((b, i) => b.level > was[i].level);
+				if (!up.length) return;
+				const b = up[up.length - 1],
+					more = up.length > 1 ? ` · +${up.length - 1} weitere` : '';
+				setTimeout(
+					() => (ui.unlock = { key: ui.unlock.key + 1, cont: '', n: now, rank: '', badge: b.name, icon: b.icon, sub: `${tierName(b, b.level)} · ${b.fmt(b.v)} ${b.what}${more}` }),
+					delay
+				);
+			});
 			if (reduceMotion()) return;
 			clearTimeout(bumpT);
 			bump = { key: bump.key + 1, from: before, on: true };

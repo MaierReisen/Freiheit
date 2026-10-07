@@ -5,22 +5,45 @@ import { CONT, nameOf } from './countries';
    Kontinent-Symbol. Das Tinten-Aussehen kommt aus gemeinsamen Filtern (#pf0–#pf3, einmal in der Pass-Ansicht). */
 
 /* ---------- Ränge ---------- */
-export const RANKS = [
-	{ n: 1, name: 'Neuling', icon: '🌱' },
-	{ n: 5, name: 'Entdecker', icon: '🧭' },
-	{ n: 10, name: 'Weltenbummler', icon: '🎒' },
-	{ n: 25, name: 'Globetrotter', icon: '🌍' },
-	{ n: 50, name: 'Abenteurer', icon: '🏔️' },
-	{ n: 100, name: 'Legende', icon: '👑' }
+export interface Rank {
+	n: number;
+	name: string;
+	icon: string;
+	/** kurzer Ansporn für diesen Rang */
+	say: string;
+}
+/* Ränge bis zum letzten Land: der höchste Rang braucht alle Länder der gewählten Länderliste (194–198) */
+const RANK_STEPS: Rank[] = [
+	{ n: 1, name: 'Fernweh', icon: '🌱', say: 'Der erste Stempel ist gesetzt – das Fernweh hat dich gepackt.' },
+	{ n: 3, name: 'Grenzgänger', icon: '🎟️', say: 'Drei Länder: Grenzen sind für dich nur Linien auf der Karte.' },
+	{ n: 5, name: 'Entdecker', icon: '🧭', say: 'Fünf Länder – jetzt beginnt das Entdecken erst richtig.' },
+	{ n: 10, name: 'Weltenbummler', icon: '🎒', say: 'Zweistellig! Dein Rucksack kennt schon einige Flughäfen.' },
+	{ n: 20, name: 'Vielflieger', icon: '✈️', say: 'Zwanzig Länder – du sammelst Bordkarten wie andere Briefmarken.' },
+	{ n: 30, name: 'Kartograf', icon: '🗺️', say: 'Deine Karte füllt sich: Du zeichnest deine eigene Welt.' },
+	{ n: 50, name: 'Globetrotter', icon: '🌍', say: 'Fünfzig Länder – ein Viertel der Welt trägt deinen Fußabdruck.' },
+	{ n: 75, name: 'Weltumsegler', icon: '⛵', say: 'Du kennst mehr Länder als die meisten Menschen je sehen.' },
+	{ n: 100, name: 'Club der 100', icon: '💯', say: 'Hundert Länder – willkommen in einem sehr kleinen Club.' },
+	{ n: 125, name: 'Nomade', icon: '🐪', say: 'Zuhause ist für dich, wo der nächste Stempel wartet.' },
+	{ n: 150, name: 'Himmelsstürmer', icon: '🦅', say: 'Drei Viertel der Welt – der Rest wird knapp.' },
+	{ n: 175, name: 'Legende', icon: '🏆', say: 'Nur noch eine Handvoll Länder trennt dich vom Ziel.' }
 ];
+const LAST = { name: 'Weltmeister', icon: '👑', say: 'Jedes Land der Erde. Du hast die ganze Welt gesehen.' };
+const rankCache = new Map<number, Rank[]>();
+/** Alle Ränge für eine Länderliste mit `total` Ländern (letzter Rang = alle Länder) */
+export function ranks(total: number): Rank[] {
+	let r = rankCache.get(total);
+	if (!r) rankCache.set(total, (r = [...RANK_STEPS.filter((x) => x.n < total), { n: total, ...LAST }]));
+	return r;
+}
 /** Index des erreichten Rangs (-1 = noch keiner) */
-export const rankIndex = (count: number) => RANKS.filter((r) => count >= r.n).length - 1;
+export const rankIndex = (count: number, total: number) => ranks(total).filter((r) => count >= r.n).length - 1;
 
 /** Stand für Kachel und Pass: Rang, nächster Rang, Fortschritt 0..1 dazwischen */
-export function rankInfo(count: number) {
-	const i = rankIndex(count);
-	const rank = i >= 0 ? RANKS[i] : null;
-	const next = RANKS[i + 1] ?? null;
+export function rankInfo(count: number, total: number) {
+	const all = ranks(total),
+		i = rankIndex(count, total);
+	const rank = i >= 0 ? all[i] : null;
+	const next = all[i + 1] ?? null;
 	const from = rank?.n ?? 0;
 	const p = next ? (count - from) / (next.n - from) : 1;
 	return { rank, next, left: next ? next.n - count : 0, p: Math.max(0, Math.min(1, p)) };

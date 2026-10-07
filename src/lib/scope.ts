@@ -38,3 +38,5 @@ export function scopeTotalIn(scope: CountryScope, cont: ContinentCode) {
 	for (const c of LISTS[scope]) if (CONT[c] === cont) n++;
 	return n;
 }
+/** Alle Länder der Liste */
+export const scopeCodes = (scope: CountryScope): ReadonlySet<string> => LISTS[scope];

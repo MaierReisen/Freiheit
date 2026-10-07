@@ -87,8 +87,8 @@ export const ui = $state({
 	focusContinent: null as string | null,
 	/** gemeinsame Start-Animation (Globus, Zähler, Flugkurve): Zeitpunkte in performance.now() */
 	intro: { key: 0, start: 0, end: 0, resume: false },
-	/** neuer Kontinent bzw. neuer Rang im Reisepass (rank gesetzt): Feier-Karte (key zählt hoch) */
-	unlock: { key: 0, cont: '', n: 0, rank: '' },
+	/** neuer Kontinent, neuer Rang (rank gesetzt) bzw. neues Abzeichen (badge gesetzt) im Reisepass: Feier-Karte (key zählt hoch) */
+	unlock: { key: 0, cont: '', n: 0, rank: '', badge: '', icon: '', sub: '' },
 	toastMsg: '',
 	toastShow: false
 });
@@ -265,9 +265,10 @@ export function goTab(tab: string, push = true, dir?: number) {
 	if (ui.settingsOpen) closeSettings(true);
 	if (ui.passOpen) closePass(true);
 	if (dir === undefined) dir = Math.sign(TABS.indexOf(t) - TABS.indexOf(ui.tab));
+	const same = t === ui.tab;
 	showTab(t, dir);
 	if (push && location.hash !== '#' + t) location.hash = t;
-	window.scrollTo(0, 0);
+	if (!same) window.scrollTo(0, 0);
 }
 
 /** Startzustand aus der Adresse (#map, #laender, #more …) */
@@ -312,6 +313,6 @@ export function onHashChange() {
 		if (ui.placesOpen) hooks.places?.close(true);
 		if (ui.settingsOpen) closeSettings(true);
 		if (ui.passOpen) closePass(true);
-		if (h !== ui.tab) goTab(h, false);
+		if (h !== ui.tab && !(h === '' && ui.tab === 'home')) goTab(h, false);
 	}
 }

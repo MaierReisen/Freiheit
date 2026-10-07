@@ -3,7 +3,10 @@
 	import { atlas, countedCountries } from '$lib/atlas.svelte';
 	import { closePass, openCountry, reduceMotion, ui } from '$lib/app.svelte';
 	import { flag } from '$lib/countries';
-	import { INK_FILTERS, RANKS, rankIndex, stamp, yearOf } from '$lib/passport';
+	import { INK_FILTERS, rankIndex, ranks, stamp, yearOf } from '$lib/passport';
+	import { badgeLevels, badges, tierName, type Badge } from '$lib/badges';
+	import { loadFacts, type Facts } from '$lib/facts';
+	import { scopeTotal } from '$lib/scope';
 	import { markSeen, passSeen } from '$lib/passSeen.svelte';
 	import PassTile from './PassTile.svelte';
 
@@ -12,6 +15,7 @@
 
 	const PER_PAGE = 6;
 	let body: HTMLDivElement;
+	let lastScroll = 0; // Scrollposition beim Verlassen merken
 
 	const stamps = $derived(countedCountries().map((c, i) => ({ code: c.code, name: c.name, nr: i + 1, entered: c.entered, s: stamp(c.code, i + 1, c.entered) })));
 	const wishes = $derived(atlas.data.wishlist.slice(0, 4));
@@ -30,7 +34,33 @@
 		}
 		return out;
 	});
-	const ri = $derived(rankIndex(stamps.length));
+	const total = $derived(scopeTotal(atlas.settings.countryScope));
+	const allRanks = $derived(ranks(total));
+	const ri = $derived(rankIndex(stamps.length, total));
+
+	/* ---------- Visa-Seiten: Abzeichen ---------- */
+	let facts = $state.raw<Record<string, Facts> | null>(null);
+	$effect(() => {
+		if (ui.passOpen && !facts) loadFacts().then((f) => (facts = f));
+	});
+	const bs = $derived(
+		facts ? badges({ codes: stamps.map((s) => s.code), facts, entered: Object.fromEntries(stamps.map((s) => [s.code, s.entered])) }, atlas.settings.countryScope) : []
+	);
+	// am nächsten an der nächsten Stufe (Ansporn); Einreise-Abzeichen erst, wenn Daten eingetragen sind
+	const nextUp = $derived(
+		bs
+			.filter((b) => b.level < b.tiers.length && b.p > 0)
+			.sort((a, b) => b.p - a.p)
+			.slice(0, 2)
+	);
+	let picked = $state<string | null>(null);
+	async function choose(id: string | null) {
+		picked = id;
+		await tick();
+		body?.querySelector('.pp-detail')?.scrollIntoView({ behavior: reduceMotion() ? 'auto' : 'smooth', block: 'nearest' });
+	}
+	const pick = $derived(bs.find((b) => b.id === picked) ?? null);
+	const tierClass = (b: Badge) => (b.level ? ['t1', 't2', 't3'][b.level - 1 + 3 - b.tiers.length] : '');
 
 	/* ---------- Stempel-Animation beim Öffnen ---------- */
 	// Stempel, die gerade noch auf ihren Auftritt warten (unsichtbar)
@@ -145,14 +175,15 @@
 		>
 		<h1 class="set-title" id="passTitle">Reisepass</h1>
 	</div>
-	<div class="ov-body" bind:this={body}>
+	<div class="ov-body" bind:this={body} onscroll={() => { if (ui.passOpen) lastScroll = body.scrollTop; }}>
 		{#if ui.passOpen}
 			<div style="margin-top:20px"><PassTile inPass /></div>
 			<ol class="pp-ranks" aria-label="Ränge">
-				{#each RANKS as r, i (r.n)}
+				{#each allRanks as r, i (r.n)}
 					<li class:on={i <= ri} class:cur={i === ri}><span aria-hidden="true">{r.icon}</span><b>{r.name}</b><small>{r.n}</small></li>
 				{/each}
 			</ol>
+			{#if ri >= 0}<p class="pp-say">„{allRanks[ri].say}“</p>{/if}
 
 			{#if !stamps.length}
 				<p class="empty">Noch keine Stempel. Für jedes bereiste Land kommt hier ein Stempel in deinen Pass.</p>
@@ -182,6 +213,40 @@
 					<div class="pp-page-n">{pi + 1}</div>
 				</div>
 			{/each}
+			{#if bs.length}
+				<div class="pp-page pp-visa">
+					<div class="pp-page-h"><span>Visa · Abzeichen</span><span>{badgeLevels(bs)} / {bs.reduce((s, b) => s + b.tiers.length, 0)}</span></div>
+					{#if nextUp.length}
+						<div class="pp-next">
+							<small>Fast geschafft</small>
+							{#each nextUp as b (b.id)}
+								<button type="button" onclick={() => choose(b.id)}
+									><span aria-hidden="true">{b.icon}</span><b>{b.name}</b><em>{b.prog}</em><span class="pp-bar"><i style="width:{b.p * 100}%"></i></span></button
+								>
+							{/each}
+						</div>
+					{/if}
+					<div class="pp-badges">
+						{#each bs as b (b.id)}
+							<button type="button" class="pp-badge {tierClass(b)}" class:sel={picked === b.id} aria-pressed={picked === b.id} onclick={() => choose(picked === b.id ? null : b.id)}>
+								<span class="pp-medal" style="--p:{b.level < b.tiers.length ? b.p : 1}" aria-hidden="true"><span>{b.icon}</span></span>
+								<b>{b.name}</b>
+								<small>{b.level ? tierName(b, b.level) : b.prog}</small>
+							</button>
+						{/each}
+					</div>
+					{#if pick}
+						<div class="pp-detail" role="status">
+							<b>{pick.icon} {pick.name}</b>
+							<span>{pick.fmt(pick.v)} {pick.what}</span>
+							<span class="pp-tiers"
+								>{#each pick.tiers as t, i (t)}<i class:on={pick.level > i} class={'t' + (i + 1 + 3 - pick.tiers.length)}>{tierName(pick, i + 1)}: {pick.fmt(t)}</i>{/each}</span
+							>
+						</div>
+					{/if}
+					<div class="pp-page-n">{pages.length + 1}</div>
+				</div>
+			{/if}
 			{#if stamps.length}
 				<p class="note">Stempel antippen öffnet das Land. Dort kannst du auch das Datum der ersten Einreise eintragen – es erscheint dann auf dem Stempel.</p>
 			{/if}
