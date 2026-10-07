@@ -163,7 +163,7 @@
 		</div>
 		{#if hls.length}
 			<div class="cl-hls">
-				<span class="lbl">Highlights</span>
+				<span class="lbl">Besonders zur Reisezeit</span>
 				{#each hls as h (h.t + (h.r ?? ''))}
 					<div class="cl-hl" class:on={h.y || h.m.includes(sel)}>
 						<i class="cl-hl-ic {h.c}" aria-hidden="true">
