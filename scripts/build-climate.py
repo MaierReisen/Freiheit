@@ -222,6 +222,9 @@ def main():
                 near_sea.append(f'{code}:{n} {round(sea[0])} km')
         out[code] = rows
         print(code, [l[0] for l in out[code]], flush=True)
+    # Antarktis: kein Rasterpunkt/Ort vorhanden, daher von Hand (Antarktische Halbinsel, Richtwerte der Station Esperanza)
+    out['AQ'] = [['Antarktische Halbinsel', [-57.0, -63.4], [2, 2, 0, -3, -5, -7, -8, -7, -6, -3, 0, 1], [-1, -1, -3, -7, -10, -12, -13, -12, -10, -7, -3, -1],
+                  [40, 45, 50, 45, 45, 40, 40, 35, 35, 35, 35, 40], [1, 1, 1, 0, 0, -1, -1, -1, -1, -1, 0, 0], 'Antarctica/Palmer', None]]
     json.dump(out, open(OUT, 'w'), ensure_ascii=False, separators=(',', ':'))
     print(len(out), 'Länder,', round(os.path.getsize(OUT) / 1024, 1), 'KB; ohne Landpunkt:', missing)
 

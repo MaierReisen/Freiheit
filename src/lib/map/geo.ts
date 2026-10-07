@@ -62,7 +62,7 @@ const VATICAN: GeoJSON.Polygon = {
 };
 const patch = (f: CountryFeature): CountryFeature => (f.id === 'VA' ? { ...f, geometry: VATICAN } : f);
 
-export const features = [...toFeatures(WORLD).filter((f) => f.id && f.id !== 'AQ').map(patch), TUVALU];
+export const features = [...toFeatures(WORLD).filter((f) => f.id).map(patch), TUVALU];
 
 // Lage und Größe jedes Landes (größtes Teilgebiet, damit z. B. Frankreich nicht in Südamerika zentriert wird)
 function mainPoly(f: CountryFeature): GeoJSON.Feature | CountryFeature {
@@ -163,7 +163,7 @@ const bordersOf = (topo: Topology) =>
 	mesh(topo, topo.objects.countries, (a, b) => a !== b && a.id !== 'VA' && b.id !== 'VA') as GeoJSON.MultiLineString;
 function makeLod(topo: Topology): Lod {
 	const feats = toFeatures(topo)
-		.filter((f) => f.id && f.id !== 'AQ' && FC[f.id])
+		.filter((f) => f.id && FC[f.id])
 		.map(patch);
 	return { feats, polys: polysOf(feats), borders: bordersOf(topo) };
 }

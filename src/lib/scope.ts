@@ -14,20 +14,21 @@ const UN = new Set(
 );
 const OBSERVERS = ['VA', 'PS']; // Beobachterstaaten: Vatikanstadt, Palästina
 const DE_FACTO = ['XK', 'TW']; // Kosovo, Taiwan
+const EXTRA = ['AQ']; // Antarktis: kein Staat, zählt aber immer mit, damit man alle sieben Kontinente bereisen kann
 
 const LISTS: Record<CountryScope, Set<string>> = {
-	un: UN,
-	un_observer: new Set([...UN, ...OBSERVERS]),
-	sovereign: new Set([...UN, ...OBSERVERS, ...DE_FACTO])
+	un: new Set([...UN, ...EXTRA]),
+	un_observer: new Set([...UN, ...OBSERVERS, ...EXTRA]),
+	sovereign: new Set([...UN, ...OBSERVERS, ...DE_FACTO, ...EXTRA])
 };
 
 export const DEFAULT_SCOPE: CountryScope = 'sovereign';
 export const isScope = (s: unknown): s is CountryScope => typeof s === 'string' && s in LISTS;
 
 export const SCOPES: { id: CountryScope; label: string; desc: string }[] = [
-	{ id: 'un', label: 'UN-Mitglieder', desc: 'Nur die Mitgliedsstaaten der Vereinten Nationen.' },
-	{ id: 'un_observer', label: 'UN + Beobachter', desc: 'UN-Mitglieder plus Vatikanstadt und Palästina.' },
-	{ id: 'sovereign', label: 'Alle Staaten', desc: 'UN-Mitglieder, Vatikanstadt und Palästina sowie Kosovo und Taiwan.' }
+	{ id: 'un', label: 'UN-Mitglieder', desc: 'Nur die Mitgliedsstaaten der Vereinten Nationen (plus Antarktis).' },
+	{ id: 'un_observer', label: 'UN + Beobachter', desc: 'UN-Mitglieder plus Vatikanstadt und Palästina (plus Antarktis).' },
+	{ id: 'sovereign', label: 'Alle Staaten', desc: 'UN-Mitglieder, Vatikanstadt und Palästina sowie Kosovo und Taiwan (plus Antarktis).' }
 ];
 
 export const inScope = (code: string, scope: CountryScope) => LISTS[scope].has(code);
