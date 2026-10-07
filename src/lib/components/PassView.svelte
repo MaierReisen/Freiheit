@@ -339,6 +339,9 @@
 		picked = id;
 		if (!id) return;
 		await tick();
+		if (!sheet) return;
+		sheetH = sheet.offsetHeight; // Platz unten sofort freihalten
+		await tick();
 		// angetipptes Abzeichen nicht vom Blatt verdecken lassen
 		const btn = body?.querySelector<HTMLElement>(`[data-badge="${id}"]`);
 		if (!btn || !sheet) return;
