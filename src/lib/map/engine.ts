@@ -1,7 +1,7 @@
 import { geoContains, geoDistance, geoGraticule10, geoNaturalEarth1, geoOrthographic, geoPath, type GeoProjection } from 'd3-geo';
 import { CONT_VIEW, nameOf, type ContinentCode } from '../countries';
 import LABEL_JSON from '../data/labels.json';
-import { fmtHeight, loadFacts, type Facts } from '../facts';
+import { loadFacts } from '../facts';
 import { FC, FINE_W, INFO, SIMP_W, features, fetchFineLod, fineLod, getLod, lodReady, smallIds, wrapLon, type Lod } from './geo';
 
 /* Weltkarte auf zwei Canvas-Ebenen: Globus (orthografisch) und flache Karte (Natural Earth).
@@ -90,23 +90,12 @@ const NAMES = Object.entries(LABEL_JSON as unknown as Record<string, [[number, n
 	.filter(([id]) => INFO[id])
 	.map(([id, [p, r]]) => ({ id, p, r }))
 	.sort((a, b) => b.r - a.r);
-// Hauptstadt und höchster Berg je Land: erst bei Länder-Zoom (weich eingeblendet), nur für Länder, die groß genug zu
-// sehen sind; Lage aus facts.json (wird erst nachgeladen, wenn so weit hineingezoomt wird)
-// (Berge etwas später als Hauptstädte, sonst wird es zu voll)
-const MARK_K = { cap: [4, 4.8], peak: [5, 6] } as const,
-	MARK_AREA = 2500; // Landfläche auf dem Bildschirm in px²
-type Mark = { id: string; cap?: { p: [number, number]; t: string }; peak?: { p: [number, number]; t: string; h: string } };
-let MARKS: Mark[] | null = null;
-const buildMarks = (f: Record<string, Facts>): Mark[] =>
-	Object.entries(f)
-		.filter(([id]) => INFO[id])
-		.map(([id, x]) => ({
-			id,
-			cap: x.capLL && x.cap?.[0] ? { p: x.capLL, t: x.cap[0] } : undefined,
-			// Zusatz wie „(Teneriffa)“ weglassen
-			peak: x.peakLL && x.peak ? { p: x.peakLL, t: x.peak[0].replace(/\s*\(.*\)$/, ''), h: ' ' + fmtHeight(x.peak[1]) } : undefined
-		}))
-		.sort((a, b) => INFO[b.id].area - INFO[a.id].area);
+// Hauptstädte: erst bei Länder-Zoom (weich eingeblendet), nur für Länder, die groß genug zu sehen sind;
+// Lage aus facts.json (wird erst nachgeladen, wenn so weit hineingezoomt wird)
+const CAP_K0 = 4,
+	CAP_K1 = 4.8,
+	CAP_AREA = 2500; // Landfläche auf dem Bildschirm in px²
+let CAPS: { id: string; p: [number, number]; t: string }[] | null = null;
 // echte Zwergstaaten (unter etwa 4.000 km²: Vatikan, Monaco, Malta, Singapur, Karibik- und Pazifikinseln …)
 const microIds = new Set(features.filter((f) => INFO[f.id].area < 0.0001).map((f) => f.id));
 // Teilflächen je Land und Detailstufe (für Umrisse, ohne jedes Mal alle Flächen zu durchsuchen)
@@ -843,7 +832,7 @@ export function createWorldMap(o: MapOptions) {
 			if (!a) continue;
 			const lh = fs * 1.15,
 				h = lh * lines.length;
-			// liegt ein Punkt (Zwergstaat, Hauptstadt, Berg) im Weg: etwas darüber oder darunter versuchen, solange es ins Land passt
+			// liegt ein Punkt (Zwergstaat, Hauptstadt) im Weg: etwas darüber oder darunter versuchen, solange es ins Land passt
 			const shifts = room > h * 3 ? [0, -(h / 2 + 9), h / 2 + 9] : [0];
 			let box: [number, number, number, number] | null = null;
 			for (const dy of shifts) {
@@ -873,112 +862,75 @@ export function createWorldMap(o: MapOptions) {
 	/** Zoom als Globus-Zoom gemessen, damit Karte und jede Bildschirmgröße gleich reagieren */
 	const globeK = (ppd: number) => (ppd * 57.2958) / ((Math.min(cw, ch) / 2) * 0.86);
 
-	let marksLoading = false;
-	/** Punkte für Hauptstadt und höchsten Berg (vor den Ländernamen bestimmt, damit die Namen ihnen ausweichen) */
-	function placeMarks(P: GeoProjection, ppd: number, taken: [number, number, number, number][]) {
+	let capsLoading = false;
+	/** Hauptstadt-Sterne (vor den Ländernamen bestimmt, damit die Namen ihnen ausweichen) */
+	function placeCaps(P: GeoProjection, ppd: number, taken: [number, number, number, number][]) {
 		const kG = globeK(ppd);
-		if (kG <= MARK_K.cap[0]) return null;
-		if (!MARKS) {
-			if (!marksLoading) {
-				marksLoading = true;
+		if (kG <= CAP_K0) return null;
+		if (!CAPS) {
+			if (!capsLoading) {
+				capsLoading = true;
 				loadFacts()
 					.then((f) => {
-						MARKS = buildMarks(f);
+						CAPS = Object.entries(f)
+							.filter(([id, x]) => INFO[id] && x.capLL && x.cap?.[0])
+							.map(([id, x]) => ({ id, p: x.capLL!, t: x.cap![0] }))
+							.sort((a, b) => INFO[b.id].area - INFO[a.id].area);
 						markDirty(false);
 					})
-					.catch(() => (marksLoading = false));
+					.catch(() => (capsLoading = false));
 			}
 			return null;
 		}
-		const zoomA = { cap: 0, peak: 0 };
-		for (const k of ['cap', 'peak'] as const) zoomA[k] = clamp((kG - MARK_K[k][0]) / (MARK_K[k][1] - MARK_K[k][0]), 0, 1);
+		const zoomA = Math.min(1, (kG - CAP_K0) / (CAP_K1 - CAP_K0));
 		const globe = view.mode === 'globe';
-		const out: { kind: 'cap' | 'peak'; x: number; y: number; a: number; t: string; h?: string }[] = [];
-		const at = (ll: [number, number], a: number) => {
+		const out: { x: number; y: number; a: number; t: string }[] = [];
+		for (const m of CAPS) {
+			if (pxArea(m.id, ppd) < CAP_AREA) continue;
+			let a = zoomA;
 			if (globe) {
-				a *= clamp((Math.PI / 2 - 0.08 - geoDistance(ll, [view.lon, view.lat])) / 0.2, 0, 1);
-				if (!a) return null;
+				a *= clamp((Math.PI / 2 - 0.08 - geoDistance(m.p, [view.lon, view.lat])) / 0.2, 0, 1);
+				if (!a) continue;
 			}
-			const p = P(ll);
-			if (!p || p[0] < 8 || p[1] < 8 || p[0] > cw - 8 || p[1] > ch - 8) return null;
-			return { x: p[0], y: p[1], a };
-		};
-		const free = (b: [number, number, number, number]) => !taken.some((t) => b[0] < t[2] && b[2] > t[0] && b[1] < t[3] && b[3] > t[1]);
-		for (const m of MARKS) {
-			if (pxArea(m.id, ppd) < MARK_AREA) continue;
-			for (const kind of ['cap', 'peak'] as const) {
-				const d = m[kind];
-				if (!d || !zoomA[kind]) continue;
-				const q = at(d.p, zoomA[kind]);
-				if (!q) continue;
-				const r = kind === 'cap' ? 5 : 7;
-				const b: [number, number, number, number] = [q.x - r, q.y - r, q.x + r, q.y + r];
-				if (!free(b)) continue;
-				taken.push(b);
-				out.push({ kind, ...q, t: d.t, h: kind === 'peak' ? (d as NonNullable<Mark['peak']>).h : undefined });
-			}
+			const p = P(m.p);
+			if (!p || p[0] < 8 || p[1] < 8 || p[0] > cw - 8 || p[1] > ch - 8) continue;
+			const b: [number, number, number, number] = [p[0] - 6, p[1] - 6, p[0] + 6, p[1] + 6];
+			if (taken.some((t) => b[0] < t[2] && b[2] > t[0] && b[1] < t[3] && b[3] > t[1])) continue;
+			taken.push(b);
+			out.push({ x: p[0], y: p[1], a, t: m.t });
 		}
 		return out;
 	}
-	/** Hauptstadt (weißer Punkt) und höchster Berg (Bergzeichen) wie in der Minikarte, Namen daneben, wo Platz ist */
-	function drawMarks(c: CanvasRenderingContext2D, list: NonNullable<ReturnType<typeof placeMarks>>, taken: [number, number, number, number][]) {
+	/** Hauptstadt als kleiner weißer Stern (deutlich anders als die runden Punkte der Zwergstaaten), Name daneben, wo Platz ist */
+	function drawCaps(c: CanvasRenderingContext2D, list: { x: number; y: number; a: number; t: string }[], taken: [number, number, number, number][]) {
 		c.lineJoin = 'round';
-		c.lineCap = 'round';
 		for (const m of list) {
 			c.globalAlpha = m.a;
-			if (m.kind === 'cap') {
-				c.beginPath();
-				c.arc(m.x, m.y, 3.8, 0, TAU);
-				c.fillStyle = '#fff';
-				c.fill();
-				c.lineWidth = 1.5;
-				c.strokeStyle = '#0A2030';
-				c.stroke();
-				c.beginPath();
-				c.arc(m.x, m.y, 1.4, 0, TAU);
-				c.fillStyle = '#0A2030';
-				c.fill();
-			} else {
-				c.beginPath();
-				c.arc(m.x, m.y, 5.6, 0, TAU);
-				c.fillStyle = 'rgba(10,32,48,.6)';
-				c.fill();
-				c.lineWidth = 1;
-				c.strokeStyle = 'rgba(246,196,69,.7)';
-				c.stroke();
-				c.beginPath();
-				c.moveTo(m.x - 3.4, m.y + 1.9);
-				c.lineTo(m.x - 1.2, m.y - 1.8);
-				c.lineTo(m.x + 0.2, m.y + 0.4);
-				c.lineTo(m.x + 1, m.y - 0.7);
-				c.lineTo(m.x + 3.4, m.y + 1.9);
-				c.closePath();
-				c.lineWidth = 1.1;
-				c.strokeStyle = 'rgba(246,196,69,.9)';
-				c.stroke();
+			c.beginPath();
+			for (let i = 0; i < 10; i++) {
+				const r = i % 2 ? 2.4 : 5.6,
+					w = (i * Math.PI) / 5 - Math.PI / 2;
+				c.lineTo(m.x + r * Math.cos(w), m.y + 0.5 + r * Math.sin(w));
 			}
+			c.closePath();
+			c.lineWidth = 2;
+			c.strokeStyle = 'rgba(7,20,31,.9)';
+			c.stroke();
+			c.fillStyle = '#fff';
+			c.fill();
 		}
-		// Beschriftung: rechts vom Punkt, sonst links; überlappt sie, bleibt nur der Punkt
+		// Beschriftung: rechts vom Stern, sonst links; überlappt sie, bleibt nur der Stern
 		c.textBaseline = 'middle';
+		c.textAlign = 'left';
 		c.lineWidth = 3;
 		c.strokeStyle = 'rgba(7,20,31,.85)';
+		c.font = '600 10.5px Figtree, system-ui, sans-serif';
+		c.fillStyle = 'rgba(255,255,255,.92)';
 		for (const m of list) {
-			const cap = m.kind === 'cap';
-			const f1 = cap ? '600 10.5px Figtree, system-ui, sans-serif' : '600 9.5px Figtree, system-ui, sans-serif',
-				f2 = '500 9.5px Figtree, system-ui, sans-serif';
-			c.font = f1;
-			const w1 = c.measureText(m.t).width;
-			let w2 = 0;
-			if (m.h) {
-				c.font = f2;
-				w2 = c.measureText(m.h).width;
-			}
-			const w = w1 + w2,
-				gap = cap ? 7 : 9,
-				hh = cap ? 7 : 6.5;
+			const w = c.measureText(m.t).width;
 			let x0: number | null = null;
-			for (const x of [m.x + gap, m.x - gap - w]) {
-				const b: [number, number, number, number] = [x - 2, m.y - hh, x + w + 2, m.y + hh];
+			for (const x of [m.x + 8, m.x - 8 - w]) {
+				const b: [number, number, number, number] = [x - 2, m.y - 7, x + w + 2, m.y + 7];
 				if (b[0] < 4 || b[2] > cw - 4 || b[1] < 4 || b[3] > ch - 4) continue;
 				if (taken.some((t) => b[0] < t[2] && b[2] > t[0] && b[1] < t[3] && b[3] > t[1])) continue;
 				taken.push(b);
@@ -987,17 +939,8 @@ export function createWorldMap(o: MapOptions) {
 			}
 			if (x0 === null) continue;
 			c.globalAlpha = m.a;
-			c.textAlign = 'left';
-			c.font = f1;
-			c.fillStyle = cap ? 'rgba(255,255,255,.92)' : 'rgba(255,255,255,.8)';
 			c.strokeText(m.t, x0, m.y);
 			c.fillText(m.t, x0, m.y);
-			if (m.h) {
-				c.font = f2;
-				c.fillStyle = 'rgba(246,196,69,.85)';
-				c.strokeText(m.h, x0 + w1, m.y);
-				c.fillText(m.h, x0 + w1, m.y);
-			}
 		}
 		c.globalAlpha = 1;
 	}
@@ -1128,9 +1071,9 @@ export function createWorldMap(o: MapOptions) {
 		}
 		const taken = avoidRects();
 		if (labels.length) drawMicroLabels(c, labels, taken);
-		const marks = placeMarks(P, ppd, taken);
+		const caps = placeCaps(P, ppd, taken);
 		drawCountryNames(c, P, ppd, visited, (id) => id === selected || id === hl?.code || dotAlpha(id, ppd) > 0, taken, dotPts);
-		if (marks?.length) drawMarks(c, marks, taken);
+		if (caps?.length) drawCaps(c, caps, taken);
 		if (selected && INFO[selected] && hl?.code !== selected) {
 			const ctr = INFO[selected].c;
 			if (onFront(ctr)) {
