@@ -570,7 +570,7 @@ input,textarea,[contenteditable="true"]{-webkit-user-select:text;user-select:tex
 .pp-tile{width:100%;display:flex;gap:16px;align-items:center;margin:0 0 18px;padding:16px;border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface);color:var(--ink);text-align:left;-webkit-tap-highlight-color:transparent;transition:transform .15s}
 button.pp-tile:active{transform:scale(.98)}
 .pp-cover{position:relative;flex:none;width:76px;height:102px;border-radius:6px 12px 12px 6px;background:radial-gradient(90% 60% at 30% 15%,rgba(255,255,255,.10),transparent 60%),repeating-linear-gradient(45deg,rgba(255,255,255,.035) 0 1px,transparent 1px 3px),linear-gradient(155deg,#18424a,#0B242B 70%);box-shadow:inset 4px 0 0 rgba(0,0,0,.28),inset 5px 0 0 rgba(255,255,255,.05),inset 0 0 0 1px rgba(0,0,0,.35),0 8px 16px -6px rgba(5,20,28,.55);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;color:#C9A24D;transform:rotate(-4deg)}
-.pp-cover::before{content:"";position:absolute;inset:6px 6px 6px 10px;border:1px solid rgba(201,162,77,.55);border-radius:3px 8px 8px 3px;pointer-events:none}
+.pp-cover::before{content:"";position:absolute;inset:7px;border:1px solid rgba(201,162,77,.55);border-radius:4px 8px 8px 4px;pointer-events:none}
 .pp-cover svg{width:30px;height:30px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;filter:drop-shadow(0 1px 0 rgba(0,0,0,.5))}
 .pp-cover svg{width:30px;height:30px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round}
 .pp-cover b{font:700 6px var(--display);letter-spacing:.12em;white-space:nowrap;padding-left:.12em;text-shadow:0 1px 0 rgba(0,0,0,.5)}
@@ -722,7 +722,7 @@ button.pp-tile:active{transform:scale(.98)}
 .cs-date-x svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round}
 
 /* Pass-Umschlag je Stufe (0 = kein Rang … 7 = Weltmeister): Material, Prägung, Glanz wachsen mit dem Rang */
-.pp-cover{width:84px;height:110px;padding:0 4px 0 7px}
+.pp-cover{width:84px;height:110px;padding:0 5px}
 .pp-cover svg{width:38px;height:38px;overflow:visible}
 .pp-cover svg .fill{fill:currentColor;stroke:none}
 .pp-cover svg{stroke-width:2}
