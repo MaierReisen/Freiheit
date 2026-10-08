@@ -30,7 +30,7 @@
 }
 [hidden]{display:none!important}
 *,*::before,*::after{box-sizing:inherit}
-html{scroll-padding-top:env(safe-area-inset-top,0px);-webkit-text-size-adjust:100%}
+html{scroll-padding-top:env(safe-area-inset-top,0px);-webkit-text-size-adjust:100%;touch-action:manipulation}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--text);font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased}
 button,input{font:inherit;color:inherit}
 button{cursor:pointer}
@@ -122,6 +122,7 @@ h2{font-family:var(--display);font-size:19px;font-weight:700;margin:40px 0 14px;
 .sheet{position:fixed;left:0;right:0;bottom:0;max-width:760px;margin:0 auto;background:var(--surface);border-radius:var(--r-lg) var(--r-lg) 0 0;box-shadow:var(--shadow);
   padding:10px 22px calc(22px + env(safe-area-inset-bottom,0px));transform:translateY(105%);transition:transform .26s cubic-bezier(.2,.8,.2,1);max-height:82vh;display:flex;flex-direction:column}
 .sheet.open{transform:none}
+.sheet.kb{bottom:var(--kb,0px);max-height:calc(var(--vvh,82vh) - 12px);padding-bottom:12px}
 .sheet:not(.open){transition-duration:.17s;transition-timing-function:cubic-bezier(.4,0,1,1)}
 .grab{width:40px;height:5px;border-radius:3px;background:var(--line);margin:0 auto 16px}
 .sheet h3{margin:0;font-family:var(--display);font-size:26px;line-height:1.15;font-weight:800;display:flex;align-items:center;gap:10px;letter-spacing:-.01em}

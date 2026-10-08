@@ -7,7 +7,7 @@
 <link rel="icon" href="%sveltekit.assets%/icon.svg" type="image/svg+xml">
 <link rel="manifest" href="%sveltekit.assets%/manifest.webmanifest">
 <link rel="apple-touch-icon" href="%sveltekit.assets%/apple-touch-icon-180x180.png">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#EDF2F4" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0A1A23" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -16,6 +16,8 @@
 try{var p=JSON.parse(localStorage.getItem('freiheit-prefs')||'{}'),r=document.documentElement;
 if(p.theme==='light'||p.theme==='dark')r.setAttribute('data-theme',p.theme);
 if(p.motion==='off'||(p.motion!=='on'&&matchMedia('(prefers-reduced-motion: reduce)').matches))r.setAttribute('data-motion','reduce')}catch(e){}
+/* Kein Seiten-Zoom per Zwei-Finger-Geste (iOS beachtet user-scalable=no nicht); Karte zoomt selbst */
+document.addEventListener('gesturestart',function(e){e.preventDefault()},{passive:false});
 </script>
 
 <meta name="apple-mobile-web-app-title" content="Freiheit">

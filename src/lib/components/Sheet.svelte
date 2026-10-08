@@ -101,6 +101,29 @@
 		if (dy > Math.min(140, sheet.offsetHeight * 0.3) || (d.vy > 0.6 && dy > 40)) closeSheet();
 	}
 
+	/* Tastatur (Suche): iOS verkleinert nur den sichtbaren Bereich, nicht das Fenster – das Sheet
+	   sonst rutscht unter die Tastatur. Unterkante und Höhe daher an den sichtbaren Bereich anpassen. */
+	$effect(() => {
+		const vv = window.visualViewport;
+		if (!vv || !ui.sheetOpen || isCountry) return;
+		const fit = () => {
+			const kb = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+			sheet.style.setProperty('--kb', `${kb}px`);
+			sheet.style.setProperty('--vvh', `${vv.height}px`);
+			sheet.classList.toggle('kb', kb > 60);
+		};
+		fit();
+		vv.addEventListener('resize', fit);
+		vv.addEventListener('scroll', fit);
+		return () => {
+			vv.removeEventListener('resize', fit);
+			vv.removeEventListener('scroll', fit);
+			sheet.style.removeProperty('--kb');
+			sheet.style.removeProperty('--vvh');
+			sheet.classList.remove('kb');
+		};
+	});
+
 	// nicht-passiv, damit das Ziehen das Scrollen verhindern kann
 	$effect(() => {
 		sheet.addEventListener('touchstart', start, { passive: true });
