@@ -1,10 +1,11 @@
 <script lang="ts">
 	import { tick, untrack } from 'svelte';
+	import { fade } from 'svelte/transition';
 	import { atlas, countedCountries } from '$lib/atlas.svelte';
 	import { closePass, openCountry, reduceMotion, ui } from '$lib/app.svelte';
 	import { flag } from '$lib/countries';
 	import { INK_FILTERS, rankIndex, ranks, stamp, yearOf } from '$lib/passport';
-	import { badgeLevels, badges, tierName, type Badge } from '$lib/badges';
+	import { badgeLevels, badges, tierName, type Badge, type DetailItem } from '$lib/badges';
 	import { loadFacts, type Facts } from '$lib/facts';
 	import { scopeTotal } from '$lib/scope';
 	import { markSeen, passSeen } from '$lib/passSeen.svelte';
@@ -410,12 +411,17 @@
 	// Stufen-Klasse t1–t3 (Bronze/Silber/Gold) zu Stufe 1..n des Abzeichens
 	const tc = (b: Badge, level: number) => (level > 0 && level <= b.tiers.length ? 't' + (level + 3 - b.tiers.length) : '');
 	const tierClass = (b: Badge) => tc(b, b.level);
-	/* Details als Blatt von unten; erneutes Antippen oder Runterziehen schließt */
+	/* Details als Blatt von unten; erneutes Antippen oder Runterziehen schließt, Hochwischen klappt die Liste auf
+	   (was zählt schon, was fehlt noch) */
 	let sheet = $state<HTMLDivElement>();
+	let list = $state<HTMLDivElement>();
 	let sheetH = $state(0);
+	let open = $state(false);
+	const det = $derived(open && pick ? pick.detail() : null);
 	let sOff = 0; // aktuelle Zieh-Verschiebung (für das Wegschieben ab dieser Stelle)
 	async function choose(id: string | null) {
 		sOff = 0;
+		open = false;
 		picked = id;
 		if (!id) return;
 		await tick();
@@ -428,6 +434,19 @@
 		const over = btn.getBoundingClientRect().bottom + 12 - (window.innerHeight - sheet.offsetHeight);
 		if (over > 0) body.scrollBy({ top: over, behavior: reduceMotion() ? 'auto' : 'smooth' });
 	}
+	/* Auf-/Zuklappen: Höhe springt, die Verschiebung gleicht das aus und läuft weich auf 0 (ab der Zieh-Position) */
+	async function setOpen(v: boolean, from = 0) {
+		if (!sheet) return;
+		const h0 = sheet.offsetHeight;
+		open = v;
+		await tick();
+		if (!sheet) return;
+		if (!v && list) list.scrollTop = 0;
+		const h1 = sheet.offsetHeight;
+		sheet.style.transition = 'none';
+		sheet.style.transform = '';
+		if (!reduceMotion()) sheet.animate([{ transform: `translateY(${h1 - h0 + from}px)` }, { transform: 'translateY(0)' }], { duration: 300, easing: 'cubic-bezier(.2,.8,.2,1)' });
+	}
 	function slideUp(node: HTMLElement) {
 		const h = node.offsetHeight + 24,
 			o = sOff;
@@ -436,34 +455,45 @@
 	$effect(() => {
 		const el = sheet;
 		if (!el) return;
-		let d: { y0: number; ly: number; lt: number; vy: number; dy: number } | null = null;
+		// mode: 0 = noch offen (Antippen), 1 = Blatt ziehen, 2 = Liste scrollt selbst
+		let d: { y0: number; ly: number; lt: number; vy: number; dy: number; mode: 0 | 1 | 2 } | null = null;
 		const ts = (e: TouchEvent) => {
 			e.stopPropagation();
 			if (e.touches.length !== 1) return (d = null);
 			const y = e.touches[0].clientY;
-			d = { y0: y, ly: y, lt: e.timeStamp, vy: 0, dy: 0 };
+			d = { y0: y, ly: y, lt: e.timeStamp, vy: 0, dy: 0, mode: 0 };
 		};
 		const tm = (e: TouchEvent) => {
 			e.stopPropagation();
 			if (!d) return;
-			e.preventDefault();
 			const y = e.touches[0].clientY,
-				dt = e.timeStamp - d.lt;
+				raw = y - d.y0;
+			if (!d.mode) d.mode = open && list?.contains(e.target as Node) && (list.scrollTop > 0 || raw < 0) ? 2 : 1;
+			if (d.mode === 2) return;
+			e.preventDefault();
+			const dt = e.timeStamp - d.lt;
 			if (dt >= 12) {
 				d.vy = 0.6 * ((y - d.ly) / dt) + 0.4 * d.vy;
 				d.ly = y;
 				d.lt = e.timeStamp;
 			}
-			d.dy = Math.max(0, y - d.y0);
+			d.dy = raw;
+			// zugeklappt nach oben: mit Widerstand, aufgeklappt nur nach unten
+			const shown = raw >= 0 ? raw : open ? 0 : Math.max(-60, raw * 0.35);
 			el.style.transition = 'none';
-			el.style.transform = `translateY(${d.dy}px)`;
+			el.style.transform = `translateY(${shown}px)`;
 		};
 		const te = (e: TouchEvent) => {
 			e.stopPropagation();
 			if (!d) return;
-			const { dy, vy } = d;
+			const { dy, vy, mode } = d;
 			d = null;
-			if (dy > 70 || (vy > 0.5 && dy > 20)) {
+			if (mode !== 1) return;
+			if (!open && (dy < -40 || (vy < -0.3 && dy < -10))) {
+				setOpen(true, Math.max(-60, dy * 0.35));
+			} else if (open && (dy > 80 || (vy > 0.5 && dy > 20))) {
+				setOpen(false, dy);
+			} else if (!open && (dy > 70 || (vy > 0.5 && dy > 20))) {
 				sOff = dy;
 				picked = null;
 			} else {
@@ -491,6 +521,7 @@
 		if (!ui.passOpen) {
 			opened = false;
 			picked = null;
+			open = false;
 			return;
 		}
 		if (opened) return;
@@ -784,12 +815,15 @@
 								class:sel={picked === b.id}
 								data-badge={b.id}
 								aria-pressed={picked === b.id}
+								aria-label="{b.name}: {max ? tierName(b, b.level) + ' erreicht' : `${b.prog}, noch ${b.fmt(b.tiers[b.level] - b.v)} bis ${tierName(b, b.level + 1)}`}"
 								onclick={() => choose(picked === b.id ? null : b.id)}
 							>
-								<span class="pp-medal {max ? '' : 'n' + tc(b, b.level + 1)}" style="--p:{max ? 1 : b.p}" aria-hidden="true"><span><i>{b.icon}</i></span></span>
+								<span class="pp-medal" aria-hidden="true"><span><i>{b.icon}</i></span></span>
 								<b>{b.name}</b>
-								<span class="pp-pips" aria-hidden="true">{#each b.tiers as t, i (t)}<i class="{tc(b, i + 1)}" class:on={b.level > i}></i>{/each}</span>
-								<small>{max ? tierName(b, b.level) + ' ✓' : b.prog}</small>
+								<span class="pp-steps" aria-hidden="true">{#each b.seg as f, i (i)}<i class={tc(b, i + 1)} style="--f:{f}"></i>{/each}</span>
+								<small aria-hidden="true"
+									>{#if max}{tierName(b, b.level)} ✓{:else}noch {b.fmt(b.tiers[b.level] - b.v)} bis <em class={tc(b, b.level + 1)}>{tierName(b, b.level + 1)}</em>{/if}</small
+								>
 							</button>
 						{/each}
 					</div>
@@ -800,12 +834,25 @@
 			{/if}
 		{/if}
 	</div>
+	{#snippet row(it: DetailItem)}
+		{#if it.code}
+			{@const code = it.code}
+			<button type="button" class="pp-it" onclick={() => openCountry(code)}
+				><span class="pp-it-i">{flag(code)}</span><span><b>{it.label}</b>{#if it.sub}<small>{it.sub}</small>{/if}</span></button
+			>
+		{:else}
+			<div class="pp-it"><span class="pp-it-i">{it.icon}</span><span><b>{it.label}</b>{#if it.sub}<small>{it.sub}</small>{/if}</span></div>
+		{/if}
+	{/snippet}
+	{#if pick && open}
+		<button type="button" class="pp-scrim" aria-label="Liste zuklappen" onclick={() => setOpen(false)} transition:fade={{ duration: reduceMotion() ? 0 : 200 }}></button>
+	{/if}
 	{#if pick}
 		{@const max = pick.level >= pick.tiers.length}
-		<div class="pp-sheet {tierClass(pick)}" class:max bind:this={sheet} bind:offsetHeight={sheetH} transition:slideUp role="status">
-			<button type="button" class="pp-grab" aria-label="Details schließen" onclick={() => choose(null)}><i></i></button>
+		<div class="pp-sheet {tierClass(pick)}" class:max class:open bind:this={sheet} transition:slideUp role="status">
+			<button type="button" class="pp-grab" aria-label={open ? 'Liste zuklappen' : 'Details schließen'} onclick={() => (open ? setOpen(false) : choose(null))}><i></i></button>
 			<div class="pp-sh-top">
-				<span class="pp-medal {max ? '' : 'n' + tc(pick, pick.level + 1)}" style="--p:{max ? 1 : pick.p}" aria-hidden="true"><span><i>{pick.icon}</i></span></span>
+				<span class="pp-medal" aria-hidden="true"><span><i>{pick.icon}</i></span></span>
 				<div>
 					<b>{pick.name}</b>
 					<span>{pick.fmt(pick.v)} {pick.what}</span>
@@ -822,6 +869,26 @@
 			<span class="pp-tiers"
 				>{#each pick.tiers as t, i (t)}<i class:on={pick.level > i} class={tc(pick, i + 1)}>{pick.level > i ? '✓ ' : ''}{tierName(pick, i + 1)}: {pick.fmt(t)}</i>{/each}</span
 			>
+			{#if det}
+				<div class="pp-list" bind:this={list}>
+					{#if det.have.length}
+						<h4>{det.haveT} <span>{det.have.length}</span></h4>
+						<div class="pp-its">{#each det.have as it, i (i)}{@render row(it)}{/each}</div>
+					{/if}
+					{#if det.miss.length}
+						<h4>{det.missT} <span>{det.miss.length + (det.missMore ?? 0)}</span></h4>
+						{#if det.note}<p class="pp-lnote">{det.note}</p>{/if}
+						<div class="pp-its miss">{#each det.miss as it, i (i)}{@render row(it)}{/each}</div>
+						{#if det.missMore}<p class="pp-lnote">… und {det.missMore} weitere</p>{/if}
+					{:else if det.note}
+						<p class="pp-lnote">{det.note}</p>
+					{:else}
+						<p class="pp-lnote">Alles dabei 🎉</p>
+					{/if}
+				</div>
+			{:else}
+				<button type="button" class="pp-more" onclick={() => setOpen(true)}><i aria-hidden="true"></i>Was zählt – was fehlt noch?</button>
+			{/if}
 		</div>
 	{/if}
 </section>
