@@ -1,7 +1,7 @@
 import { CONT, nameOf } from './countries';
 
 /* Reisepass: Ränge und Stempel. Ein Stempel ist ein SVG-Text (Rahmen + Motiv + Name/Datum), eingefärbt über
-   currentColor. Rund 80 Länder haben ein eigenes Motiv, alle anderen einen schlichten Stempel mit
+   currentColor. Rund 110 Länder haben ein eigenes Motiv, alle anderen einen schlichten Stempel mit Regions- bzw.
    Kontinent-Symbol. Das Tinten-Aussehen kommt aus gemeinsamen Filtern (#pf0–#pf3, einmal in der Pass-Ansicht). */
 
 /* ---------- Ränge ---------- */
@@ -767,6 +767,224 @@ ${star(12, 10, 2.4)}${star(30, 18, 2)}${star(22, 4, 1.6)}${peng(30, 1.1)}${peng(
 <rect x="22" y="50" width="56" height="10" ${HALF} stroke-width="2.6"/><path d="M27,51 V59 M33,51 V59 M45,51 V59 M55,51 V59 M67,51 V59 M73,51 V59" stroke-width="1.6"/>
 <rect x="6" y="60" width="88" height="16" ${HALF} stroke-width="2.6"/><path d="M12,62 V76 M20,62 V76 M30,62 V76 M70,62 V76 M80,62 V76 M88,62 V76" stroke-width="2.2"/><path d="M44,76 V66 Q50,60 56,66 V76" ${SOLID}/>
 ${[10, 22, 34, 66, 78, 90].map((x) => `<circle cx="${x}" cy="57" r="1.6" ${SOLID}/>`).join('')}${GROUND}`, [0, -4, 100, 82]),
+	// Brunei: Omar-Ali-Saifuddien-Moschee in der Lagune mit Königsbarke
+	BN: () =>
+		M(`<path d="M50,8 V2 M47.5,4 Q50,7 52.5,4" stroke-width="1.8"/><path d="M38,40 Q35,26 50,14 Q65,26 62,40 Z" ${SOLID}/>
+<rect x="28" y="40" width="44" height="18" ${HALF} stroke-width="2.6"/>${[34, 42, 58, 66].map((x) => `<path d="M${x - 2.5},56 V48 Q${x},44 ${x + 2.5},48 V56 Z" ${SOLID}/>`).join('')}<path d="M46,58 V48 Q50,43 54,48 V58" ${SOLID}/>
+<path d="M27,40 Q31,33 35,40 Z M65,40 Q69,33 73,40 Z" ${SOLID}/><rect x="78" y="20" width="6" height="38" ${HALF} stroke-width="2.2"/><path d="M76.5,20 Q81,11 85.5,20 Z" ${SOLID}/><path d="M81,12 V6" stroke-width="1.6"/>
+<path d="M20,58 H90" stroke-width="2.6"/><path d="M4,62 Q6,68 14,68 H30 Q36,68 38,62 Z" ${SOLID}/><path d="M38,62 L42,57 M4,62 L2,57" stroke-width="2"/><path d="M14,62 V56 H28 V62" stroke-width="1.8"/>
+<path d="M30,66 V72 M70,66 V72 M50,66 V74" stroke-width="1.4" stroke-dasharray="2 2"/><path d="${waves(4, 77, 6, 15, 3)}" stroke-width="2.2"/>`),
+	// Dominikanische Republik: Buckelwal vor Samaná unter Palmen
+	DO: () =>
+		M(`${sun(84, 12, 7)}<path d="M14,58 Q12,40 22,22" stroke-width="3"/><path d="M22,22 Q12,16 4,24 M22,22 Q18,10 8,9 M22,22 Q30,10 40,12 M22,22 Q34,18 38,30 M22,22 Q24,14 20,7" stroke-width="2.8"/>
+<path d="M2,58 Q8,52 18,56 Q24,58 30,58" ${HALF} stroke-width="2.2"/>
+<path d="M58,60 L62,42 H68 L72,60 Z" ${SOLID}/><path d="M65,42 C56,40 48,32 44,20 Q52,24 58,24 Q63,26 65,31 Q67,26 72,24 Q78,24 86,20 C82,32 74,40 65,42 Z" ${SOLID}/>
+<path d="M46,26 V34 M84,26 V32 M50,30 V38" stroke-width="1.6" stroke-dasharray="2 3"/>
+<path d="M34,60 Q46,56 56,61 M74,61 Q84,56 98,60" stroke-width="2.4"/><path d="${waves(4, 68, 7, 14, 3)}" stroke-width="2"/><path d="${waves(10, 76, 6, 14, 3)}" stroke-width="2"/>`),
+	// Jamaika: Kolibri „Doctor Bird" an der Blüte
+	JM: () =>
+		M(`<path d="M10,76 Q6,62 12,50" stroke-width="2.4"/><path d="M12,50 Q4,48 2,40 Q10,40 12,50 Z" ${SOLID}/><path d="M22,38 L8,44 L14,52 Z" ${HALF} stroke-width="2.2"/><path d="M8,44 L5,42 M10,48 L6,49" stroke-width="1.6"/>
+<path d="M33,25 L19,37" stroke-width="2"/><circle cx="38" cy="22" r="6" ${SOLID}/><circle cx="39.5" cy="20.5" r="1.3" ${PAPER}/>
+<path d="M42,26 Q50,26 58,34 Q62,40 56,44 Q48,44 42,36 Q38,30 42,26 Z" ${SOLID}/><path d="M48,30 Q56,6 82,2 Q72,18 56,34 Z" ${HALF} stroke-width="2.4"/><path d="M54,26 Q62,14 74,8" stroke-width="1.4"/>
+<path d="M56,42 Q68,62 94,64 M58,40 Q74,58 92,74" stroke-width="2.2"/><path d="M94,64 q4,1 3,5 q-4,0 -3,-5 Z M92,74 q4,0 4,4 q-4,1 -4,-4 Z" ${SOLID}/>`),
+	// Bahamas: Flamingo im flachen Wasser
+	BS: () =>
+		M(`${sun(84, 14, 7)}<path d="M44,40 Q40,28 54,26 Q70,24 80,34 Q72,44 56,44 Q46,44 44,40 Z" ${SOLID}/><path d="M58,32 Q66,30 74,36" stroke="var(--paper)" stroke-width="1.6"/>
+<path d="M46,34 Q34,30 36,18 Q38,8 30,8 Q24,8 24,14" stroke-width="3.6"/><circle cx="27" cy="11" r="4" ${SOLID}/><path d="M23,12 Q18,14 19,21" stroke-width="2.8"/><circle cx="27.5" cy="10" r="1" ${PAPER}/>
+<path d="M58,44 V70" stroke-width="2.2"/><path d="M62,44 L70,54 L60,58" stroke-width="2"/>
+<path d="M44,70 Q58,66 72,70" stroke-width="2"/><path d="${waves(4, 72, 7, 14, 3)}" stroke-width="2"/><path d="${waves(12, 78, 6, 14, 3)}" stroke-width="2"/>`, [0, 2, 100, 78]),
+	// Panama: Frachter in der Kanalschleuse
+	PA: () =>
+		M(`<path d="M2,40 Q20,26 40,34 Q60,22 80,32 Q90,28 98,34" stroke-width="2"/><rect x="2" y="50" width="12" height="26" ${HALF} stroke-width="2.4"/><rect x="86" y="50" width="12" height="26" ${HALF} stroke-width="2.4"/>
+<path d="M14,52 H86" stroke-width="1.4" stroke-dasharray="3 3"/><path d="M16,52 H84 L78,64 H22 Z" ${SOLID}/><path d="M24,58 H76" stroke="var(--paper)" stroke-width="1.4"/>
+${[22, 32, 42, 52].map((x, i) => `<rect x="${x}" y="${i % 2 ? 40 : 44}" width="9" height="${i % 2 ? 12 : 8}" ${i % 2 ? SOLID : HALF} stroke-width="1.8"/>`).join('')}
+<rect x="66" y="32" width="12" height="20" ${HALF} stroke-width="2.2"/><path d="M68,37 H76" stroke-width="2.4"/><rect x="70" y="24" width="5" height="8" ${SOLID}/>
+<path d="M14,66 H86" stroke-width="2"/><path d="${waves(16, 72, 5, 14, 3)}" stroke-width="1.8"/>${GROUND}`),
+	// Zypern: Aphrodite-Felsen im Abendlicht
+	CY: () =>
+		M(`<path d="M60,56 A18,18 0 0 1 96,56" ${HALF} stroke-width="2.4"/><path d="M62,40 l-4,-4 M78,34 V28 M94,40 l4,-4" stroke-width="2"/>
+<path d="M14,22 q3,-3 6,0 q3,-3 6,0 M30,12 q2.5,-2.5 5,0 q2.5,-2.5 5,0" stroke-width="1.8"/>
+<path d="M32,60 Q32,34 46,30 Q58,30 62,44 L64,60 Z" ${SOLID}/><path d="M42,40 Q46,36 52,38" stroke="var(--paper)" stroke-width="1.6"/><path d="M14,60 Q16,48 24,48 Q30,50 30,60 Z" ${HALF} stroke-width="2.2"/>
+<path d="M2,60 H98" stroke-width="2.4"/><path d="M66,64 H92 M70,68 H88 M74,72 H84" stroke-width="1.8" stroke-dasharray="4 3"/><path d="${waves(4, 70, 4, 14, 3)}" stroke-width="2"/>${GROUND}`),
+	// Bulgarien: Rose aus dem Rosental
+	BG: () =>
+		M(`<path d="M30,30 Q26,52 50,58 Q74,52 70,30 Q64,44 50,44 Q36,44 30,30 Z" ${HALF} stroke-width="2.6"/>
+<path d="M38,34 Q36,18 50,15 Q64,18 62,34 Q56,40 50,36 Q44,40 38,34 Z" ${SOLID}/><path d="M50,31 Q44,27 49,22 Q56,22 55,29 M43,24 Q46,18 52,18" stroke="var(--paper)" stroke-width="1.6"/>
+<path d="M50,58 Q47,68 50,78" stroke-width="3"/><path d="M49,66 Q36,58 28,64 Q38,72 49,66 Z M51,72 Q64,62 73,67 Q63,76 51,72 Z" ${SOLID}/><path d="M48,62 l-3,-2 M51,70 l3,-1" stroke-width="1.4"/>
+<path d="M22,18 q-4,4 0,8 q4,-4 0,-8 Z M78,20 q-4,4 0,8 q4,-4 0,-8 Z" ${SOLID}/>`, [16, 12, 68, 66]),
+	// Rumänien: Schloss Bran auf dem Felsen
+	RO: () =>
+		M(`<path d="M86,6 A9,9 0 1 0 95,20 A7,7 0 1 1 86,6 Z" ${SOLID}/><path d="M66,12 q3,-4 6,0 q3,-4 6,0 l-6,3 Z" ${SOLID}/>
+<path d="M8,76 Q14,58 28,56 H74 Q88,58 94,76 Z" ${HALF} stroke-width="2.6"/><path d="M20,68 l6,-4 M70,66 l8,4" stroke-width="1.6"/>
+<rect x="30" y="32" width="38" height="24" ${HALF} stroke-width="2.6"/><path d="M28,34 L38,24 H62 L70,34 Z" ${SOLID}/>
+<rect x="18" y="22" width="13" height="34" ${HALF} stroke-width="2.4"/><path d="M16,22 L24.5,4 L33,22 Z" ${SOLID}/><rect x="64" y="26" width="12" height="30" ${HALF} stroke-width="2.4"/><path d="M62,26 L70,12 L78,26 Z" ${SOLID}/>
+${[[22, 30], [22, 42], [69, 34], [69, 44], [38, 40], [48, 40], [58, 40]].map(([x, y]) => `<rect x="${x}" y="${y}" width="4" height="6" ${SOLID}/>`).join('')}${GROUND}`),
+	// Montenegro: Bucht von Kotor mit Inselkirche
+	ME: () =>
+		M(`<path d="M2,62 L12,18 L22,30 L30,22 L42,62 Z" ${HALF} stroke-width="2.6"/><path d="M98,62 L88,12 L76,30 L70,24 L58,62 Z" ${HALF} stroke-width="2.6"/>
+<path d="M12,18 L16,28 L20,26 M88,12 L84,24 L80,22" stroke-width="1.6"/><path d="M2,62 H98" stroke-width="2.2"/>
+<ellipse cx="50" cy="62" rx="12" ry="3" ${SOLID}/><rect x="42" y="50" width="12" height="11" ${HALF} stroke-width="2"/><path d="M43,50 Q48,40 53,50 Z" ${SOLID}/><path d="M48,42 V38" stroke-width="1.4"/>
+<rect x="55" y="44" width="5" height="17" ${SOLID}/><path d="M54.5,44 L57.5,37 L60.5,44 Z" ${SOLID}/>
+<path d="M40,68 H60 M44,72 H56" stroke-width="1.6" stroke-dasharray="3 3"/><path d="${waves(4, 70, 2, 14, 3)}" stroke-width="2"/><path d="${waves(70, 70, 2, 14, 3)}" stroke-width="2"/>${GROUND}`),
+	// Estland: Türme der Tallinner Altstadt
+	EE: () => {
+		const tower = (x: number, w: number, top: number, spire: number) =>
+			`<rect x="${x - w / 2}" y="${top}" width="${w}" height="${56 - top}" ${HALF} stroke-width="2.4"/><path d="M${x - w / 2 - 2},${top} L${x},${top - spire} L${x + w / 2 + 2},${top} Z" ${SOLID}/><rect x="${x - 1.5}" y="${top + 6}" width="3" height="6" ${SOLID}/>`;
+		return M(`${tower(20, 14, 30, 22)}${tower(46, 10, 30, 30)}${tower(68, 12, 26, 20)}${tower(86, 10, 38, 14)}
+<rect x="2" y="56" width="96" height="20" ${HALF} stroke-width="2.6"/><path d="M2,56 V51 H8 V56 M14,56 V51 H20 V56 M80,56 V51 H86 V56 M92,56 V51 H98 V56" stroke-width="2"/>
+<path d="M42,76 V66 Q48,60 54,66 V76" ${SOLID}/><path d="M8,64 H34 M64,64 H92" stroke-width="1.4" stroke-dasharray="3 3"/>${GROUND}`, [0, -2, 100, 80]);
+	},
+	// Monaco: Jacht vor dem Felsen
+	MC: () =>
+		M(`<path d="M50,52 Q56,30 70,28 L78,22 H98 V52 Z" ${HALF} stroke-width="2.4"/>${[[62, 34], [70, 30], [80, 26], [90, 26]].map(([x, y]) => `<rect x="${x}" y="${y}" width="6" height="${52 - y}" fill="var(--paper)" stroke-width="1.6"/>`).join('')}
+<path d="M86,26 Q91,16 96,26" ${SOLID}/>${sun(16, 14, 6)}
+<path d="M6,56 H94 L86,68 H18 Z" ${SOLID}/><path d="M22,56 V48 H70 L78,56 M32,48 V40 H62 L66,48" ${HALF} stroke-width="2.2"/><path d="M26,52 H70 M36,44 H60" stroke-width="1.6" stroke-dasharray="3 2"/>
+<path d="M48,40 V30 M44,34 H52" stroke-width="1.8"/><path d="M12,62 H88" stroke="var(--paper)" stroke-width="1.4"/><path d="${waves(4, 76, 6, 15, 3)}" stroke-width="2.2"/>`),
+	// Georgien: Gergeti-Kirche vor dem Kasbek
+	GE: () =>
+		M(`<path d="M30,62 L62,8 L98,62 Z" ${HALF} stroke-width="2.6"/><path d="M52,25 L62,8 L72,25 L67,22 L62,28 L57,22 Z" ${SOLID}/>
+<path d="M2,76 Q10,52 28,48 Q44,48 56,76 Z" ${HALF} stroke-width="2.6"/>
+<rect x="16" y="38" width="22" height="10" ${SOLID}/><rect x="23" y="27" width="8" height="11" ${SOLID}/><path d="M22,27 L27,18 L32,27 Z" ${SOLID}/><path d="M27,18 V13 M25,15 H29" stroke-width="1.4"/>
+<rect x="40" y="40" width="5" height="8" ${SOLID}/><path d="M39.5,40 L42.5,35 L45.5,40 Z" ${SOLID}/><path d="M24,48 V43 Q27,40 30,43 V48" ${PAPER}/>
+<path d="M78,20 q3,-3 6,0 q3,-3 6,0" stroke-width="1.6"/>${GROUND}`),
+	// Armenien: Kloster Chor Virap vor dem Ararat
+	AM: () =>
+		M(`<path d="M4,58 L44,8 L66,34 L76,26 L98,58 Z" ${HALF} stroke-width="2.6"/><path d="M33,22 L44,8 L55,22 L50,20 L44,26 L38,20 Z M72,30 L76,26 L80,30 L76,32 Z" ${SOLID}/>
+<path d="M2,76 Q20,60 50,62 Q72,62 88,76" ${HALF} stroke-width="2.4"/>
+<path d="M28,64 V56 H32 V60 H36 V56 H40 V60 H60 V56 H64 V60 H68 V56 H72 V66 H28 Z" ${SOLID}/><rect x="42" y="46" width="16" height="14" ${SOLID}/><rect x="46" y="38" width="8" height="8" ${SOLID}/><path d="M45,38 L50,29 L55,38 Z" ${SOLID}/>
+<path d="M50,29 V24 M48,26 H52" stroke-width="1.4"/><path d="M48,60 V54 Q50,51 52,54 V60" ${PAPER}/>${GROUND}`),
+	// Aserbaidschan: Flame Towers in Baku
+	AZ: () => {
+		const flame = (x: number, w: number, top: number, fill: string) =>
+			`<path d="M${x - w},76 V${top + 30} Q${x - w},${top + 8} ${x + w * 0.2},${top} Q${x + w * 0.1},${top + 12} ${x + w},${top + 22} V76 Z" ${fill} stroke-width="2.6"/>`;
+		let win = '';
+		for (let y = 26; y < 72; y += 6) win += `M40,${y} H58 `;
+		return M(`${flame(26, 14, 22, HALF)}${flame(74, 14, 20, HALF)}${flame(50, 12, 2, SOLID)}<path d="${win}" stroke="var(--paper)" stroke-width="1.4" stroke-dasharray="3 2"/>
+<path d="M16,46 H36 M16,56 H36 M64,44 H84 M64,54 H84" stroke-width="1.4" stroke-dasharray="3 3"/><path d="M2,68 Q8,64 14,68" stroke-width="1.8"/>${GROUND}`);
+	},
+	// Kasachstan: Bajterek-Turm in Astana
+	KZ: () =>
+		M(`<path d="M42,76 Q47,52 43,32 M58,76 Q53,52 57,32 M50,74 V32" stroke-width="2.6"/><path d="M44,40 L56,48 M56,40 L44,48 M45,54 L55,62 M55,54 L45,62" stroke-width="1.4"/>
+<path d="M43,32 Q32,26 34,12 M57,32 Q68,26 66,12 M47,31 Q42,22 42,14 M53,31 Q58,22 58,14" stroke-width="2.2"/>
+<circle cx="50" cy="17" r="10" ${SOLID}/><path d="M44,13 Q47,9 51,9" stroke="var(--paper)" stroke-width="1.8"/>
+<rect x="36" y="70" width="28" height="6" ${HALF} stroke-width="2"/><rect x="6" y="56" width="14" height="20" ${HALF} stroke-width="2.2"/><rect x="80" y="50" width="14" height="26" ${HALF} stroke-width="2.2"/>
+<path d="M10,62 H16 M10,68 H16 M84,56 H90 M84,62 H90 M84,68 H90" stroke-width="1.6"/>${GROUND}`),
+	// Oman: Dau unter vollem Segel
+	OM: () =>
+		M(`${sun(86, 14, 7)}<path d="M52,58 L48,8" stroke-width="2.6"/><path d="M18,44 L80,4" stroke-width="2.6"/><path d="M22,42 L78,8 L64,56 Z" ${HALF} stroke-width="2.4"/>
+<path d="M6,48 L16,66 H80 L96,48 L86,54 H22 Z" ${SOLID}/><path d="M18,60 H84" stroke="var(--paper)" stroke-width="1.4"/><path d="M6,48 L4,42 M96,48 L98,44" stroke-width="2"/>
+<path d="${waves(4, 70, 7, 14, 3)}" stroke-width="2"/><path d="${waves(10, 77, 6, 14, 3)}" stroke-width="2"/>`),
+	// Katar: Falke auf dem Sitzblock
+	QA: () =>
+		M(`<path d="M41,22 Q34,40 40,58 L46,64 H58 L62,56 Q68,38 59,22 Z" ${SOLID}/><circle cx="50" cy="17" r="9" ${SOLID}/>
+<path d="M57,15 Q64,16 62,23 L59,20" ${SOLID}/><circle cx="53" cy="14.5" r="2.2" ${PAPER}/><circle cx="53.4" cy="14.5" r="1" ${SOLID}/><path d="M52,19 Q50,24 52,28" stroke="var(--paper)" stroke-width="1.6"/>
+<path d="M44,32 Q40,46 46,58 M48,36 Q46,46 50,54" stroke="var(--paper)" stroke-width="1.4"/><path d="M47,64 L45,74 H57 L55,64 Z" ${SOLID}/>
+<path d="M48,62 V68 M54,62 V68" stroke-width="2.2"/><rect x="34" y="66" width="34" height="5" rx="2" ${HALF} stroke-width="2"/><path d="M51,71 V76" stroke-width="3"/>
+<rect x="6" y="50" width="8" height="26" ${HALF} stroke-width="2"/><rect x="16" y="40" width="9" height="36" ${HALF} stroke-width="2"/><path d="M80,76 V46 Q86,30 92,46 V76" ${HALF} stroke-width="2"/>${GROUND}`),
+	// Saudi-Arabien: Elefantenfelsen bei AlUla
+	SA: () =>
+		M(`${star(14, 10, 2.4)}${star(30, 6, 1.8)}${star(84, 8, 2)}<path d="M66,12 A8,8 0 1 0 74,24 A6,6 0 1 1 66,12 Z" ${SOLID}/>
+<path d="M12,76 V48 Q12,24 38,22 Q64,20 74,34 Q82,44 82,58 Q82,68 86,76 H76 Q74,60 70,52 Q66,60 66,76 Z" ${SOLID}/>
+<path d="M22,36 Q30,30 40,32 M18,50 Q30,44 46,48 M50,30 Q58,34 60,44 M24,62 H44" stroke="var(--paper)" stroke-width="1.4"/>
+<path d="M2,72 Q20,66 40,72 Q70,66 98,72" stroke-width="1.8"/>${GROUND}`),
+	// Laos: Goldene Stupa That Luang
+	LA: () => {
+		let spires = '';
+		for (const x of [18, 28, 38, 62, 72, 82]) spires += `<path d="M${x - 3},60 L${x},48 L${x + 3},60 Z" ${SOLID}/>`;
+		return M(`<rect x="10" y="60" width="80" height="16" ${HALF} stroke-width="2.6"/><rect x="24" y="50" width="52" height="10" ${HALF} stroke-width="2.4"/>${spires}
+<path d="M36,50 Q36,38 50,32 Q64,38 64,50 Z" ${SOLID}/><path d="M42,50 Q44,42 50,38 Q56,42 58,50" stroke="var(--paper)" stroke-width="1.4"/><path d="M46,33 L50,2 L54,33 Z" ${SOLID}/>
+<path d="M47,18 H53 M46.5,24 H53.5" stroke="var(--paper)" stroke-width="1.2"/><path d="M44,76 V68 Q50,62 56,68 V76" ${SOLID}/><path d="M16,68 H38 M62,68 H84" stroke-width="1.4" stroke-dasharray="2 3"/>${GROUND}`);
+	},
+	// Hongkong: Dschunke vor der Skyline
+	HK: () =>
+		M(`${[[4, 30, 10], [16, 18, 9], [62, 26, 10], [74, 12, 8], [84, 28, 12]].map(([x, y, w]) => `<rect x="${x}" y="${y}" width="${w}" height="${58 - y}" ${HALF} stroke-width="1.8"/>`).join('')}
+<path d="M26,58 V22 L34,4 L42,22 V58" ${HALF} stroke-width="1.8"/><path d="M26,22 L42,40 M42,22 L26,40" stroke-width="1.2"/>
+<path d="M12,58 Q14,68 28,68 H70 Q84,68 88,56 L80,60 H18 Z" ${SOLID}/>
+<path d="M44,58 V16 Q60,20 64,56 Z" ${SOLID}/><path d="M66,58 V30 Q78,34 80,56 Z" ${SOLID}/><path d="M22,58 V34 Q32,38 34,56 Z" ${SOLID}/>
+<path d="M45,26 Q54,27 58,28 M45,36 Q55,36 60,38 M45,46 Q56,46 62,47 M67,40 Q74,41 77,42 M67,48 Q75,48 79,49 M23,44 Q29,44 31,45" stroke="var(--paper)" stroke-width="1.4"/>
+<path d="${waves(4, 72, 7, 14, 3)}" stroke-width="2"/><path d="${waves(10, 78, 6, 14, 3)}" stroke-width="2"/>`, [0, 2, 100, 78]),
+	// Bhutan: Kloster Tigernest an der Felswand
+	BT: () =>
+		M(`<path d="M62,2 Q54,18 60,34 Q50,52 56,76 H98 V2 Z" ${HALF} stroke-width="2.6"/><path d="M70,14 l6,8 M80,40 l8,6 M68,58 l6,10" stroke-width="1.4"/>
+<path d="M30,30 L38,24 H54 L62,30 Z" ${SOLID}/><rect x="34" y="30" width="24" height="12" fill="var(--paper)" stroke-width="2.2"/><path d="M40,34 V38 M46,34 V38 M52,34 V38" stroke-width="2"/>
+<path d="M20,46 L26,41 H44 L50,46 Z" ${SOLID}/><rect x="23" y="46" width="24" height="10" fill="var(--paper)" stroke-width="2.2"/><path d="M29,49 V53 M35,49 V53 M41,49 V53" stroke-width="2"/>
+<path d="M48,8 L50,24 M46,22 H54" stroke-width="1.6"/><path d="M2,62 Q14,54 26,58" stroke-width="1.6"/>${[6, 12, 18, 24].map((x, i) => `<rect x="${x - 2}" y="${58 + (i % 2) - (x - 2) / 8}" width="3.5" height="5" ${i % 2 ? SOLID : HALF} stroke-width="1"/>`).join('')}
+<path d="M4,30 q4,-6 10,-2 q4,-4 8,0" stroke-width="1.8"/><path d="M2,76 Q14,66 26,70 Q38,64 52,76" ${HALF} stroke-width="2"/>`),
+	// Seychellen: Granitfelsen und Palme auf La Digue
+	SC: () =>
+		M(`${sun(16, 14, 6)}<path d="M8,76 Q4,50 24,46 Q42,44 44,62 Q46,76 38,76 Z" ${HALF} stroke-width="2.6"/><path d="M38,76 Q34,38 60,34 Q80,34 82,56 L80,76 Z" ${HALF} stroke-width="2.6"/>
+<path d="M50,44 Q48,56 52,70 M60,40 Q58,54 62,72 M70,42 Q70,56 72,70 M20,52 Q18,62 22,72 M30,52 Q30,62 32,72" stroke-width="1.4"/>
+<path d="M90,76 Q92,46 76,22" stroke-width="3"/><path d="M76,22 Q64,18 58,28 M76,22 Q70,10 58,10 M76,22 Q84,8 96,12 M76,22 Q90,22 94,34 M76,22 Q78,14 74,6" stroke-width="2.8"/>
+<path d="M2,70 Q6,66 10,70" stroke-width="1.6"/>${GROUND}`),
+	// Botsuana: Mokoro im Okavango-Delta
+	BW: () =>
+		M(`${sun(84, 14, 7)}<path d="M8,76 V40 M14,76 V34 M20,76 V44" stroke-width="1.8"/>${[[8, 40], [14, 34], [20, 44]].map(([x, y]) => `<path d="M${x},${y} l-5,-6 M${x},${y} l0,-8 M${x},${y} l5,-6 M${x},${y} l-7,-2 M${x},${y} l7,-2" stroke-width="1.4"/>`).join('')}
+<path d="M26,60 Q54,70 90,60 Q56,64 26,60 Z" fill="currentColor" stroke="currentColor" stroke-width="2.4"/>
+<circle cx="66" cy="30" r="3.6" ${SOLID}/><path d="M66,34 V48 M66,48 L62,59 M66,48 L70,59 M66,38 L74,34" stroke-width="3"/><path d="M58,76 L80,14" stroke-width="1.8"/>
+<path d="M34,70 Q38,66 44,70 Z M80,70 Q84,66 90,70 Z" ${SOLID}/><path d="${waves(30, 76, 4, 14, 3)}" stroke-width="2"/>`),
+	// Ruanda: Berggorilla im Bambus
+	RW: () =>
+		M(`<path d="M8,76 V10 M92,76 V14 M16,76 V30" stroke-width="2"/><path d="M8,30 l-6,-4 M8,46 l6,-6 M92,32 l6,-4 M92,50 l-6,-6 M16,44 l6,-4" stroke-width="1.8"/>
+<path d="M24,76 Q20,50 30,38 Q34,30 40,28 Q38,16 48,12 Q58,10 61,20 Q62,26 59,30 Q72,32 78,46 Q84,60 82,76 Z" ${SOLID}/>
+<path d="M43,22 Q50,19 57,22 M44,26 Q50,23 56,26" stroke="var(--paper)" stroke-width="1.6"/><circle cx="46" cy="24.5" r="1.3" ${PAPER}/><circle cx="54" cy="24.5" r="1.3" ${PAPER}/>
+<path d="M46,32 Q50,35 54,32" stroke="var(--paper)" stroke-width="1.4"/><path d="M36,46 Q30,62 36,76 M70,46 Q76,62 70,76 M44,64 Q50,62 56,64" stroke="var(--paper)" stroke-width="1.6"/>`),
+	// Äthiopien: Felsenkirche Bet Giyorgis in Lalibela
+	ET: () =>
+		M(`<path d="M12,4 H88 Q94,4 94,10 V70 Q94,76 88,76 H12 Q6,76 6,70 V10 Q6,4 12,4 Z" ${HALF} stroke-width="2.4" stroke-dasharray="5 3"/>
+<path d="M40,10 H60 V30 H80 V50 H60 V70 H40 V50 H20 V30 H40 Z" ${SOLID}/><path d="M44,14 H56 V34 H76 V46 H56 V66 H44 V46 H24 V34 H44 Z M48,18 H52 V38 H72 V42 H52 V62 H48 V42 H28 V38 H48 Z" stroke="var(--paper)" stroke-width="1.4"/>`, [4, 2, 92, 76]),
+	// Senegal: bunte Pirogen am Strand
+	SN: () =>
+		M(`${sun(84, 12, 6)}<path d="M20,44 Q30,50 52,50 Q74,50 82,40 L78,44 Q66,46 52,46 Q34,46 22,40 Z" ${HALF} stroke-width="2"/>
+<path d="M6,54 Q18,68 50,68 Q80,68 94,50 L88,56 Q72,60 50,60 Q24,60 10,48 Z" ${SOLID}/><path d="M18,62 L26,58 L34,62 L42,58 L50,62 L58,58 L66,62 L74,58 L82,62" stroke="var(--paper)" stroke-width="1.4"/>
+<path d="M10,48 V36 M94,50 V38" stroke-width="2"/><path d="M10,36 l8,3 l-8,3 Z M94,38 l-8,3 l8,3 Z" ${SOLID}/><path d="M22,40 V32 M82,40 V32" stroke-width="1.6"/>
+<path d="M2,72 Q26,68 50,72 Q74,68 98,72" stroke-width="1.8"/>${GROUND}`),
+	// Venezuela: Salto Ángel am Tafelberg
+	VE: () =>
+		M(`<path d="M8,76 L16,22 Q18,14 28,14 H80 Q88,14 90,22 L96,76 Z" ${HALF} stroke-width="3"/><path d="M14,30 H24 M80,30 H90 M18,22 H34 M70,22 H86" stroke-width="1.4"/>
+<path d="M46,14 V58 M50,14 V62 M54,14 V58" stroke-width="2" stroke-dasharray="6 3"/><path d="M40,62 q4,-6 10,-2 q6,-4 10,2 q-10,4 -20,0 Z" ${SOLID}/>
+<path d="M30,8 q4,-6 10,-2 q4,-4 8,0 M64,8 q3,-4 7,-1 q3,-3 6,0" stroke-width="1.8"/>
+<path d="M2,76 Q4,64 12,66 Q16,58 24,64 Q30,58 36,66 Q42,60 48,68 Q56,62 62,68 Q68,58 76,64 Q82,58 88,66 Q94,62 98,68 V76 Z" ${SOLID}/>`),
+	// Uruguay: Mate-Becher mit Bombilla und Thermoskanne
+	UY: () =>
+		M(`<path d="M28,40 Q20,60 34,74 H60 Q74,60 66,40 Z" ${HALF} stroke-width="3"/><rect x="25" y="34" width="44" height="6" rx="2" ${SOLID}/><path d="M30,37 H64" stroke="var(--paper)" stroke-width="1.2" stroke-dasharray="2 2"/>
+<path d="M54,36 L70,4 M68,4 H74" stroke-width="3"/><path d="M30,74 H64" stroke-width="3"/><path d="M36,52 Q46,48 56,54" stroke-width="1.6"/>
+<rect x="78" y="28" width="14" height="48" rx="3" ${SOLID}/><path d="M80,28 V22 H90 V28 M90,24 H96 V30" stroke-width="2.4"/><path d="M80,40 H90 M80,62 H90" stroke="var(--paper)" stroke-width="1.6"/>
+${sun(14, 14, 6)}<path d="M14,4 V2 M14,24 V26 M4,14 H2 M24,14 H26 M7,7 L5.5,5.5 M21,21 L22.5,22.5 M21,7 L22.5,5.5 M7,21 L5.5,22.5" stroke-width="1.8"/>${GROUND}`),
+	// Ukraine: Sonnenblume über dem Weizenfeld
+	UA: () => {
+		let petals = '';
+		for (let i = 0; i < 16; i++) petals += `<path d="M0,-12 Q5,-20 0,-27 Q-5,-20 0,-12 Z" transform="rotate(${i * 22.5})" ${HALF} stroke-width="1.8"/>`;
+		let seeds = '';
+		for (const [x, y] of [[-4, -4], [4, -4], [0, 0], [-4, 4], [4, 4], [0, -7], [0, 7], [-7, 0], [7, 0]]) seeds += `<circle cx="${x}" cy="${y}" r="1" ${PAPER}/>`;
+		return M(`<g transform="translate(50,30)">${petals}<circle r="12" ${SOLID}/>${seeds}</g>
+<path d="M50,42 Q47,60 50,76" stroke-width="3.2"/><path d="M49,56 Q34,48 24,56 Q36,64 49,56 Z M51,64 Q66,54 76,62 Q64,70 51,64 Z" ${SOLID}/>
+<path d="M4,76 V62 M10,76 V58 M16,76 V64 M84,76 V60 M90,76 V56 M96,76 V62" stroke-width="1.8"/>${[[4, 62], [10, 58], [16, 64], [84, 60], [90, 56], [96, 62]].map(([x, y]) => `<ellipse cx="${x}" cy="${y - 3}" rx="1.8" ry="4" ${SOLID}/>`).join('')}${GROUND}`, [0, 0, 100, 80]);
+	},
+	// Libanon: Zeder
+	LB: () => {
+		let t = '';
+		for (const [y, w] of [[64, 42], [52, 34], [41, 26], [30, 18], [20, 10]])
+			t += `<path d="M${50 - w},${y} Q${50 - w / 2},${y - 10} 50,${y - 6} Q${50 + w / 2},${y - 10} ${50 + w},${y} Q${50 + w / 2},${y - 3} 50,${y + 1} Q${50 - w / 2},${y - 3} ${50 - w},${y} Z" ${SOLID}/>`;
+		return M(`<path d="M50,76 V12" stroke-width="4"/><path d="M50,62 L36,56 M50,50 L62,46 M50,40 L40,36" stroke-width="2.4"/>${t}<path d="M50,14 V8" stroke-width="2.4"/>${GROUND}`);
+	},
+	// Puerto Rico: Wachhäuschen (Garita) von El Morro
+	PR: () =>
+		M(`${sun(84, 14, 7)}<rect x="2" y="52" width="70" height="24" ${HALF} stroke-width="2.6"/><path d="M2,60 H72 M2,68 H72 M14,52 V60 M30,52 V60 M46,52 V60 M62,52 V60 M22,60 V68 M38,60 V68 M54,60 V68 M10,68 V76 M30,68 V76 M50,68 V76" stroke-width="1.4"/>
+<path d="M28,52 V30 H52 V52 Q40,60 28,52 Z" ${HALF} stroke-width="2.6"/><path d="M26,30 Q40,8 54,30 Z" ${SOLID}/><circle cx="40" cy="12" r="2.6" ${SOLID}/><path d="M26,30 H54" stroke-width="3"/>
+<rect x="38" y="34" width="4" height="12" ${SOLID}/><path d="M72,62 Q80,58 88,62 Q94,66 98,62" stroke-width="2"/><path d="${waves(74, 70, 2, 12, 3)}" stroke-width="1.8"/>${GROUND}`),
+	// Trinidad und Tobago: Steeldrum
+	TT: () =>
+		M(`<ellipse cx="50" cy="30" rx="32" ry="10" ${HALF} stroke-width="3"/><ellipse cx="42" cy="29" rx="7" ry="3" stroke-width="1.6"/><ellipse cx="58" cy="29" rx="7" ry="3" stroke-width="1.6"/><ellipse cx="50" cy="34" rx="5" ry="2" stroke-width="1.6"/><ellipse cx="50" cy="25" rx="5" ry="1.8" stroke-width="1.6"/>
+<path d="M18,30 V66 Q50,82 82,66 V30" stroke-width="3"/><path d="M18,46 Q50,58 82,46 M18,58 Q50,70 82,58" stroke-width="2.4"/><path d="M18,30 Q50,44 82,30 V40 Q50,54 18,40 Z" ${SOLID}/>
+<path d="M14,4 L40,22 M86,4 L60,22" stroke-width="2.6"/><circle cx="40" cy="22" r="3" ${SOLID}/><circle cx="60" cy="22" r="3" ${SOLID}/>
+<path d="M88,32 V20 L96,18 V30" stroke-width="1.8"/><circle cx="86" cy="32" r="2.4" ${SOLID}/><circle cx="94" cy="30" r="2.4" ${SOLID}/>`, [2, 0, 96, 80]),
+	// San Marino: die drei Türme auf dem Monte Titano
+	SM: () => {
+		const tw = (x: number, y: number) =>
+			`<rect x="${x - 5}" y="${y - 16}" width="10" height="16" ${SOLID}/><path d="M${x - 6},${y - 16} V${y - 20} H${x - 3} V${y - 17} H${x - 1} V${y - 20} H${x + 1} V${y - 17} H${x + 3} V${y - 20} H${x + 6} V${y - 16} Z" ${SOLID}/><path d="M${x},${y - 20} V${y - 28} q4,-1 6,2 q-3,2 -6,1" stroke-width="1.6"/><rect x="${x - 1.5}" y="${y - 10}" width="3" height="5" ${PAPER}/>`;
+		return M(`<path d="M2,76 L18,56 L40,40 L58,34 L80,38 L98,54 V76 Z" ${HALF} stroke-width="2.6"/><path d="M24,58 L30,64 M60,44 L64,52 M80,50 L84,58" stroke-width="1.4"/>
+${tw(24, 52)}${tw(54, 36)}${tw(80, 40)}<path d="M28,48 L50,34 M58,34 L76,38" stroke-width="1.6" stroke-dasharray="2 2"/>${GROUND}`, [0, 0, 100, 80]);
+	},
 	ZM: () => MOTIFS.ZW()
 };
 
@@ -814,19 +1032,57 @@ const CONT_MOTIFS: Record<string, () => Motif> = {
 	OC: () =>
 		M(`<path d="M4,70 Q28,70 38,46 Q48,22 70,22 Q90,24 88,40 Q86,50 76,46 Q70,38 78,34" fill="currentColor" fill-opacity=".2" stroke-width="3.4"/>
 <path d="M50,30 Q58,28 64,34 M44,44 Q50,40 56,44" stroke-width="2"/><path d="${waves(4, 76, 6, 15, 4)}" stroke-width="2.4"/>`),
+	// Karibik und Mittelamerika: Palmenstrand mit Segelboot
+	CAR: () =>
+		M(`${sun(86, 12, 7)}<path d="M2,76 Q20,64 48,72" ${HALF} stroke-width="2.4"/><path d="M22,70 Q18,44 32,22" stroke-width="3"/>
+<path d="M32,22 Q20,16 12,26 M32,22 Q28,8 16,8 M32,22 Q40,8 52,10 M32,22 Q46,20 48,32 M32,22 Q34,14 30,6" stroke-width="2.8"/><circle cx="30" cy="27" r="2.2" ${SOLID}/>
+<path d="M58,62 H90 L86,68 H62 Z" ${SOLID}/><path d="M74,60 V24 L90,58 Z" ${HALF} stroke-width="2.2"/><path d="M72,60 V30 L60,58 Z" ${HALF} stroke-width="2.2"/>
+<path d="${waves(50, 76, 3, 16, 3)}" stroke-width="2.2"/>`),
+	// Arabien und Sahara: Kamel in den Dünen unter der Mondsichel
+	DES: () =>
+		M(`<path d="M12,4 A9,9 0 1 0 21,18 A7,7 0 1 1 12,4 Z" ${SOLID}/>${star(28, 8, 2)}${star(90, 10, 2.4)}
+<path d="M2,66 Q30,54 56,64 Q76,56 98,64 V76 H2 Z" ${HALF} stroke-width="2.2"/>
+<path d="M20,46 Q22,36 32,34 Q42,20 52,32 Q60,34 64,40 L70,28 Q72,22 78,22 L83,24 Q85,27 81,28 L77,29 L72,46 Q68,52 64,53 L63,76 H60 L59,54 H54 L53,76 H50 L50,54 H36 L35,76 H32 L31,54 H28 L27,76 H24 L24,52 Q19,50 20,46 Z" ${SOLID}/>
+<path d="M20,46 Q16,50 17,58" stroke-width="1.8"/><circle cx="79" cy="25" r="1" ${PAPER}/>${GROUND}`),
 	// Antarktis und Sonstiges: Kompass
 	AN: () =>
 		M(`<circle cx="50" cy="40" r="30" stroke-width="3"/><path d="M50,14 L57,40 L50,66 L43,40 Z" fill="currentColor" fill-opacity=".3" stroke-width="2.4"/><path d="M50,14 L57,40 H43 Z" fill="currentColor" stroke="none"/>`, [10, 0, 80, 80])
 };
 
+/** Regionen mit eigenem Ersatz-Motiv (statt Kontinent-Symbol) */
+const REGION: Record<string, string> = {};
+for (const [k, list] of [
+	['CAR', 'AG AI AW BB BL BM BQ BS BZ CU CW DM DO GD GP HN HT JM KN KY LC MF MQ MS NI PA PR SV SX TC TT VC VG VI'],
+	['DES', 'BH DZ EH IQ IR JO KW LY MR OM PS QA SA SY YE']
+])
+	for (const c of list.split(' ')) REGION[c] = k;
+
 /* ---------- Rahmen ---------- */
-type Frame = 'tag' | 'oct' | 'oval' | 'rrect' | 'circle' | 'scallop' | 'zig' | 'tri' | 'hex' | 'notch';
+type Frame = 'tag' | 'oct' | 'oval' | 'rrect' | 'circle' | 'scallop' | 'zig' | 'tri' | 'hex' | 'notch' | 'shield' | 'diamond' | 'perf' | 'banner' | 'arch';
 type Txt = { name: string; date: string; nr: string };
 
 function place(m: Motif, [rx, ry, rw, rh]: number[]) {
 	const [bx, by, bw, bh] = m.box,
 		s = Math.min(rw / bw, rh / bh);
 	return `<g transform="translate(${f1(rx + (rw - bw * s) / 2 - bx * s)},${f1(ry + (rh - bh * s) / 2 - by * s)}) scale(${+s.toFixed(3)})">${m.svg}</g>`;
+}
+/** Briefmarken-Rand: Rechteck mit halbrunden Zähnen */
+function perfPath(x: number, y: number, w: number, h: number, r: number, s: number) {
+	let d = `M${x},${y}`;
+	const edge = (x0: number, y0: number, dx: number, dy: number, len: number) => {
+		const n = Math.round(len / s),
+			st = len / n;
+		for (let i = 0; i < n; i++) {
+			const c = st * (i + 0.5);
+			d += ` L${f1(x0 + dx * (c - r))},${f1(y0 + dy * (c - r))} A${r},${r} 0 0 0 ${f1(x0 + dx * (c + r))},${f1(y0 + dy * (c + r))}`;
+		}
+		d += ` L${x0 + dx * len},${y0 + dy * len}`;
+	};
+	edge(x, y, 1, 0, w);
+	edge(x + w, y, 0, 1, h);
+	edge(x + w, y + h, -1, 0, w);
+	edge(x, y + h, 0, -1, h);
+	return d + 'Z';
 }
 const below = (t: Txt) => (t.date ? `${t.date} · ${t.nr}` : t.nr);
 
@@ -890,6 +1146,32 @@ ${nameBlock(t.name, 100, 60, 112, 17)}${place(m, [46, 70, 108, 66])}${pill(100, 
 		'0 0 240 140',
 		`<path d="M12,6 H228 Q234,6 234,12 V56 A14,14 0 0 0 234,84 V128 Q234,134 228,134 H12 Q6,134 6,128 V84 A14,14 0 0 0 6,56 V12 Q6,6 12,6 Z" ${TINT} stroke-width="4"/>
 <rect x="26" y="16" width="188" height="108" rx="10" ${DOTS}/>${place(m, [128, 20, 84, 98])}${sideText(t, 74, 84, 13, 52, 64, 108)}`
+	],
+	shield: (t, m) => [
+		'0 0 200 220',
+		`<path d="M16,10 H184 V92 Q184,168 100,210 Q16,168 16,92 Z" ${TINT} stroke-width="4.5"/><path d="M28,22 H172 V92 Q172,158 100,196 Q28,158 28,92 Z" ${DOTS}/>
+${nameBlock(t.name, 100, 52, 132, 15)}${place(m, [50, 64, 100, 76])}${small(100, 162, below(t), 10)}`
+	],
+	diamond: (t, m) => [
+		'0 0 220 220',
+		`<path d="M110,6 L214,110 L110,214 L6,110 Z" ${TINT} stroke-width="4.5"/><path d="M110,22 L198,110 L110,198 L22,110 Z" ${DOTS}/>
+${place(m, [56, 36, 108, 86])}${nameBlock(t.name, 110, 143, 116, 13)}${small(110, 159, below(t), 9.5)}`
+	],
+	perf: (t, m) => [
+		'0 0 180 210',
+		`<path d="${perfPath(6, 6, 168, 198, 4.5, 15)}" ${TINT} stroke-width="3"/><rect x="18" y="18" width="144" height="174" stroke-width="2.4"/>
+${place(m, [28, 26, 124, 96])}${nameBlock(t.name, 90, 154, 112, 14)}${small(90, 178, below(t), 10.5)}`
+	],
+	banner: (t, m) => [
+		'0 0 220 200',
+		`<circle cx="110" cy="100" r="88" ${TINT} stroke-width="4"/><circle cx="110" cy="100" r="76" ${DOTS}/>${place(m, [62, 30, 96, 78])}
+<path d="M4,112 H216 L206,125 L216,138 H4 L14,125 Z" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+<text class="k" x="110" y="${f1(125 + fit(t.name, 172, 15) * 0.36)}" font-family="var(--display)" font-weight="800" font-size="${fit(t.name, 172, 15)}" text-anchor="middle" letter-spacing=".5">${esc(t.name)}</text>${small(110, 160, below(t), 10.5)}`
+	],
+	arch: (t, m) => [
+		'0 0 180 220',
+		`<path d="M10,212 V88 A80,80 0 0 1 170,88 V212 Z" ${TINT} stroke-width="4.5"/><path d="M22,200 V88 A68,68 0 0 1 158,88 V200 Z" ${DOTS}/>
+${place(m, [40, 40, 100, 84])}${nameBlock(t.name, 90, 150, 124, 14)}${pill(90, 164, below(t), 10.5)}`
 	]
 };
 
@@ -900,7 +1182,7 @@ const DEFS: Record<string, StampDef> = {
 	CA: { f: 'tag', c: 'red' },
 	NO: { f: 'oct', c: 'navy' },
 	FR: { f: 'oval', c: 'blue' },
-	IT: { f: 'rrect', c: 'green' },
+	IT: { f: 'perf', c: 'green' },
 	GR: { f: 'circle', c: 'teal' },
 	EG: { f: 'tri', c: 'gold' },
 	JP: { f: 'scallop', c: 'coral' },
@@ -915,7 +1197,7 @@ const DEFS: Record<string, StampDef> = {
 	TR: { f: 'circle', c: 'coral' },
 	HR: { f: 'circle', c: 'blue' },
 	AT: { f: 'oct', c: 'red' },
-	CH: { f: 'rrect', c: 'red' },
+	CH: { f: 'shield', c: 'red' },
 	NL: { f: 'tag', c: 'coral' },
 	IS: { f: 'hex', c: 'navy' },
 	MA: { f: 'oct', c: 'brown' },
@@ -927,7 +1209,7 @@ const DEFS: Record<string, StampDef> = {
 	NZ: { f: 'hex', c: 'green', short: 'NEUSEELAND' },
 	BR: { f: 'oval', c: 'green' },
 	CN: { f: 'tag', c: 'red' },
-	DE: { f: 'rrect', c: 'navy' },
+	DE: { f: 'arch', c: 'navy' },
 	AE: { f: 'oct', c: 'gold', short: 'EMIRATE' },
 	MV: { f: 'circle', c: 'teal' },
 	TZ: { f: 'oct', c: 'gold' },
@@ -973,10 +1255,52 @@ const DEFS: Record<string, StampDef> = {
 	MU: { f: 'oct', c: 'plum' },
 	AQ: { f: 'zig', c: 'navy' },
 	GL: { f: 'scallop', c: 'teal' },
-	VA: { f: 'circle', c: 'gold', short: 'VATIKAN' }
+	VA: { f: 'circle', c: 'gold', short: 'VATIKAN' },
+	BN: { f: 'arch', c: 'gold' },
+	DO: { f: 'shield', c: 'blue' },
+	JM: { f: 'banner', c: 'green' },
+	BS: { f: 'perf', c: 'coral' },
+	PA: { f: 'tag', c: 'blue' },
+	CY: { f: 'diamond', c: 'coral' },
+	BG: { f: 'perf', c: 'red' },
+	RO: { f: 'shield', c: 'plum' },
+	ME: { f: 'banner', c: 'navy' },
+	EE: { f: 'arch', c: 'blue' },
+	MC: { f: 'diamond', c: 'red' },
+	GE: { f: 'shield', c: 'red' },
+	AM: { f: 'arch', c: 'coral' },
+	AZ: { f: 'banner', c: 'teal' },
+	KZ: { f: 'diamond', c: 'gold' },
+	OM: { f: 'perf', c: 'brown' },
+	QA: { f: 'diamond', c: 'plum' },
+	SA: { f: 'arch', c: 'green' },
+	LA: { f: 'shield', c: 'gold' },
+	HK: { f: 'banner', c: 'red' },
+	BT: { f: 'perf', c: 'plum' },
+	SC: { f: 'banner', c: 'teal' },
+	BW: { f: 'diamond', c: 'brown' },
+	RW: { f: 'shield', c: 'green' },
+	ET: { f: 'perf', c: 'green' },
+	SN: { f: 'tag', c: 'gold' },
+	VE: { f: 'shield', c: 'teal' },
+	UY: { f: 'banner', c: 'blue' },
+	UA: { f: 'perf', c: 'gold' },
+	LB: { f: 'diamond', c: 'green' },
+	PR: { f: 'arch', c: 'navy' },
+	TT: { f: 'perf', c: 'red' },
+	SM: { f: 'banner', c: 'plum' }
+};
+/** Kurze Stempelnamen für lange amtliche Namen (Länder ohne eigenen Kurznamen im Stempel) */
+const SHORT: Record<string, string> = {
+	BN: 'Brunei', CD: 'DR Kongo', CG: 'Kongo', CF: 'Zentralafrika', AG: 'Antigua & Barbuda', KN: 'St. Kitts & Nevis', VC: 'St. Vincent',
+	TT: 'Trinidad & Tobago', ST: 'São Tomé', PS: 'Palästina', MD: 'Moldau', BQ: 'Bonaire', GS: 'Südgeorgien', HM: 'Heard-Insel', IO: 'Chagos-Inseln',
+	TF: 'Franz. Süd-Gebiete', UM: 'US-Überseeinseln', VG: 'Brit. Jungferninseln', VI: 'US-Jungferninseln', TC: 'Turks & Caicos', PM: 'St. Pierre',
+	SJ: 'Spitzbergen', AX: 'Åland', MP: 'Nördl. Marianen', GF: 'Franz.-Guayana', VA: 'Vatikan', BA: 'Bosnien'
 };
 const COLORS = ['teal', 'coral', 'gold', 'blue', 'plum', 'green', 'red', 'navy', 'brown'];
-const GENERIC: Frame[] = ['circle', 'scallop', 'zig', 'oct', 'hex'];
+const GENERIC: Frame[] = ['circle', 'scallop', 'zig', 'oct', 'hex', 'shield', 'diamond', 'perf', 'banner', 'arch'];
+/** Rahmen mit Platz für zwei Namenszeilen (für lange Namen; Kreis-Bögen und Banner haben nur eine Zeile) */
+const TWO_LINE: Frame[] = ['oct', 'hex', 'shield', 'perf', 'arch', 'tag', 'notch'];
 /** fester Zufall je Land (immer gleich) */
 const hash = (s: string) => {
 	let h = 2166136261;
@@ -1002,17 +1326,17 @@ export function stamp(code: string, nr: number, entered?: string): Stamp {
 	if (hit) return hit;
 	const h = hash(code),
 		def = DEFS[code];
-	const frame: Frame = def?.f ?? GENERIC[h % GENERIC.length];
-	const motif = (MOTIFS[code] && def ? MOTIFS[code] : (CONT_MOTIFS[CONT[code]] ?? CONT_MOTIFS.AN))();
-	const name = (def?.short ?? nameOf(code)).toLocaleUpperCase('de').replace(/ẞ/g, 'SS');
+	const name = (def?.short ?? SHORT[code] ?? nameOf(code)).toLocaleUpperCase('de').replace(/ẞ/g, 'SS');
+	const frame: Frame = def?.f ?? (name.length > 13 ? TWO_LINE[h % TWO_LINE.length] : GENERIC[h % GENERIC.length]);
+	const motif = (MOTIFS[code] && def ? MOTIFS[code] : (CONT_MOTIFS[REGION[code] ?? CONT[code]] ?? CONT_MOTIFS.AN))();
 	const [vb, inner] = FRAMES[frame]({ name, date: stampDate(entered), nr: `Nr. ${nr}` }, motif);
 	const wide = +vb.split(' ')[2] / +vb.split(' ')[3] > 1.25;
 	const s: Stamp = {
 		svg: `<svg class="pp-stamp" viewBox="${vb}" aria-hidden="true"><g filter="url(#pf${h % 4})" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-linecap="round">${inner}</g></svg>`,
-		color: `var(--st-${def?.c ?? COLORS[(h >> 3) % COLORS.length]})`,
-		rot: ((h >> 6) % 15) - 7,
-		dy: ((h >> 10) % 9) - 4,
-		w: wide ? 94 + ((h >> 14) % 5) : 84 + ((h >> 14) % 5)
+		color: `var(--st-${def?.c ?? COLORS[(h >>> 3) % COLORS.length]})`,
+		rot: ((h >>> 6) % 15) - 7,
+		dy: ((h >>> 10) % 9) - 4,
+		w: wide ? 94 + ((h >>> 14) % 5) : 84 + ((h >>> 14) % 5)
 	};
 	if (cache.size > 400) cache.clear();
 	cache.set(key, s);

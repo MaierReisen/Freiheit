@@ -105,6 +105,7 @@
 	let book = $state.raw<HTMLDivElement>(undefined as unknown as HTMLDivElement);
 	let strip = $state.raw<HTMLDivElement>(undefined as unknown as HTMLDivElement);
 	let cur = $state(0);
+	let shown = $state(0); // Seitenzahl in der Leiste: springt schon beim Umblättern um, nicht erst wenn die Seite liegt
 	let near = $state<number[]>([0, 1]); // vorbereitete Seiten (aktuelle ± 1), wird nach dem Blättern im Leerlauf nachgezogen
 	$effect(() => {
 		const c = cur;
@@ -179,6 +180,7 @@
 	function run(goal: 0 | 1) {
 		if (!turn) return;
 		turn.goal = goal;
+		shown = goal ? turn.to : turn.from;
 		cancelAnimationFrame(raf);
 		last = performance.now();
 		raf = requestAnimationFrame(step);
@@ -187,7 +189,7 @@
 		const t = turn!;
 		turn = null;
 		if (ok) {
-			cur = t.to;
+			cur = shown = t.to;
 			navigator.vibrate?.(6);
 		}
 		// Ebenen erst lösen, wenn Svelte die neue aktuelle Seite markiert hat (sonst blitzt die alte kurz auf)
@@ -200,13 +202,13 @@
 		const t = turn;
 		turn = null;
 		clearTurn(t);
-		cur = t.goal ? t.to : t.from;
+		cur = shown = t.goal ? t.to : t.from;
 	}
 	function goPage(i: number) {
 		i = Math.max(0, Math.min(pages.length - 1, i));
 		stopTurn();
 		if (i === cur) return;
-		if (reduceMotion() || !book) return void (cur = i);
+		if (reduceMotion() || !book) return void (cur = shown = i);
 		const t: Turn = { from: cur, to: i, p: 0, v: 0.005, goal: 1, w: 0 };
 		turn = t;
 		begin(t);
@@ -256,6 +258,8 @@
 			d.lt = ts;
 		}
 		t.p = pOf(t, x - d.x0);
+		const sh = t.from !== t.to && t.p > 0.5 ? t.to : t.from;
+		if (sh !== shown) shown = sh;
 		if (!raf) raf = requestAnimationFrame(() => { raf = 0; paint(); });
 		return true;
 	}
@@ -312,7 +316,7 @@
 	}
 	// aktive Seitenzahl in der Leiste mittig halten
 	$effect(() => {
-		const i = cur;
+		const i = shown;
 		const el = strip?.children[i + 1] as HTMLElement | undefined; // [0] = Zurück-Pfeil
 		if (el) strip.scrollTo({ left: el.offsetLeft - strip.clientWidth / 2 + el.clientWidth / 2, behavior: 'auto' });
 	});
@@ -422,7 +426,7 @@
 			markSeen(codes);
 			body?.scrollTo(0, 0);
 			stopTurn();
-			cur = 0;
+			cur = shown = 0;
 			if (!fresh.length || reduceMotion()) return;
 			pending = fresh;
 			play(fresh);
@@ -579,7 +583,7 @@
 					<div class="pp-strip" bind:this={strip} role="group" aria-label="Seite wählen">
 						<button type="button" class="pp-arrow" aria-label="Vorherige Seite" disabled={cur <= 0} onclick={() => goPage(cur - 1)}>‹</button>
 						{#each pages as _, pi (pi)}
-							<button type="button" class:on={pi === cur} aria-label="Seite {pi + 1}" aria-current={pi === cur ? 'page' : undefined} onclick={() => goPage(pi)}>{pi + 1}</button>
+							<button type="button" class:on={pi === shown} aria-label="Seite {pi + 1}" aria-current={pi === shown ? 'page' : undefined} onclick={() => goPage(pi)}>{pi + 1}</button>
 						{/each}
 						<button type="button" class="pp-arrow" aria-label="Nächste Seite" disabled={cur >= pages.length - 1} onclick={() => goPage(cur + 1)}>›</button>
 					</div>
