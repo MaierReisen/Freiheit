@@ -822,7 +822,7 @@
 								<b>{b.name}</b>
 								<span class="pp-steps" aria-hidden="true">{#each b.seg as f, i (i)}<i class={tc(b, i + 1)} style="--f:{f}"></i>{/each}</span>
 								<small aria-hidden="true"
-									>{#if max}{tierName(b, b.level)} ✓{:else}noch {b.fmt(b.tiers[b.level] - b.v)} bis <em class={tc(b, b.level + 1)}>{tierName(b, b.level + 1)}</em>{/if}</small
+									>{#if max}{tierName(b, b.level)} ✓{:else}noch {b.fmt(b.tiers[b.level] - b.v).replace(' ', '\u00a0')} bis <em class={tc(b, b.level + 1)}>{tierName(b, b.level + 1)}</em>{/if}</small
 								>
 							</button>
 						{/each}
