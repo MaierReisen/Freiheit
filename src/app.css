@@ -661,26 +661,31 @@ button.pp-tile:active{transform:scale(.98)}
   --bzg:conic-gradient(from 30deg,#7A4520,#E0A16B,#9C5A2B,#F0B98A,#8A4E25,#D08A50,#7A4520);
   --svg:conic-gradient(from 30deg,#7E8892,#F4F7FA,#9AA5AF,#FFFFFF,#8994A0,#DCE3E9,#7E8892);
   --gdg:conic-gradient(from 30deg,#8A6514,#F2D98A,#B0841C,#FFF0B8,#9C7418,#E2BE5A,#8A6514);
-  --gdl:linear-gradient(135deg,#9C7418,#F2D98A 35%,#B88A1E 60%,#F7E3A1 85%,#A57B16)}
+  --gdl:linear-gradient(135deg,#9C7418,#F2D98A 35%,#B88A1E 60%,#F7E3A1 85%,#A57B16);
+  --bzl:linear-gradient(135deg,#7A4520,#E8A874 35%,#9C5A2B 60%,#F0B98A 85%,#8A4E25);
+  --svl:linear-gradient(135deg,#7E8892,#F4F7FA 35%,#9AA5AF 60%,#FFFFFF 85%,#8994A0)}
 .pp-visa{margin-bottom:16px;padding:16px 10px 14px;background:var(--paper);border:1px solid var(--line);border-radius:var(--r-lg)}
 .pp-badges{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px 4px;padding-top:6px}
 .pp-badge{display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 2px;border:0;border-radius:var(--r-md);background:none;color:var(--ink);text-align:center;-webkit-tap-highlight-color:transparent;transition:background .15s}
 .pp-badge.sel{background:color-mix(in srgb,var(--primary) 12%,transparent)}
 .pp-badge b{font-size:13px;line-height:1.2;hyphens:auto;max-width:100%}
 .pp-badge small{font-size:11.5px;text-wrap:balance;font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums}
-/* Ring = Fortschritt zur nächsten Stufe, in deren Farbe; volle Stufe = Metallring */
+/* Medaille: Metallring + gewölbte Fläche in der erreichten Stufe */
 .pp-medal{--t:var(--chip);position:relative;width:66px;height:66px;border-radius:50%;display:grid;place-items:center;background:var(--t)}
 .pp-medal span{width:56px;height:56px;border-radius:50%;display:grid;place-items:center;font-size:28px;background:var(--paper);border:2px dashed var(--line)}
 .pp-medal i{font-style:normal}
 .pp-badge:not(.t1,.t2,.t3) .pp-medal i,.pp-sheet:not(.t1,.t2,.t3) .pp-medal i{filter:grayscale(1) brightness(1.25);opacity:.7}
-.t1 .pp-medal{--t:var(--bz)}.t2 .pp-medal{--t:var(--sv)}.t3 .pp-medal{--t:var(--gd)}
-.pp-badge:is(.t1,.t2,.t3) .pp-medal span,.pp-sheet:is(.t1,.t2,.t3) .pp-medal span{border:0;background:radial-gradient(circle at 35% 30%,color-mix(in srgb,var(--t) 28%,var(--paper)),var(--paper) 70%)}
-.max.t1 .pp-medal{background:var(--bzg)}.max.t2 .pp-medal{background:var(--svg)}
-.max.t3 .pp-medal{background:var(--gdg);box-shadow:0 4px 16px -4px rgba(176,132,28,.6)}
+.t1 .pp-medal{--t:var(--bz);background:var(--bzg)}.t2 .pp-medal{--t:var(--sv);background:var(--svg)}.t3 .pp-medal{--t:var(--gd);background:var(--gdg)}
+.pp-badge:is(.t1,.t2,.t3) .pp-medal,.pp-sheet:is(.t1,.t2,.t3) .pp-medal{box-shadow:inset 0 1px 1px rgba(255,255,255,.6),inset 0 -1px 2px rgba(0,0,0,.35),0 2px 6px -2px rgba(0,0,0,.45)}
+.pp-badge:is(.t1,.t2,.t3) .pp-medal span,.pp-sheet:is(.t1,.t2,.t3) .pp-medal span{border:0;background:radial-gradient(circle at 32% 26%,rgba(255,255,255,.55),transparent 38%),radial-gradient(circle at 50% 55%,color-mix(in srgb,var(--t) 40%,var(--paper)),color-mix(in srgb,var(--t) 12%,var(--paper)) 75%);box-shadow:inset 0 2px 3px rgba(0,0,0,.3),inset 0 -1px 1px rgba(255,255,255,.4)}
+/* höchste Stufe: zusätzlich Glanz nach außen */
+.pp-badge.max.t1 .pp-medal,.pp-sheet.max.t1 .pp-medal{box-shadow:inset 0 1px 1px rgba(255,255,255,.6),0 4px 14px -4px rgba(156,90,43,.7)}
+.pp-badge.max.t2 .pp-medal,.pp-sheet.max.t2 .pp-medal{box-shadow:inset 0 1px 1px rgba(255,255,255,.7),0 4px 14px -4px rgba(137,148,160,.8)}
+.pp-badge.max.t3 .pp-medal,.pp-sheet.max.t3 .pp-medal{box-shadow:inset 0 1px 1px rgba(255,255,255,.7),0 4px 16px -4px rgba(176,132,28,.75)}
 /* Stufenleiste: ein Abschnitt je Stufe, gefüllt in deren Farbe */
 .pp-steps{display:flex;gap:3px;width:100%;max-width:96px;margin:4px 0 1px}
-.pp-steps i{--c:var(--primary);flex:1;height:7px;border-radius:4px;background:linear-gradient(90deg,var(--c) calc(var(--f)*100%),var(--chip) 0)}
-.pp-steps i.t1{--c:var(--bz)}.pp-steps i.t2{--c:var(--sv)}.pp-steps i.t3{--c:var(--gd)}
+.pp-steps i{--m:var(--primary);flex:1;height:7px;border-radius:4px;background:linear-gradient(var(--chip),var(--chip)) right/calc((1 - var(--f))*100%) 100% no-repeat,var(--m);box-shadow:inset 0 1px 0 rgba(255,255,255,.25)}
+.pp-steps i.t1{--m:var(--bzl)}.pp-steps i.t2{--m:var(--svl)}.pp-steps i.t3{--m:var(--gdl)}
 .pp-badge small em{font-style:normal}
 .pp-badge small em.t1,.pp-badge.max.t1 small{color:var(--bz)}
 .pp-badge small em.t2,.pp-badge.max.t2 small{color:color-mix(in srgb,var(--sv) 45%,var(--ink))}
@@ -715,11 +720,11 @@ button.pp-tile:active{transform:scale(.98)}
 .pp-next-t>span:last-child{color:var(--muted)}
 .pp-bar{height:10px;border-radius:5px;background:var(--chip);overflow:hidden}
 .pp-bar i{display:block;height:100%;border-radius:5px;background:var(--primary)}
-.pp-next.t1 .pp-bar i{background:var(--bz)}.pp-next.t2 .pp-bar i{background:var(--sv)}.pp-next.t3 .pp-bar i{background:var(--gdl)}
+.pp-next.t1 .pp-bar i{background:var(--bzl)}.pp-next.t2 .pp-bar i{background:var(--svl)}.pp-next.t3 .pp-bar i{background:var(--gdl)}
 .pp-done{margin:0;font-weight:600}
 .pp-tiers{display:flex;flex-wrap:wrap;gap:6px}
 .pp-tiers i{font-style:normal;font-size:12.5px;padding:4px 10px;border-radius:99px;background:var(--chip);color:var(--muted)}
-.pp-tiers i.on.t1{background:var(--bz);color:#fff}.pp-tiers i.on.t2{background:var(--sv);color:#0D2B3A}.pp-tiers i.on.t3{background:var(--gdl);color:#3A2A05}
+.pp-tiers i.on.t1{background:var(--bzl);color:#fff;text-shadow:0 1px 1px rgba(0,0,0,.35)}.pp-tiers i.on.t2{background:var(--svl);color:#0D2B3A}.pp-tiers i.on.t3{background:var(--gdl);color:#3A2A05}
 
 /* Länderseite: Einreisedatum */
 .cs-date{position:relative;cursor:pointer}

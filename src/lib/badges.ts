@@ -68,7 +68,7 @@ const ISLANDS = set(
 	'AG AU BS BB BH CV KM CU CY DM DO FJ GD HT IS ID IE JM JP KI LK MG MV MT MH FM MU NR NZ PW PG PH KN LC VC WS ST SC SG SB TL TO TT TV GB VU TW BN'
 );
 const EQUATOR = set('EC CO BR GA CG CD UG KE SO ID KI MV ST');
-const POLAR = set('NO SE FI IS RU CA US');
+const POLAR = set('NO SE FI IS RU CA US AQ');
 const MICRO = set('VA SM MC LI AD LU MT');
 const count = (x: BadgeCtx, s: Set<string>) => x.codes.filter((c) => s.has(c)).length;
 const distinct = (x: BadgeCtx, f: (fa: Facts) => string[] | undefined) => new Set(x.codes.flatMap((c) => f(x.facts[c] ?? {}) ?? [])).size;
@@ -101,7 +101,7 @@ const pool =
 		return {
 			haveT: 'Zählt schon',
 			have: all.filter((c) => v.has(c)).map((c) => land(c, sub?.(c, x))).sort(byName),
-			missT: 'Fehlt noch',
+			missT: 'Noch offen',
 			miss: all.filter((c) => !v.has(c)).map((c) => land(c, sub?.(c, x))).sort(byName)
 		};
 	};
@@ -247,16 +247,15 @@ function defs(scope: CountryScope, facts: Record<string, Facts>): Def[] {
 		{ id: 'giant', name: 'Giganten', icon: '🐘', what: 'der 10 größten Länder', tiers: [3, 6, 10], val: (x) => count(x, giants), detail: pool(() => [...giants].sort((a, b) => area(b) - area(a)), (c) => num(Math.round(area(c) / 1000) * 1000) + ' km²') },
 		{ id: 'pop', name: 'Milliarden-Club', icon: '👥', what: 'Menschen leben dort', tiers: [1e9, 3e9, 5e9], val: (x) => x.codes.reduce((s, c) => s + (x.facts[c]?.pop ?? 0), 0), fmt: popFmt, detail: ranked(all, (c) => facts[c]?.pop ?? 0, popFmt) },
 		{ id: 'area', name: 'Landnahme', icon: '📐', what: 'der Landfläche der Erde', tiers: [10, 25, 50], val: (x) => Math.floor((x.codes.reduce((s, c) => s + area(c), 0) / worldArea) * 100), fmt: (v) => v + ' %', detail: ranked(all, area, (a) => (a / worldArea * 100).toLocaleString('de-DE', { maximumFractionDigits: a / worldArea < 0.001 ? 2 : 1 }) + ' %') },
-		{ id: 'eq', name: 'Äquatortaufe', icon: '🌞', what: 'Land am Äquator', tiers: [1], val: (x) => count(x, EQUATOR), detail: pool(() => all.filter((c) => EQUATOR.has(c))) },
-		{ id: 'polar', name: 'Polarkreis', icon: '🌌', what: 'Länder am Polarkreis', tiers: [1, 4, POLAR.size], val: (x) => count(x, POLAR), detail: pool(() => all.filter((c) => POLAR.has(c))) },
-		{ id: 'ice', name: 'Ewiges Eis', icon: '🐧', what: 'Antarktis', tiers: [1], val: (x) => (x.codes.includes('AQ') ? 1 : 0), detail: pool(() => ['AQ']) },
-		{ id: 'k8', name: 'Dach der Welt', icon: '🏔️', what: 'Länder mit Achttausender', tiers: [1, eight.size], val: (x) => count(x, eight), detail: pool(() => eight, (c, x) => x.facts[c]?.peak && `${x.facts[c].peak![0]} · ${num(x.facts[c].peak![1])} m`) },
+		{ id: 'eq', name: 'Äquatortaufe', icon: '🌞', what: 'Länder am Äquator', tiers: [1, 3, 6], val: (x) => count(x, EQUATOR), detail: pool(() => all.filter((c) => EQUATOR.has(c))) },
+		{ id: 'polar', name: 'Polarkreise', icon: '🐧', what: 'Länder an den Polarkreisen (mit Antarktis)', tiers: [1, 4, POLAR.size], val: (x) => count(x, POLAR), detail: pool(() => POLAR) },
+		{ id: 'k8', name: 'Dach der Welt', icon: '🏔️', what: 'Länder mit Achttausender', tiers: [1, 2, eight.size], val: (x) => count(x, eight), detail: pool(() => eight, (c, x) => x.facts[c]?.peak && `${x.facts[c].peak![0]} · ${num(x.facts[c].peak![1])} m`) },
 		{
 			id: 'quad',
 			name: 'Vier Himmelsrichtungen',
 			icon: '🧭',
 			what: 'Erdviertel (Nord/Süd × Ost/West)',
-			tiers: [4],
+			tiers: [2, 3, 4],
 			val: (x) => new Set(x.codes.filter((c) => c !== 'AQ').map((c) => quadOf(x, c))).size,
 			detail: (x) => {
 				const by = new Map<string, string[]>();

@@ -411,7 +411,7 @@
 	// Stufen-Klasse t1–t3 (Bronze/Silber/Gold) zu Stufe 1..n des Abzeichens
 	const tc = (b: Badge, level: number) => (level > 0 && level <= b.tiers.length ? 't' + (level + 3 - b.tiers.length) : '');
 	const tierClass = (b: Badge) => tc(b, b.level);
-	/* Details als Blatt von unten; erneutes Antippen oder Runterziehen schließt, Hochwischen klappt die Liste auf
+	/* Details als Blatt von unten; erneutes Antippen, Runterwischen (auch aufgeklappt) oder Tippen daneben schließt, Hochwischen klappt die Liste auf
 	   (was zählt schon, was fehlt noch) */
 	let sheet = $state<HTMLDivElement>();
 	let list = $state<HTMLDivElement>();
@@ -491,11 +491,11 @@
 			if (mode !== 1) return;
 			if (!open && (dy < -40 || (vy < -0.3 && dy < -10))) {
 				setOpen(true, Math.max(-60, dy * 0.35));
-			} else if (open && (dy > 80 || (vy > 0.5 && dy > 20))) {
-				setOpen(false, dy);
-			} else if (!open && (dy > 70 || (vy > 0.5 && dy > 20))) {
+			} else if (dy > 70 || (vy > 0.5 && dy > 20)) {
+				// auch aufgeklappt: Runterwischen schließt das ganze Blatt (wie die Länderseite)
 				sOff = dy;
 				picked = null;
+				open = false;
 			} else {
 				el.style.transition = 'transform .2s cubic-bezier(.2,.8,.2,1)';
 				el.style.transform = '';
@@ -845,12 +845,12 @@
 		{/if}
 	{/snippet}
 	{#if pick && open}
-		<button type="button" class="pp-scrim" aria-label="Liste zuklappen" onclick={() => setOpen(false)} transition:fade={{ duration: reduceMotion() ? 0 : 200 }}></button>
+		<button type="button" class="pp-scrim" aria-label="Details schließen" onclick={() => choose(null)} transition:fade={{ duration: reduceMotion() ? 0 : 200 }}></button>
 	{/if}
 	{#if pick}
 		{@const max = pick.level >= pick.tiers.length}
 		<div class="pp-sheet {tierClass(pick)}" class:max class:open bind:this={sheet} transition:slideUp role="status">
-			<button type="button" class="pp-grab" aria-label={open ? 'Liste zuklappen' : 'Details schließen'} onclick={() => (open ? setOpen(false) : choose(null))}><i></i></button>
+			<button type="button" class="pp-grab" aria-label="Details schließen" onclick={() => choose(null)}><i></i></button>
 			<div class="pp-sh-top">
 				<span class="pp-medal" aria-hidden="true"><span><i>{pick.icon}</i></span></span>
 				<div>
@@ -875,14 +875,14 @@
 						<h4>{det.haveT} <span>{det.have.length}</span></h4>
 						<div class="pp-its">{#each det.have as it, i (i)}{@render row(it)}{/each}</div>
 					{/if}
-					{#if det.miss.length}
+					{#if det.miss.length && !max}
 						<h4>{det.missT} <span>{det.miss.length + (det.missMore ?? 0)}</span></h4>
 						{#if det.note}<p class="pp-lnote">{det.note}</p>{/if}
 						<div class="pp-its miss">{#each det.miss as it, i (i)}{@render row(it)}{/each}</div>
 						{#if det.missMore}<p class="pp-lnote">… und {det.missMore} weitere</p>{/if}
 					{:else if det.note}
 						<p class="pp-lnote">{det.note}</p>
-					{:else}
+					{:else if !max}
 						<p class="pp-lnote">Alles dabei 🎉</p>
 					{/if}
 				</div>

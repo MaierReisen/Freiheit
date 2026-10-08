@@ -17,6 +17,8 @@ export interface CountryEntry {
 	position?: number;
 	/** Erste Einreise (für den Reisepass): "JJJJ-MM" oder "JJJJ" */
 	entered?: string;
+	/** Seltene Briefmarke im Pass: einmal ausgelost (fehlt = noch nicht ausgelost) */
+	special?: boolean;
 	[key: string]: unknown;
 }
 
@@ -55,6 +57,7 @@ type Op =
 	| { t: 'addCountry'; code: string; name: string; position: number }
 	| { t: 'removeCountry'; code: string }
 	| { t: 'setEntered'; code: string; entered: string | null }
+	| { t: 'setSpecial'; code: string; special: boolean }
 	| { t: 'addWish'; code: string; name: string }
 	| { t: 'removeWish'; code: string }
 	| { t: 'replaceAll'; data: AtlasData }
@@ -151,6 +154,9 @@ export const isEntered = (v: unknown): v is string => typeof v === 'string' && /
 export const wishSet = () => new Set(atlas.data.wishlist.map((c) => c.code));
 
 /* ---------- Supabase ---------- */
+/** Fehler „Spalte gibt es nicht“ (Migration noch nicht ausgeführt) */
+const noColumn = (e: { code?: string } | null | undefined) => e?.code === 'PGRST204' || e?.code === '42703';
+
 async function runOp(op: Op, user: string) {
 	const ok = <T extends { error: unknown }>(r: T) => {
 		if (r.error) throw r.error;
@@ -163,6 +169,13 @@ async function runOp(op: Op, user: string) {
 			const r = await supabase.from('visited_countries').update({ entered: op.entered }).eq('user_id', user).eq('code', op.code);
 			// Spalte noch nicht angelegt (Migration 004 fehlt): Datum bleibt lokal, Warteschlange nicht blockieren
 			if (r.error && r.error.code !== 'PGRST204' && r.error.code !== '42703') throw r.error;
+			return;
+		}
+		case 'setSpecial': {
+			// nur setzen, solange noch nicht ausgelost: das erste Gerät gewinnt, alle anderen übernehmen dessen Los
+			const r = await supabase.from('visited_countries').update({ special: op.special }).eq('user_id', user).eq('code', op.code).is('special', null);
+			// Spalte noch nicht angelegt (Migration 005 fehlt): Los bleibt lokal
+			if (r.error && !noColumn(r.error)) throw r.error;
 			return;
 		}
 		case 'removeCountry':
@@ -187,10 +200,18 @@ async function runOp(op: Op, user: string) {
 			const d = op.data;
 			for (const t of ['visited_countries', 'wishlist', 'milestones']) ok(await supabase.from(t).delete().eq('user_id', user));
 			if (d.countries.length) {
-				const rows = d.countries.map((c, i) => ({ user_id: user, code: c.code, name: c.name, position: i, entered: isEntered(c.entered) ? c.entered : null }));
+				const rows = d.countries.map((c, i) => ({
+					user_id: user,
+					code: c.code,
+					name: c.name,
+					position: i,
+					entered: isEntered(c.entered) ? c.entered : null,
+					special: typeof c.special === 'boolean' ? c.special : null
+				}));
 				let r = await supabase.from('visited_countries').insert(rows);
-				// ohne Spalte „entered“ (Migration 004 fehlt) ohne Einreisedaten speichern
-				if (r.error && (r.error.code === 'PGRST204' || r.error.code === '42703')) r = await supabase.from('visited_countries').insert(rows.map(({ entered: _e, ...x }) => x));
+				// ohne Spalte „special“ (Migration 005 fehlt) bzw. „entered“ (004 fehlt) speichern
+				if (r.error && noColumn(r.error)) r = await supabase.from('visited_countries').insert(rows.map(({ special: _s, ...x }) => x));
+				if (r.error && noColumn(r.error)) r = await supabase.from('visited_countries').insert(rows.map(({ special: _s, entered: _e, ...x }) => x));
 				ok(r);
 			}
 			if (d.wishlist.length) ok(await supabase.from('wishlist').insert(d.wishlist.map((w) => ({ user_id: user, code: w.code, name: w.name }))));
@@ -230,7 +251,7 @@ async function pull() {
 	if (!user || !(await flush())) return;
 	const countriesQuery = (cols: string) => supabase.from('visited_countries').select(cols).order('position').order('created_at');
 	const [c0, w, m, st] = await Promise.all([
-		countriesQuery('code,name,position,created_at,entered'),
+		countriesQuery('code,name,position,created_at,entered,special'),
 		supabase.from('wishlist').select('code,name').order('created_at'),
 		supabase.from('milestones').select('year,count').order('year'),
 		supabase.from('user_settings').select('*').maybeSingle()
@@ -245,10 +266,20 @@ async function pull() {
 		if (JSON.stringify(next) !== JSON.stringify(atlas.settings)) atlas.settings = next;
 		writeJson(settingsKey(user), atlas.settings);
 	}
-	// Spalte „entered“ fehlt noch (Migration 004): ohne laden, Einreisedaten bleiben auf diesem Gerät
-	const noEntered = c0.error?.code === '42703' || c0.error?.code === 'PGRST204';
-	const c = (noEntered ? await countriesQuery('code,name,position,created_at') : c0) as unknown as {
-		data: { code: string; position: number; entered?: string | null }[];
+	// Spalte „special“ (Migration 005) bzw. „entered“ (004) fehlt noch: ohne laden, diese Angaben bleiben auf diesem Gerät
+	let noSpecial = false,
+		noEntered = false,
+		c1 = c0 as { data: unknown; error: { code?: string } | null };
+	if (noColumn(c1.error)) {
+		noSpecial = true;
+		c1 = await countriesQuery('code,name,position,created_at,entered');
+	}
+	if (noColumn(c1.error)) {
+		noEntered = true;
+		c1 = await countriesQuery('code,name,position,created_at');
+	}
+	const c = c1 as unknown as {
+		data: { code: string; position: number; entered?: string | null; special?: boolean | null }[];
 		error: unknown;
 	};
 	if (c.error || w.error || m.error) {
@@ -272,8 +303,17 @@ async function pull() {
 	const next: AtlasData = {
 		schemaVersion: 1,
 		countries: c.data.map((r) => {
-			const entered = noEntered ? atlas.data.countries.find((x) => x.code === r.code)?.entered : r.entered;
-			return { code: r.code, name: nameOf(r.code), visits: [], position: r.position, ...(isEntered(entered) ? { entered } : {}) };
+			const local = atlas.data.countries.find((x) => x.code === r.code);
+			const entered = noEntered ? local?.entered : r.entered;
+			const special = noSpecial ? local?.special : r.special;
+			return {
+				code: r.code,
+				name: nameOf(r.code),
+				visits: [],
+				position: r.position,
+				...(isEntered(entered) ? { entered } : {}),
+				...(typeof special === 'boolean' ? { special } : {})
+			};
 		}),
 		wishlist: w.data.map((r) => ({ code: r.code, name: nameOf(r.code) })),
 		milestones: m.data.map((r) => ({ year: r.year, count: r.count }))
@@ -370,6 +410,14 @@ export function setEntered(code: string, entered: string | null) {
 	};
 	persist();
 	enqueue({ t: 'setEntered', code, entered: v });
+}
+/** Ausgelostes Los der seltenen Briefmarke merken (nur wenn noch keins da ist) */
+export function setSpecial(code: string, special: boolean) {
+	const s = atlas.data;
+	if (!s.countries.some((c) => c.code === code && c.special === undefined)) return;
+	atlas.data = { ...s, countries: s.countries.map((c) => (c.code === code ? { ...c, special } : c)) };
+	persist();
+	enqueue({ t: 'setSpecial', code, special });
 }
 export function addWish(code: string) {
 	const s = atlas.data;
