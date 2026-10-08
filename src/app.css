@@ -641,6 +641,10 @@ button.pp-tile:active{transform:scale(.98)}
 /* Seltene Länder: eingeklebte Briefmarke (gedruckt, nicht gestempelt) – Papier --stp, Goldrand für Legenden --stg */
 :root{--stp:#FFFFFF;--stg:#D6A740;--stt:16%}@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--stp:#26404A;--stg:#B48A33;--stt:30%}}:root[data-theme="dark"]{--stp:#26404A;--stg:#B48A33;--stt:30%}
 .pp-stamp.sp{width:auto;height:140px;max-height:none;mix-blend-mode:normal;opacity:1;filter:drop-shadow(0 1px 1.5px rgba(13,43,58,.3))}
+/* Leichte Daueranimation: ab und zu hebt ein Windstoß die Marke kurz an (je Land versetzt) */
+.pp-stamp.sp{transform-origin:50% 90%;animation:spLift 9s ease-in-out infinite}
+@keyframes spLift{0%,72%,100%{transform:none}78%{transform:perspective(500px) rotateX(9deg) rotateY(-7deg) translateY(-3px)}85%{transform:perspective(500px) rotateX(-3deg) rotateY(2deg)}91%{transform:none}}
+@media (prefers-reduced-motion:reduce){.pp-stamp.sp{animation:none}}
 .pp-stamp .pp{fill:var(--stp);stroke:none}
 .pp-stamp .gd{fill:var(--stg);stroke:none}
 .pp-stamp .pic{--paper:color-mix(in srgb,currentColor var(--stt),var(--stp))}

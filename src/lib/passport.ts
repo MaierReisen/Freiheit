@@ -1654,7 +1654,7 @@ export function stamp(code: string, nr: number, entered?: string, special: 0 | 1
 	const wide = !special && +vb.split(' ')[2] / +vb.split(' ')[3] > 1.25;
 	const s: Stamp = {
 		svg: special
-			? `<svg class="pp-stamp sp" viewBox="${vb}" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-linejoin="round" stroke-linecap="round">${inner}</g></svg>`
+			? `<svg class="pp-stamp sp" viewBox="${vb}" style="animation-delay:-${(h >>> 8) % 9000}ms" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-linejoin="round" stroke-linecap="round">${inner}</g></svg>`
 			: `<svg class="pp-stamp" viewBox="${vb}" aria-hidden="true"><g filter="url(#pf${h % 4})" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-linecap="round">${inner}</g></svg>`,
 		color: `var(--st-${def?.c ?? COLORS[(h >>> 3) % COLORS.length]})`,
 		rot: special ? (((h >>> 6) % 7) - 3) : ((h >>> 6) % 15) - 7,
