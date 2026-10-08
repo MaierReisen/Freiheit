@@ -1424,12 +1424,12 @@ ${place(m, [40, 40, 100, 84])}${nameBlock(t.name, 90, 150, 124, 14)}${pill(90, 1
 /* ---------- Spezialstempel: Briefmarke (Szenen in scenes.ts) ---------- */
 let markId = 0;
 /** Briefmarke für seltene Länder: gezähntes Papier, farbig bedrucktes Bild (Szene oder Motiv), Länder-Nr. als Nennwert,
-    darunter Name und „SELTEN“ bzw. bei Legenden „LEGENDE“ mit goldenem Rand. Ohne Tinten-Filter: gedruckt, nicht gestempelt. */
+    darunter Name und „ENTLEGEN“ bzw. bei Legenden „LEGENDE“ mit goldenem Rand. Ohne Tinten-Filter: gedruckt, nicht gestempelt. */
 function markFrame(t: Txt, scene: string | null, m: Motif, legend: boolean, nr: number): [string, string] {
 	const id = 'mk' + ++markId,
 		two = split(t.name).length > 1,
 		art = scene ? `<g transform="translate(18,18) scale(.911)">${scene}</g>` : place(m, [30, 34, 140, 118]),
-		label = (legend ? 'LEGENDE' : 'SELTEN') + (t.date ? ` · ${t.date}` : ''),
+		label = (legend ? 'LEGENDE' : 'ENTLEGEN') + (t.date ? ` · ${t.date}` : ''),
 		sx = f1(label.length * 3.1 + 10);
 	const paper = legend
 		? `<path d="${perfPath(4, 4, 192, 232, 4.5, 15)}" class="gd"/><rect x="12" y="12" width="176" height="216" class="pp"/>`

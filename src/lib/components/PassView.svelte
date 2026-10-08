@@ -601,7 +601,7 @@
 		navigator.vibrate?.(30);
 		const p = document.createElement('div');
 		p.className = 'pp-fx pp-plus';
-		p.textContent = legend ? 'Legende!' : 'Seltene Marke';
+		p.textContent = legend ? 'Legende!' : 'Entlegen';
 		Object.assign(p.style, { left: r.left + r.width / 2 + 'px', top: r.top + 6 + 'px', color: col });
 		document.body.appendChild(p);
 		p.animate([{ transform: 'translate(-50%,0)', opacity: 0 }, { transform: 'translate(-50%,-18px)', opacity: 1, offset: 0.3 }, { transform: 'translate(-50%,-34px)', opacity: 0 }], { duration: 1600, easing: 'ease-out' }).finished.then(() => p.remove());
