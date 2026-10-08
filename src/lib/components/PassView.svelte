@@ -8,6 +8,7 @@
 	import { loadFacts, type Facts } from '$lib/facts';
 	import { scopeTotal } from '$lib/scope';
 	import { markSeen, passSeen } from '$lib/passSeen.svelte';
+	import { isSpecial, rollSpecials } from '$lib/special.svelte';
 	import PassTile from './PassTile.svelte';
 
 	/* Reisepass (Vollbild): Seiten zum Blättern mit je 6 Stempeln in der Reihenfolge „Land Nr. X“, danach „?“-Plätze für
@@ -78,7 +79,7 @@
 		};
 	});
 
-	const stamps = $derived(countedCountries().map((c, i) => ({ code: c.code, name: c.name, nr: i + 1, entered: c.entered, s: stamp(c.code, i + 1, c.entered) })));
+	const stamps = $derived(countedCountries().map((c, i) => ({ code: c.code, name: c.name, nr: i + 1, entered: c.entered, s: stamp(c.code, i + 1, c.entered, isSpecial(c.code)), sp: isSpecial(c.code) })));
 	const wishes = $derived(atlas.data.wishlist.slice(0, 4));
 	const pages = $derived.by(() => {
 		const slots: ({ kind: 'stamp'; st: (typeof stamps)[number] } | { kind: 'wish'; code: string; name: string })[] = [
@@ -492,6 +493,7 @@
 		opened = true;
 		untrack(() => {
 			const codes = stamps.map((s) => s.code);
+			rollSpecials(codes);
 			const seen = passSeen.codes;
 			const fresh = seen ? codes.filter((c) => !seen.includes(c)).slice(-3) : [];
 			markSeen(codes);
@@ -517,10 +519,22 @@
 			if (pi !== cur) { goPage(pi); await wait(350); }
 			slot.scrollIntoView({ behavior: 'smooth', block: 'center' });
 			await wait(500);
+			const sp = isSpecial(code);
 			pending = pending.filter((c) => c !== code);
 			await tick();
 			const el = slot.querySelector<HTMLElement>('.pp-stamp');
 			if (!el) continue;
+			if (sp) {
+				// Spezialstempel: kein Aufprall, das Siegel zeichnet sich selbst – erst Rahmen, dann Szene, dann Name
+				navigator.vibrate?.([40, 90, 40]);
+				el.classList.add('draw');
+				await wait(2000);
+				await el.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.05)' }, { transform: 'scale(1)' }], { duration: 420, easing: 'ease-out' }).finished;
+				ripple(slot);
+				navigator.vibrate?.(30);
+				await wait(1200);
+				continue;
+			}
 			// Stempel fällt mit Schwung herunter, quetscht und federt nach
 			await el.animate(
 				[
@@ -537,6 +551,53 @@
 			await wait(700);
 		}
 		pending = [];
+	}
+
+	/** Spezialstempel: ruhige Tintenwelle um den Stempel und die Zeile „Seltener Stempel“ */
+	function ripple(slot: HTMLElement) {
+		const r = slot.getBoundingClientRect(),
+			cx = r.left + r.width / 2,
+			cy = r.top + r.height / 2,
+			col = getComputedStyle(slot).getPropertyValue('--c') || css('--primary');
+		for (const delay of [0, 220]) {
+			const e = document.createElement('i');
+			e.className = 'pp-fx';
+			Object.assign(e.style, { left: cx + 'px', top: cy + 'px', width: '120px', height: '150px', border: `2px solid ${col}`, borderRadius: '60px 60px 8px 8px' });
+			document.body.appendChild(e);
+			e.animate([{ transform: 'translate(-50%,-50%) scale(.9)', opacity: 0.7 }, { transform: 'translate(-50%,-50%) scale(1.9)', opacity: 0 }], { duration: 1100, delay, easing: 'ease-out', fill: 'backwards' }).finished.then(() => e.remove());
+		}
+		// goldene Funkelsterne, wie beim „Shiny“
+		for (let i = 0; i < 14; i++) {
+			const e = document.createElement('i'),
+				a = (i / 14) * Math.PI * 2 + Math.random() * 0.4,
+				d = 70 + Math.random() * 60,
+				sz = 9 + Math.random() * 12;
+			e.className = 'pp-fx';
+			Object.assign(e.style, {
+				left: cx + 'px',
+				top: cy + 'px',
+				width: sz + 'px',
+				height: sz + 'px',
+				background: 'radial-gradient(circle,#fff 0 22%,#FFD45E 23% 45%,transparent 46%)',
+				clipPath: 'polygon(50% 0,60% 40%,100% 50%,60% 60%,50% 100%,40% 60%,0 50%,40% 40%)',
+				filter: 'drop-shadow(0 0 3px #E8A800)'
+			});
+			document.body.appendChild(e);
+			e.animate(
+				[
+					{ transform: 'translate(-50%,-50%) scale(.2) rotate(0)', opacity: 0 },
+					{ transform: `translate(${Math.cos(a) * d * 0.7}px,${Math.sin(a) * d * 0.7}px) scale(1) rotate(60deg)`, opacity: 1, offset: 0.4 },
+					{ transform: `translate(${Math.cos(a) * d}px,${Math.sin(a) * d * 1.1}px) scale(.2) rotate(140deg)`, opacity: 0 }
+				],
+				{ duration: 1100 + Math.random() * 500, delay: Math.random() * 250, easing: 'ease-out', fill: 'backwards' }
+			).finished.then(() => e.remove());
+		}
+		const p = document.createElement('div');
+		p.className = 'pp-fx pp-plus';
+		p.textContent = 'Seltener Stempel';
+		Object.assign(p.style, { left: cx + 'px', top: r.top + 6 + 'px', color: col });
+		document.body.appendChild(p);
+		p.animate([{ transform: 'translate(-50%,0)', opacity: 0 }, { transform: 'translate(-50%,-18px)', opacity: 1, offset: 0.3 }, { transform: 'translate(-50%,-34px)', opacity: 0 }], { duration: 1600, easing: 'ease-out' }).finished.then(() => p.remove());
 	}
 
 	/** Tintenspritzer, Konfetti und „+1 Stempel“ über dem Stempel */
@@ -635,8 +696,9 @@
 											class="pp-slot"
 											data-stamp={sl.st.code}
 											class:wait={pending.includes(sl.st.code)}
+											class:sp={sl.st.sp}
 											style="transform:translateY({sl.st.s.dy}px) rotate({sl.st.s.rot}deg);--c:{sl.st.s.color};--w:{sl.st.s.w}%"
-											aria-label="{sl.st.name}, Land Nr. {sl.st.nr}"
+											aria-label="{sl.st.name}, Land Nr. {sl.st.nr}{sl.st.sp ? ', seltener Spezialstempel' : ''}"
 											onclick={() => openCountry(sl.st.code)}>{@html sl.st.s.svg}</button
 										>
 									{:else}

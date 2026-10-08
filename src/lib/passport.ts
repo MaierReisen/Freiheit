@@ -1416,6 +1416,43 @@ ${place(m, [40, 40, 100, 84])}${nameBlock(t.name, 90, 150, 124, 14)}${pill(90, 1
 	]
 };
 
+/* ---------- Spezialstempel: großes Siegel mit eigener Szene ---------- */
+/** Szenen in 180 × 170 (Himmel oben, Boden unten). Abstufungen der einen Stempelfarbe (fill-opacity) geben Tiefe. */
+const L1 = 'fill="currentColor" fill-opacity=".1"',
+	L2 = 'fill="currentColor" fill-opacity=".22"',
+	L3 = 'fill="currentColor" fill-opacity=".42"',
+	L4 = 'fill="currentColor" fill-opacity=".7"';
+const pine = (x: number, y: number, h: number, f = SOLID) =>
+	`<path d="M${x},${y - h} L${f1(x + h * 0.28)},${f1(y - h * 0.45)} H${f1(x + h * 0.14)} L${f1(x + h * 0.36)},${y - 2} H${f1(x - h * 0.36)} L${f1(x - h * 0.14)},${f1(y - h * 0.45)} H${f1(x - h * 0.28)} Z" ${f}/>`;
+const SCENES: Record<string, () => string> = {
+	// Bhutan: Tigernest über dem Paro-Tal, Gebetsfahnen, Himalaya-Gipfel
+	BT: () => `<circle cx="132" cy="34" r="17" ${SOLID}/><circle cx="132" cy="34" r="25" ${DOTS}/>
+<path d="M0,112 L26,66 L42,84 L72,30 L104,88 L124,62 L180,112 V170 H0 Z" ${L1} stroke-width="2"/><path d="M72,30 L62,46 L70,43 L74,52 L80,43 L86,47 Z M26,66 L19,78 L26,75 L32,80 Z M124,62 L117,74 L124,72 L130,77 Z" ${L4} stroke="none"/>
+<path d="M0,128 Q30,104 60,122 Q92,100 120,126 L180,116 V170 H0 Z" ${L2} stroke-width="2"/>
+<path d="M104,170 Q96,128 108,100 Q104,76 114,56 H180 V170 Z" ${L3} stroke-width="2.6"/><path d="M118,70 l12,10 M140,96 l12,6 M116,112 l10,12 M150,134 l12,8 M128,150 l9,10" stroke-width="1.6"/>
+<path d="M58,106 Q76,98 100,104" stroke-width="3.2"/>
+<path d="M46,92 L62,82 H92 L106,92 Z" ${SOLID}/><rect x="52" y="92" width="48" height="16" fill="var(--paper)" stroke-width="2.4"/><path d="M60,96 V104 M70,96 V104 M80,96 V104 M90,96 V104" stroke-width="2.2"/>
+<path d="M60,76 L72,66 H92 L100,76 Z" ${SOLID}/><rect x="64" y="76" width="30" height="7" fill="var(--paper)" stroke-width="2"/><path d="M76,66 V56 M72,59 H80 M76,56 l0,-5" stroke-width="1.8"/>
+<path d="M26,112 L38,103 H62 L70,112 Z" ${SOLID}/><rect x="30" y="112" width="34" height="14" fill="var(--paper)" stroke-width="2.4"/><path d="M38,116 V122 M47,116 V122 M56,116 V122" stroke-width="2.2"/>
+<path d="M0,22 Q40,52 104,36" stroke-width="1.6"/>${[14, 30, 46, 62, 78, 94].map((x, i) => `<rect x="${x - 3}" y="${[24, 32, 38, 42, 42, 38][i]}" width="7" height="9" ${i % 3 === 0 ? SOLID : i % 3 === 1 ? L3 : 'fill="var(--paper)"'} stroke-width="1.4"/>`).join('')}
+${pine(14, 170, 52)}${pine(34, 170, 38, L4)}${pine(160, 170, 44)}<path d="M4,150 q6,-8 12,0 M138,16 q5,-6 10,0 q5,-6 10,0 M150,68 q4,-5 8,0 q4,-5 8,0" stroke-width="1.8"/>
+<path d="${waves(0, 160, 13, 14, 3)}" stroke-width="2" stroke="var(--paper)"/><path d="${waves(4, 166, 12, 14, 3)}" stroke-width="2"/>`
+};
+let sealId = 0;
+/** Großes Siegel (Torbogen): Szene füllt den Bogen, darüber „SELTEN“, darunter Name und Datum. Frame/Szene/Name tragen Klassen für die Zeichen-Animation. */
+function sealFrame(t: Txt, scene: string | null, m: Motif): [string, string] {
+	const id = 'sc' + ++sealId,
+		arch = 'M14,292 V112 A106,106 0 0 1 226,112 V292 Z';
+	const art = scene ?? place(m, [10, 20, 160, 120]);
+	return [
+		'0 0 240 300',
+		`<clipPath id="${id}"><path d="M34,214 V112 A86,86 0 0 1 206,112 V214 Z"/></clipPath>
+<g class="fr"><path pathLength="1" d="${arch}" ${TINT} stroke-width="4.5"/><path pathLength="1" d="M26,280 V112 A94,94 0 0 1 214,112 V280 Z" ${DOTS}/><path pathLength="1" d="M34,214 V112 A86,86 0 0 1 206,112 V214 Z" stroke-width="2.4"/><path pathLength="1" d="M34,214 H206" stroke-width="2.4"/></g>
+<g class="sc"><g clip-path="url(#${id})"><g transform="translate(30,44)">${art}</g></g></g>
+<g class="nm">${pill(120, 8, 'SELTEN', 11)}${star(78, 19, 6.5)}${star(162, 19, 6.5)}${nameBlock(t.name, 120, 244, 168, 20)}${small(120, 266, below(t), 11.5)}</g>`
+	];
+}
+
 /* ---------- Stempel je Land ---------- */
 type StampDef = { f: Frame; c: string; short?: string };
 /** Eigene Stempel: Rahmen, Farbe (Token --st-…), ggf. kurzer Name */
@@ -1593,8 +1630,8 @@ export interface Stamp {
 
 const cache = new Map<string, Stamp>();
 /** Stempel für ein Land (zwischengespeichert: wird nur bei geändertem Datum/Nr. neu gebaut) */
-export function stamp(code: string, nr: number, entered?: string): Stamp {
-	const key = `${code}|${nr}|${entered ?? ''}`;
+export function stamp(code: string, nr: number, entered?: string, special = false): Stamp {
+	const key = `${code}|${nr}|${entered ?? ''}|${special ? 1 : 0}`;
 	const hit = cache.get(key);
 	if (hit) return hit;
 	const h = hash(code),
@@ -1602,14 +1639,17 @@ export function stamp(code: string, nr: number, entered?: string): Stamp {
 	const name = (def?.short ?? SHORT[code] ?? nameOf(code)).toLocaleUpperCase('de').replace(/ẞ/g, 'SS');
 	const frame: Frame = def?.f ?? (name.length > 13 ? TWO_LINE[h % TWO_LINE.length] : GENERIC[h % GENERIC.length]);
 	const motif = (MOTIFS[code] && def ? MOTIFS[code] : (CONT_MOTIFS[REGION[code] ?? CONT[code]] ?? CONT_MOTIFS.AN))();
-	const [vb, inner] = FRAMES[frame]({ name, date: stampDate(entered), nr: `Nr. ${nr}` }, motif);
-	const wide = +vb.split(' ')[2] / +vb.split(' ')[3] > 1.25;
+	const txt = { name, date: stampDate(entered), nr: `Nr. ${nr}` };
+	const [vb, inner] = special ? sealFrame(txt, SCENES[code]?.() ?? null, motif) : FRAMES[frame](txt, motif);
+	const wide = !special && +vb.split(' ')[2] / +vb.split(' ')[3] > 1.25;
 	const s: Stamp = {
-		svg: `<svg class="pp-stamp" viewBox="${vb}" aria-hidden="true"><g filter="url(#pf${h % 4})" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-linecap="round">${inner}</g></svg>`,
+		svg: special
+			? `<span class="pp-sw"><svg class="pp-stamp sp" viewBox="${vb}" aria-hidden="true"><g filter="url(#pf${h % 4})" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-linecap="round">${inner}</g></svg><i class="gl"></i><i class="sk k1"></i><i class="sk k2"></i><i class="sk k3"></i></span>`
+			: `<svg class="pp-stamp" viewBox="${vb}" aria-hidden="true"><g filter="url(#pf${h % 4})" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-linecap="round">${inner}</g></svg>`,
 		color: `var(--st-${def?.c ?? COLORS[(h >>> 3) % COLORS.length]})`,
-		rot: ((h >>> 6) % 15) - 7,
+		rot: special ? (((h >>> 6) % 7) - 3) : ((h >>> 6) % 15) - 7,
 		dy: ((h >>> 10) % 9) - 4,
-		w: wide ? 94 + ((h >>> 14) % 5) : 84 + ((h >>> 14) % 5)
+		w: special ? 96 : wide ? 94 + ((h >>> 14) % 5) : 84 + ((h >>> 14) % 5)
 	};
 	if (cache.size > 400) cache.clear();
 	cache.set(key, s);
