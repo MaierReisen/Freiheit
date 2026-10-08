@@ -1,58 +1,75 @@
-/* Spezialstempel: selten besuchte Länder können beim ersten Eintrag einen „Folienstempel“ bekommen.
-   Ob ein Land besonders wird, wird einmal ausgelost und im Konto gemerkt (Spalte „special“, Migration 005),
-   damit alle Geräte dasselbe zeigen. Zusätzlich lokal gemerkt (Stand vor Migration 005 bzw. ohne Verbindung). */
-import { atlas, setSpecial } from './atlas.svelte';
+/* Seltenheit der Stempel: jedes Land wird beim ersten Öffnen des Passes einmal ausgelost –
+   Common (normaler Stempel), Rare (Briefmarke), Super Rare (Briefmarke mit Silberrand). Die entlegensten Ziele sind immer
+   Legendary (Goldrand). Das Los wird im Konto gemerkt (Spalte „special“, Migration 006), damit alle Geräte dasselbe zeigen.
+   Zusätzlich lokal gemerkt (ohne Spalte bzw. ohne Verbindung). */
+import { atlas, setSpecial, type CountryEntry } from './atlas.svelte';
 
-/** Wenig besuchte Länder (Touristenzahlen ganz unten): Auslosung mit Chance CHANCE */
-const RARE = 'TV NR KI MH FM PW SB VU TO ST KM CF TD SS ER DJ GW GQ BI SL LR MR NE ML BF AF TM TJ KG KP YE SY LY SO BT MM LA MN TL PG GN GM CG GA MW MZ AO ET SD IQ IR CU VE'.split(' ');
-/** Die entlegensten Ziele: immer besonders */
-const LEGEND = 'TV NR KI KP TM SO SS ER CF TD'.split(' ');
-const CHANCE = 1 / 3;
+/** 0 = Common, 1 = Rare, 2 = Super Rare, 3 = Legendary */
+export type Tier = 0 | 1 | 2 | 3;
 
-const KEY = 'freiheit-pass-special';
+/** Die entlegensten Ziele: immer Legendary */
+export const LEGEND = 'TV NR KI KP TM SO SS ER CF TD MH FM SB KM AF YE SY LY GQ GW'.split(' ');
+/** Chancen beim Auslosen (Rest = Common) */
+export const CHANCE = { rare: 0.22, super: 0.08 };
 
-function load(): Record<string, boolean> {
+const KEY = 'freiheit-pass-tier';
+const OLD_KEY = 'freiheit-pass-special'; // bis v1.23: true = seltene Marke
+
+/** Gespeicherter Wert → Stufe. Altes Los (true/false): bisherige Marke = Rare, sonst neu auslosen */
+export const tierOf = (v: unknown): Tier | undefined =>
+	v === true ? 1 : typeof v === 'number' && v >= 0 && v <= 2 ? (Math.round(v) as Tier) : undefined;
+
+function load(): Record<string, Tier> {
+	const out: Record<string, Tier> = {};
 	try {
-		const v = JSON.parse(localStorage.getItem(KEY) || '{}');
-		return v && typeof v === 'object' ? v : {};
-	} catch {
-		return {};
-	}
+		const old = JSON.parse(localStorage.getItem(OLD_KEY) || '{}');
+		const cur = JSON.parse(localStorage.getItem(KEY) || '{}');
+		for (const v of [old, cur])
+			if (v && typeof v === 'object')
+				for (const [c, x] of Object.entries(v)) {
+					const t = tierOf(x);
+					if (t !== undefined) out[c] = t;
+				}
+	} catch {}
+	return out;
 }
 
-export const special = $state<{ map: Record<string, boolean> }>({ map: typeof window === 'undefined' ? {} : load() });
+export const special = $state<{ map: Record<string, Tier> }>({ map: typeof window === 'undefined' ? {} : load() });
 
-/** Vorschau: ?spezial in der Adresse macht alle Stempel zu Spezialstempeln, ?spezial=legende alle zu Legenden */
-const preview = () => (typeof location === 'undefined' ? null : new URLSearchParams(location.search).get('spezial'));
+/** Vorschau: ?spezial in der Adresse macht alle Stempel zu Rare, ?spezial=super zu Super Rare, ?spezial=legende zu Legendary */
+const preview = (): Tier | null => {
+	const p = typeof location === 'undefined' ? null : new URLSearchParams(location.search).get('spezial');
+	return p === null ? null : p === 'legende' ? 3 : p === 'super' ? 2 : 1;
+};
 
+const entry = (code: string): CountryEntry | undefined => atlas.data.countries.find((c) => c.code === code);
 /** Los aus dem Konto, sonst das lokal gemerkte */
-const drawn = (code: string): boolean | undefined => atlas.data.countries.find((c) => c.code === code)?.special ?? special.map[code];
+const drawn = (code: string): Tier | undefined => tierOf(entry(code)?.special) ?? special.map[code];
 
-export const isSpecial = (code: string) => preview() !== null || drawn(code) === true;
+export const specialLevel = (code: string): Tier => (LEGEND.includes(code) ? 3 : (preview() ?? drawn(code) ?? 0));
 
-/** 0 = normal, 1 = seltene Briefmarke, 2 = Legende (goldener Rand) */
-export const specialLevel = (code: string): 0 | 1 | 2 => (!isSpecial(code) ? 0 : LEGEND.includes(code) || preview() === 'legende' ? 2 : 1);
-
-/** Lost für noch nicht ausgeloste Länder einmal aus; gibt die neu besonderen Codes zurück */
-export function rollSpecials(codes: string[]): string[] {
-	const won: string[] = [];
+/** Lost für noch nicht ausgeloste Länder einmal aus */
+export function rollSpecials(codes: string[]) {
 	let changed = false;
 	for (const c of codes) {
-		if (!RARE.includes(c)) continue;
-		const remote = atlas.data.countries.find((x) => x.code === c)?.special;
-		const known = remote ?? special.map[c];
-		const yes = known ?? (LEGEND.includes(c) || Math.random() < CHANCE);
+		if (LEGEND.includes(c)) continue;
+		const remote = tierOf(entry(c)?.special);
+		const t: Tier = remote ?? special.map[c] ?? roll();
 		// Konto noch ohne Los: dieses (auch ein früher nur lokal gemerktes) hochladen
-		if (remote === undefined) setSpecial(c, yes);
-		if (special.map[c] !== yes) {
-			special.map[c] = yes;
+		if (remote === undefined) setSpecial(c, t);
+		if (special.map[c] !== t) {
+			special.map[c] = t;
 			changed = true;
 		}
-		if (known === undefined && yes) won.push(c);
 	}
 	if (changed)
 		try {
 			localStorage.setItem(KEY, JSON.stringify(special.map));
+			localStorage.removeItem(OLD_KEY);
 		} catch {}
-	return won;
+}
+
+function roll(): Tier {
+	const r = Math.random();
+	return r < CHANCE.super ? 2 : r < CHANCE.super + CHANCE.rare ? 1 : 0;
 }

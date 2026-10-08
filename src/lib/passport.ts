@@ -1423,23 +1423,31 @@ ${place(m, [40, 40, 100, 84])}${nameBlock(t.name, 90, 150, 124, 14)}${pill(90, 1
 
 /* ---------- Spezialstempel: Briefmarke (Szenen in scenes.ts) ---------- */
 let markId = 0;
-/** Briefmarke für seltene Länder: gezähntes Papier, farbig bedrucktes Bild (Szene oder Motiv), Länder-Nr. als Nennwert,
-    darunter Name und „ENTLEGEN“ bzw. bei Legenden „LEGENDE“ mit goldenem Rand. Ohne Tinten-Filter: gedruckt, nicht gestempelt. */
-function markFrame(t: Txt, scene: string | null, m: Motif, legend: boolean, nr: number): [string, string] {
+/** Seltenheit: Beschriftung auf der Marke (1 = Rare, 2 = Super Rare, 3 = Legendary) */
+export const TIER_LABEL = ['', 'RARE', 'SUPER RARE', 'LEGENDARY'];
+/** Briefmarke statt Stempel: gezähntes Papier, farbig bedrucktes Bild (Szene oder sonst das Stempelmotiv), Länder-Nr. als Nennwert,
+    darunter Name und Stufe; Super Rare mit metallischem Silberrand, Legendary mit Goldrand. Ohne Tinten-Filter: gedruckt, nicht gestempelt. */
+function markFrame(t: Txt, scene: string | null, m: Motif, tier: number, nr: number): [string, string] {
 	const id = 'mk' + ++markId,
 		two = split(t.name).length > 1,
-		art = scene ? `<g transform="translate(18,18) scale(.911)">${scene}</g>` : place(m, [30, 34, 140, 118]),
-		label = (legend ? 'LEGENDE' : 'ENTLEGEN') + (t.date ? ` · ${t.date}` : ''),
-		sx = f1(label.length * 3.1 + 10);
-	const paper = legend
-		? `<path d="${perfPath(4, 4, 192, 232, 4.5, 15)}" class="gd"/><rect x="12" y="12" width="176" height="216" class="pp"/>`
-		: `<path d="${perfPath(4, 4, 192, 232, 4.5, 15)}" class="pp"/>`;
+		art = scene ? `<g transform="translate(18,18) scale(.911)">${scene}</g>` : place(m, [46, 40, 118, 116]),
+		label = TIER_LABEL[tier] + (t.date ? ` · ${t.date}` : ''),
+		fs = tier > 1 ? 10.5 : 11.5,
+		sx = f1(label.length * fs * 0.27 + 10),
+		edge = perfPath(4, 4, 192, 232, 4.5, 15),
+		inner = '<rect x="12" y="12" width="176" height="216" class="pp"/>';
+	const paper =
+		tier > 2
+			? `<path d="${edge}" class="gd"/>${inner}`
+			: tier > 1
+				? `<linearGradient id="${id}s" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="var(--sv1)"/><stop offset=".3" stop-color="var(--sv2)"/><stop offset=".5" stop-color="var(--sv3)"/><stop offset=".72" stop-color="var(--sv2)"/><stop offset="1" stop-color="var(--sv1)"/></linearGradient><path d="${edge}" fill="url(#${id}s)" stroke="none"/>${inner}`
+				: `<path d="${edge}" class="pp"/>`;
 	return [
 		'0 0 200 240',
 		`${paper}<clipPath id="${id}"><rect x="18" y="18" width="164" height="150"/></clipPath>
 <g class="pic"><rect x="18" y="18" width="164" height="150" class="bg"/><g clip-path="url(#${id})">${art}</g><rect x="18" y="18" width="164" height="150" stroke-width="2"/>
 <text class="v" x="27" y="46" font-size="24">${nr}</text></g>
-${nameBlock(t.name, 100, two ? 211 : 200, 164, two ? 19 : 22)}${small(100, 226, label, 11.5)}${star(100 - sx, 222, 5)}${star(100 + sx, 222, 5)}`
+${nameBlock(t.name, 100, two ? 211 : 200, 164, two ? 19 : 22)}${small(100, 226, label, fs)}${star(100 - sx, 222, 5)}${star(100 + sx, 222, 5)}`
 	];
 }
 
@@ -1620,7 +1628,7 @@ export interface Stamp {
 
 const cache = new Map<string, Stamp>();
 /** Stempel für ein Land (zwischengespeichert: wird nur bei geändertem Datum/Nr. neu gebaut) */
-export function stamp(code: string, nr: number, entered?: string, special: 0 | 1 | 2 = 0): Stamp {
+export function stamp(code: string, nr: number, entered?: string, special: 0 | 1 | 2 | 3 = 0): Stamp {
 	const key = `${code}|${nr}|${entered ?? ''}|${special}`;
 	const hit = cache.get(key);
 	if (hit) return hit;
@@ -1630,7 +1638,7 @@ export function stamp(code: string, nr: number, entered?: string, special: 0 | 1
 	const frame: Frame = def?.f ?? (name.length > 13 ? TWO_LINE[h % TWO_LINE.length] : GENERIC[h % GENERIC.length]);
 	const motif = (MOTIFS[code] && def ? MOTIFS[code] : (CONT_MOTIFS[REGION[code] ?? CONT[code]] ?? CONT_MOTIFS.AN))();
 	const txt = { name, date: stampDate(entered), nr: `Nr. ${nr}` };
-	const [vb, inner] = special ? markFrame(txt, SCENES[code]?.() ?? null, motif, special > 1, nr) : FRAMES[frame](txt, motif);
+	const [vb, inner] = special ? markFrame(txt, SCENES[code]?.() ?? null, motif, special, nr) : FRAMES[frame](txt, motif);
 	const wide = !special && +vb.split(' ')[2] / +vb.split(' ')[3] > 1.25;
 	const s: Stamp = {
 		svg: special

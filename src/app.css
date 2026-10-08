@@ -638,8 +638,8 @@ button.pp-tile:active{transform:scale(.98)}
 .pp-empty{width:112px;height:112px;border-radius:50%;border:2.5px dashed var(--line);display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--muted);text-align:center;font-size:11.5px;font-weight:600;line-height:1.25}
 .pp-empty b{font:800 30px/1 var(--display);color:var(--sun);margin-bottom:4px}
 .pp-slot.sp{z-index:1}
-/* Seltene Länder: eingeklebte Briefmarke (gedruckt, nicht gestempelt) – Papier --stp, Goldrand für Legenden --stg */
-:root{--stp:#FFFFFF;--stg:#D6A740;--stt:16%}@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--stp:#26404A;--stg:#B48A33;--stt:30%}}:root[data-theme="dark"]{--stp:#26404A;--stg:#B48A33;--stt:30%}
+/* Rare/Super Rare/Legendary: eingeklebte Briefmarke (gedruckt, nicht gestempelt) – Papier --stp, Silberrand --sv1–3, Goldrand --stg */
+:root{--stp:#FFFFFF;--stg:#D6A740;--stt:16%;--sv1:#7E8892;--sv2:#DCE3E9;--sv3:#FFFFFF}@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--stp:#26404A;--stg:#B48A33;--stt:30%;--sv1:#6C7680;--sv2:#BCC5CD;--sv3:#E8EDF1}}:root[data-theme="dark"]{--stp:#26404A;--stg:#B48A33;--stt:30%;--sv1:#6C7680;--sv2:#BCC5CD;--sv3:#E8EDF1}
 .pp-stamp.sp{width:auto;height:140px;max-height:none;mix-blend-mode:normal;opacity:1;filter:drop-shadow(0 1px 1.5px rgba(13,43,58,.3))}
 /* Leichte Daueranimation: ab und zu hebt ein Windstoß die Marke kurz an (je Land versetzt) */
 .pp-stamp.sp{transform-origin:50% 90%;animation:spLift 9s ease-in-out infinite}
@@ -726,6 +726,28 @@ button.pp-tile:active{transform:scale(.98)}
 .pp-tiers{display:flex;flex-wrap:wrap;gap:6px}
 .pp-tiers i{font-style:normal;font-size:12.5px;padding:4px 10px;border-radius:99px;background:var(--chip);color:var(--muted)}
 .pp-tiers i.on.t1{background:var(--bzl);color:#fff;text-shadow:0 1px 1px rgba(0,0,0,.35)}.pp-tiers i.on.t2{background:var(--svl);color:#0D2B3A}.pp-tiers i.on.t3{background:var(--gdl);color:#3A2A05}
+
+/* Reisepass: Legende der Seltenheitsstufen (Knopf über den Seiten + Blatt von unten) */
+.pp-tools{display:flex;justify-content:flex-end;margin:-8px 0 8px}
+.pp-info{display:inline-flex;align-items:center;gap:6px;padding:6px 12px 6px 9px;border:1px solid var(--line);border-radius:999px;background:var(--surface);color:var(--muted);font:600 12.5px var(--text);-webkit-tap-highlight-color:transparent}
+.pp-info:active{transform:scale(.96)}
+.pp-info svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
+.pp-leg{max-height:calc(100% - 48px - env(safe-area-inset-top,0px));padding-bottom:0;gap:0}
+.pp-leg-list{flex:1;min-height:0;margin:0 -20px;padding:0 20px calc(18px + env(safe-area-inset-bottom,0px));overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y}
+.pp-leg h2{margin:2px 0 4px;font:800 20px var(--display);letter-spacing:-.01em}
+.pp-leg p{margin:0 0 6px;color:var(--muted);font-size:13.5px;line-height:1.4}
+.pp-leg ul{margin:0;padding:0;list-style:none}
+.pp-leg li{display:flex;align-items:center;gap:14px;padding:10px 0;border-bottom:1px solid var(--line)}
+.pp-leg li:last-child{border-bottom:0}
+.pp-leg li>span:last-child{display:flex;flex-direction:column;gap:2px;min-width:0}
+.pp-leg li b{display:flex;align-items:center;gap:8px;font:800 16px var(--display)}
+.pp-leg li small{font-size:13px;color:var(--muted);line-height:1.35}
+.pp-leg-st{flex:none;display:grid;place-items:center;width:78px;height:86px}
+.pp-leg-st .pp-stamp,.pp-leg-st .pp-stamp.sp{width:auto;height:auto;max-width:78px;max-height:86px;animation:none}
+.pp-leg em{font:700 11.5px var(--text);font-style:normal;padding:2px 8px;border-radius:99px;background:var(--chip);color:var(--muted)}
+.pp-leg em.r1{background:color-mix(in srgb,var(--primary) 16%,transparent);color:var(--primary)}
+.pp-leg em.r2{background:var(--svl);color:#0D2B3A}
+.pp-leg em.r3{background:var(--gdl);color:#3A2A05}
 
 /* Länderseite: Einreisedatum */
 .cs-date{position:relative;cursor:pointer}

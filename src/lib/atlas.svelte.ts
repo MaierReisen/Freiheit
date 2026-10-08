@@ -17,8 +17,9 @@ export interface CountryEntry {
 	position?: number;
 	/** Erste Einreise (für den Reisepass): "JJJJ-MM" oder "JJJJ" */
 	entered?: string;
-	/** Seltene Briefmarke im Pass: einmal ausgelost (fehlt = noch nicht ausgelost) */
-	special?: boolean;
+	/** Seltenheit des Stempels im Pass: 0 = Common, 1 = Rare, 2 = Super Rare (einmal ausgelost, fehlt = noch nicht ausgelost;
+	    true = altes Los bis v1.23 = Rare) */
+	special?: number | boolean;
 	[key: string]: unknown;
 }
 
@@ -57,7 +58,7 @@ type Op =
 	| { t: 'addCountry'; code: string; name: string; position: number }
 	| { t: 'removeCountry'; code: string }
 	| { t: 'setEntered'; code: string; entered: string | null }
-	| { t: 'setSpecial'; code: string; special: boolean }
+	| { t: 'setSpecial'; code: string; special: number }
 	| { t: 'addWish'; code: string; name: string }
 	| { t: 'removeWish'; code: string }
 	| { t: 'replaceAll'; data: AtlasData }
@@ -156,6 +157,8 @@ export const wishSet = () => new Set(atlas.data.wishlist.map((c) => c.code));
 /* ---------- Supabase ---------- */
 /** Fehler „Spalte gibt es nicht“ (Migration noch nicht ausgeführt) */
 const noColumn = (e: { code?: string } | null | undefined) => e?.code === 'PGRST204' || e?.code === '42703';
+/** Spalte „special“ noch alt (ja/nein statt Stufe, Migration 006 fehlt) */
+const oldSpecial = (e: { code?: string } | null | undefined) => e?.code === '22P02';
 
 async function runOp(op: Op, user: string) {
 	const ok = <T extends { error: unknown }>(r: T) => {
@@ -174,8 +177,8 @@ async function runOp(op: Op, user: string) {
 		case 'setSpecial': {
 			// nur setzen, solange noch nicht ausgelost: das erste Gerät gewinnt, alle anderen übernehmen dessen Los
 			const r = await supabase.from('visited_countries').update({ special: op.special }).eq('user_id', user).eq('code', op.code).is('special', null);
-			// Spalte noch nicht angelegt (Migration 005 fehlt): Los bleibt lokal
-			if (r.error && !noColumn(r.error)) throw r.error;
+			// Spalte fehlt oder ist noch alt (Migration 006 fehlt): Los bleibt lokal
+			if (r.error && !noColumn(r.error) && !oldSpecial(r.error)) throw r.error;
 			return;
 		}
 		case 'removeCountry':
@@ -206,11 +209,11 @@ async function runOp(op: Op, user: string) {
 					name: c.name,
 					position: i,
 					entered: isEntered(c.entered) ? c.entered : null,
-					special: typeof c.special === 'boolean' ? c.special : null
+					special: typeof c.special === 'number' ? c.special : c.special === true ? 1 : null
 				}));
 				let r = await supabase.from('visited_countries').insert(rows);
-				// ohne Spalte „special“ (Migration 005 fehlt) bzw. „entered“ (004 fehlt) speichern
-				if (r.error && noColumn(r.error)) r = await supabase.from('visited_countries').insert(rows.map(({ special: _s, ...x }) => x));
+				// ohne Spalte „special“ (Migration 005/006 fehlt) bzw. „entered“ (004 fehlt) speichern
+				if (r.error && (noColumn(r.error) || oldSpecial(r.error))) r = await supabase.from('visited_countries').insert(rows.map(({ special: _s, ...x }) => x));
 				if (r.error && noColumn(r.error)) r = await supabase.from('visited_countries').insert(rows.map(({ special: _s, entered: _e, ...x }) => x));
 				ok(r);
 			}
@@ -279,7 +282,7 @@ async function pull() {
 		c1 = await countriesQuery('code,name,position,created_at');
 	}
 	const c = c1 as unknown as {
-		data: { code: string; position: number; entered?: string | null; special?: boolean | null }[];
+		data: { code: string; position: number; entered?: string | null; special?: number | boolean | null }[];
 		error: unknown;
 	};
 	if (c.error || w.error || m.error) {
@@ -312,7 +315,8 @@ async function pull() {
 				visits: [],
 				position: r.position,
 				...(isEntered(entered) ? { entered } : {}),
-				...(typeof special === 'boolean' ? { special } : {})
+				// altes „nein“ (false) gilt als nicht ausgelost: wird neu gelost
+				...(typeof special === 'number' || special === true ? { special } : {})
 			};
 		}),
 		wishlist: w.data.map((r) => ({ code: r.code, name: nameOf(r.code) })),
@@ -411,10 +415,10 @@ export function setEntered(code: string, entered: string | null) {
 	persist();
 	enqueue({ t: 'setEntered', code, entered: v });
 }
-/** Ausgelostes Los der seltenen Briefmarke merken (nur wenn noch keins da ist) */
-export function setSpecial(code: string, special: boolean) {
+/** Ausgeloste Seltenheit des Stempels merken (nur wenn noch keine da ist) */
+export function setSpecial(code: string, special: number) {
 	const s = atlas.data;
-	if (!s.countries.some((c) => c.code === code && c.special === undefined)) return;
+	if (!s.countries.some((c) => c.code === code && typeof c.special !== 'number' && c.special !== true)) return;
 	atlas.data = { ...s, countries: s.countries.map((c) => (c.code === code ? { ...c, special } : c)) };
 	persist();
 	enqueue({ t: 'setSpecial', code, special });

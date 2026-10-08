@@ -4,12 +4,12 @@
 	import { atlas, countedCountries } from '$lib/atlas.svelte';
 	import { closePass, openCountry, reduceMotion, ui } from '$lib/app.svelte';
 	import { flag } from '$lib/countries';
-	import { INK_FILTERS, rankIndex, ranks, stamp, yearOf } from '$lib/passport';
+	import { INK_FILTERS, rankIndex, ranks, stamp, TIER_LABEL, yearOf } from '$lib/passport';
 	import { badgeLevels, badges, tierName, type Badge, type DetailItem } from '$lib/badges';
 	import { loadFacts, type Facts } from '$lib/facts';
 	import { scopeTotal } from '$lib/scope';
 	import { markSeen, passSeen } from '$lib/passSeen.svelte';
-	import { specialLevel, rollSpecials } from '$lib/special.svelte';
+	import { CHANCE, LEGEND, specialLevel, rollSpecials, type Tier } from '$lib/special.svelte';
 	import PassTile from './PassTile.svelte';
 
 	/* Reisepass (Vollbild): Seiten zum Blättern mit je 6 Stempeln in der Reihenfolge „Land Nr. X“, danach „?“-Plätze für
@@ -522,6 +522,7 @@
 			opened = false;
 			picked = null;
 			open = false;
+			legend = false;
 			return;
 		}
 		if (opened) return;
@@ -560,7 +561,7 @@
 			const el = slot.querySelector<HTMLElement>('.pp-stamp');
 			if (!el) continue;
 			if (sp) {
-				await tearOff(slot, el, sp > 1);
+				await tearOff(slot, el, sp);
 				await wait(900);
 				continue;
 			}
@@ -582,8 +583,8 @@
 		pending = [];
 	}
 
-	/** Seltene Briefmarke: wird von oben aufgeklebt und angedrückt (kein zweites Bild) */
-	async function tearOff(slot: HTMLElement, el: HTMLElement, legend: boolean) {
+	/** Briefmarke (Rare und höher): wird von oben aufgeklebt und angedrückt (kein zweites Bild) */
+	async function tearOff(slot: HTMLElement, el: HTMLElement, tier: Tier) {
 		const r = el.getBoundingClientRect(),
 			col = getComputedStyle(slot).getPropertyValue('--c') || css('--primary');
 		navigator.vibrate?.(15);
@@ -601,11 +602,82 @@
 		navigator.vibrate?.(30);
 		const p = document.createElement('div');
 		p.className = 'pp-fx pp-plus';
-		p.textContent = legend ? 'Legende!' : 'Entlegen';
+		p.textContent = TIER_LABEL[tier];
 		Object.assign(p.style, { left: r.left + r.width / 2 + 'px', top: r.top + 6 + 'px', color: col });
 		document.body.appendChild(p);
 		p.animate([{ transform: 'translate(-50%,0)', opacity: 0 }, { transform: 'translate(-50%,-18px)', opacity: 1, offset: 0.3 }, { transform: 'translate(-50%,-34px)', opacity: 0 }], { duration: 1600, easing: 'ease-out' }).finished.then(() => p.remove());
 	}
+
+	/* ---------- Legende: Seltenheitsstufen (Blatt von unten, Runterwischen oder Tippen daneben schließt) ---------- */
+	const TIER_NAME = ['Common', 'Rare', 'Super Rare', 'Legendary'];
+	const pct = (p: number) => Math.round(p * 100) + ' %';
+	let legend = $state(false);
+	let legSheet = $state<HTMLDivElement>();
+	let legList = $state<HTMLDivElement>();
+	const legRows = $derived(
+		legend
+			? [
+					{ t: 0, p: pct(1 - CHANCE.rare - CHANCE.super), d: 'Normaler Stempel – so sieht es bei den meisten Ländern aus.', s: stamp('BT', 12, undefined, 0) },
+					{ t: 1, p: pct(CHANCE.rare), d: 'Eingeklebte Briefmarke statt Stempel.', s: stamp('BT', 12, undefined, 1) },
+					{ t: 2, p: pct(CHANCE.super), d: 'Briefmarke mit Silberrand.', s: stamp('BT', 12, undefined, 2) },
+					{ t: 3, p: 'immer', d: `Briefmarke mit Goldrand – nur die ${LEGEND.length} entlegensten Länder der Welt, z. B. Tuvalu.`, s: stamp('TV', 12, undefined, 3) }
+				]
+			: []
+	);
+	$effect(() => {
+		const el = legSheet;
+		if (!el) return;
+		let d: { y0: number; ly: number; lt: number; vy: number; dy: number; mode: 0 | 1 | 2 } | null = null;
+		const ts = (e: TouchEvent) => {
+			e.stopPropagation();
+			if (e.touches.length !== 1) return (d = null);
+			const y = e.touches[0].clientY;
+			d = { y0: y, ly: y, lt: e.timeStamp, vy: 0, dy: 0, mode: 0 };
+		};
+		const tm = (e: TouchEvent) => {
+			e.stopPropagation();
+			if (!d) return;
+			const y = e.touches[0].clientY,
+				raw = y - d.y0;
+			// Liste scrollt selbst, solange sie nicht ganz oben steht oder nach oben gewischt wird
+			if (!d.mode) d.mode = legList?.contains(e.target as Node) && (legList.scrollTop > 0 || raw < 0) ? 2 : 1;
+			if (d.mode === 2) return;
+			e.preventDefault();
+			const dt = e.timeStamp - d.lt;
+			if (dt >= 12) {
+				d.vy = 0.6 * ((y - d.ly) / dt) + 0.4 * d.vy;
+				d.ly = y;
+				d.lt = e.timeStamp;
+			}
+			d.dy = raw;
+			el.style.transition = 'none';
+			el.style.transform = `translateY(${Math.max(0, raw)}px)`;
+		};
+		const te = (e: TouchEvent) => {
+			e.stopPropagation();
+			if (!d) return;
+			const { dy, vy, mode } = d;
+			d = null;
+			if (mode !== 1) return;
+			if (dy > 70 || (vy > 0.5 && dy > 20)) {
+				sOff = dy;
+				legend = false;
+			} else {
+				el.style.transition = 'transform .2s cubic-bezier(.2,.8,.2,1)';
+				el.style.transform = '';
+			}
+		};
+		el.addEventListener('touchstart', ts, { passive: true });
+		el.addEventListener('touchmove', tm, { passive: false });
+		el.addEventListener('touchend', te);
+		el.addEventListener('touchcancel', te);
+		return () => {
+			el.removeEventListener('touchstart', ts);
+			el.removeEventListener('touchmove', tm);
+			el.removeEventListener('touchend', te);
+			el.removeEventListener('touchcancel', te);
+		};
+	});
 
 	/** Tintenspritzer, Konfetti und „+1 Stempel“ über dem Stempel */
 	function burst(slot: HTMLElement) {
@@ -678,6 +750,11 @@
 				<p class="empty">Noch keine Stempel. Für jedes bereiste Land kommt hier ein Stempel in deinen Pass.</p>
 			{/if}
 			{#if pages.length}
+				<div class="pp-tools">
+					<button type="button" class="pp-info" onclick={() => { choose(null); sOff = 0; legend = true; }}
+						><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 11v6M12 7.5v.5" /></svg>Seltenheit</button
+					>
+				</div>
 				<!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->
 				<div
 					class="pp-book"
@@ -705,7 +782,7 @@
 											class:wait={pending.includes(sl.st.code)}
 											class:sp={sl.st.sp > 0}
 											style="transform:translateY({sl.st.s.dy}px) rotate({sl.st.s.rot}deg);--c:{sl.st.s.color};--w:{sl.st.s.w}%"
-											aria-label="{sl.st.name}, Land Nr. {sl.st.nr}{sl.st.sp > 1 ? ', Legenden-Briefmarke' : sl.st.sp ? ', seltene Briefmarke' : ''}"
+											aria-label="{sl.st.name}, Land Nr. {sl.st.nr}{sl.st.sp ? `, Briefmarke ${TIER_NAME[sl.st.sp]}` : ''}"
 											onclick={() => openCountry(sl.st.code)}>{@html sl.st.s.svg}</button
 										>
 									{:else}
@@ -841,6 +918,24 @@
 			{:else}
 				<button type="button" class="pp-more" onclick={() => setOpen(true)}><i aria-hidden="true"></i>Was zählt – was fehlt noch?</button>
 			{/if}
+		</div>
+	{/if}
+	{#if legend}
+		<button type="button" class="pp-scrim" aria-label="Legende schließen" onclick={() => (legend = false)} transition:fade={{ duration: reduceMotion() ? 0 : 200 }}></button>
+		<div class="pp-sheet pp-leg" bind:this={legSheet} transition:slideUp role="dialog" aria-labelledby="ppLegT">
+			<button type="button" class="pp-grab" aria-label="Legende schließen" onclick={() => (legend = false)}><i></i></button>
+			<div class="pp-leg-list" bind:this={legList}>
+				<h2 id="ppLegT">Seltenheit der Stempel</h2>
+				<p>Jedes Land wird beim ersten Öffnen des Passes einmal ausgelost. Das Ergebnis bleibt und gilt auf allen Geräten.</p>
+				<ul>
+					{#each legRows as x (x.t)}
+						<li>
+							<span class="pp-leg-st" style="color:{x.s.color}">{@html x.s.svg}</span>
+							<span><b>{TIER_NAME[x.t]} <em class="r{x.t}">{x.p}</em></b><small>{x.d}</small></span>
+						</li>
+					{/each}
+				</ul>
+			</div>
 		</div>
 	{/if}
 </section>
