@@ -1316,6 +1316,28 @@ export function createWorldMap(o: MapOptions) {
 	window.addEventListener('scroll', onScroll, { passive: true });
 	const onDown = (e: PointerEvent) => {
 		if (passiveTouch(e)) {
+			// zweiter Finger auf dem inaktiven Globus: sofort aktivieren und zoomen (Zwei-Finger-Geste scrollt nie versehentlich)
+			const f = tapOnly;
+			if (f && e.pointerId !== f.id && ptrs.size === 0 && lastScroll <= f.t - 350) {
+				clearTimeout(holdTimer);
+				tapOnly = null;
+				o.onActivate();
+				navigator.vibrate?.(8);
+				cancelMotion();
+				for (const id of [f.id, e.pointerId]) {
+					try {
+						cv.setPointerCapture(id);
+					} catch {}
+				}
+				ptrs.set(f.id, { x: f.lx, y: f.ly });
+				ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+				gest = { t0: performance.now(), moved: 99, lt: performance.now(), vx: 0, vy: 0, trail: [], pinch: true, freeLat: true, touch: true, x0: f.lx, y0: f.ly, dist: 0, d0: Math.hypot(f.lx - e.clientX, f.ly - e.clientY) || 1, k0: view.k };
+				holdDrag = true; // Seite darf dabei nicht scrollen
+				interacting = true;
+				fadeT0 = 0;
+				markDirty(false);
+				return;
+			}
 			tapOnly = ptrs.size === 0 && !tapOnly ? { id: e.pointerId, x: e.clientX, y: e.clientY, t: performance.now(), moved: 0, lx: e.clientX, ly: e.clientY } : null;
 			// langes Drücken aktiviert Globus/Karte, ohne ein Land zu öffnen
 			clearTimeout(holdTimer);

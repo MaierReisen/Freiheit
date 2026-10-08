@@ -24,8 +24,8 @@
 				? 'Aktiv · außerhalb tippen zum Beenden'
 				: coarse
 					? s.mode === 'globe'
-						? 'Land antippen · halten zum Drehen'
-						: 'Land antippen · halten zum Verschieben'
+						? 'Zwei Finger zoomen · halten zum Drehen'
+						: 'Zwei Finger zoomen · halten zum Verschieben'
 					: s.mode === 'globe'
 						? 'Ziehen zum Drehen'
 						: 'Tippe auf ein Land'
