@@ -582,69 +582,21 @@
 		pending = [];
 	}
 
-	/** Seltene Briefmarke: hängt mit der Nachbarmarke am Bogen über dem Feld, wird abgerissen und klebt sich fest */
+	/** Seltene Briefmarke: wird von oben aufgeklebt und angedrückt (kein zweites Bild) */
 	async function tearOff(slot: HTMLElement, el: HTMLElement, legend: boolean) {
 		const r = el.getBoundingClientRect(),
-			col = getComputedStyle(slot).getPropertyValue('--c') || css('--primary'),
-			up = 'translate(0,-56px) scale(1.12)',
-			k = r.right + r.width > innerWidth ? -1 : 1; // Nachbarmarke rechts, in der rechten Spalte links
-		// Nachbarmarke (Kopie) daneben – bleibt nach dem Abreißen am Bogen und verschwindet
-		const twin = document.createElement('div');
-		twin.className = 'pp-fx';
-		Object.assign(twin.style, { left: (k > 0 ? r.right - 1 : r.left - r.width + 1) + 'px', top: r.top + 'px', width: r.width + 'px', height: r.height + 'px', color: col, transformOrigin: k > 0 ? '0 50%' : '100% 50%' });
-		twin.innerHTML = el.outerHTML;
-		(twin.firstElementChild as HTMLElement).style.cssText = 'width:100%;height:100%';
-		document.body.appendChild(twin);
-		el.style.transformOrigin = k > 0 ? '100% 50%' : '0 50%';
-		const D = 1900,
-			o = { duration: D, easing: 'ease-in-out', fill: 'backwards' } as const;
-		twin.animate(
-			[
-				{ transform: up, opacity: 0 },
-				{ transform: up, opacity: 1, offset: 0.12 },
-				{ transform: `translate(${3 * k}px,-56px) scale(1.12)`, offset: 0.3 },
-				{ transform: up, offset: 0.36 },
-				{ transform: `translate(${4 * k}px,-56px) scale(1.12)`, offset: 0.46 },
-				{ transform: `translate(${16 * k}px,-56px) scale(1.12) rotate(${4 * k}deg)`, opacity: 1, offset: 0.52 },
-				{ transform: `translate(${70 * k}px,-34px) scale(1.04) rotate(${12 * k}deg)`, opacity: 0, offset: 0.76 },
-				{ transform: `translate(${70 * k}px,-34px) scale(1.04) rotate(${12 * k}deg)`, opacity: 0 }
-			],
-			o
-		).finished.then(() => twin.remove());
+			col = getComputedStyle(slot).getPropertyValue('--c') || css('--primary');
 		navigator.vibrate?.(15);
-		setTimeout(() => {
-			// Abreißen: kleine Papierfasern an der Zähnung
-			navigator.vibrate?.([10, 30, 10]);
-			for (let i = 0; i < 7; i++) {
-				const e = document.createElement('i'),
-					sz = 3 + Math.random() * 4;
-				e.className = 'pp-fx';
-				Object.assign(e.style, { left: (k > 0 ? r.right : r.left) + 'px', top: r.top - 56 + r.height * (0.15 + Math.random() * 0.7) + 'px', width: sz + 'px', height: sz + 'px', background: css('--stp') || '#fff', border: '1px solid ' + css('--line'), borderRadius: '1px' });
-				document.body.appendChild(e);
-				e.animate(
-					[
-						{ transform: 'translate(-50%,-50%) rotate(0)', opacity: 1 },
-						{ transform: `translate(${k * (10 + Math.random() * 30)}px,${30 + Math.random() * 50}px) rotate(${Math.random() * 360}deg)`, opacity: 0 }
-					],
-					{ duration: 700 + Math.random() * 400, easing: 'ease-in' }
-				).finished.then(() => e.remove());
-			}
-		}, D * 0.5);
 		await el.animate(
 			[
-				{ transform: up, opacity: 0 },
-				{ transform: up, opacity: 1, offset: 0.12 },
-				{ transform: `translate(${-3 * k}px,-56px) scale(1.12)`, offset: 0.3 },
-				{ transform: up, offset: 0.36 },
-				{ transform: `translate(${-4 * k}px,-56px) scale(1.12)`, offset: 0.46 },
-				{ transform: `translate(${-12 * k}px,-64px) scale(1.12) rotate(${-7 * k}deg)`, offset: 0.54 },
-				{ transform: 'translate(0,3px) scale(.96) rotate(0)', offset: 0.84 },
-				{ transform: 'translate(0,0) scale(1.02)', offset: 0.92 },
+				{ transform: 'translateY(-48px) scale(1.15) rotate(-5deg)', opacity: 0 },
+				{ transform: 'translateY(-48px) scale(1.15) rotate(-5deg)', opacity: 1, offset: 0.2 },
+				{ transform: 'translateY(-6px) scale(1.04) rotate(-1deg)', offset: 0.7 },
+				{ transform: 'translateY(2px) scale(.97)', offset: 0.85 },
 				{ transform: 'none' }
 			],
-			o
+			{ duration: 1100, easing: 'ease-in-out', fill: 'backwards' }
 		).finished;
-		el.style.transformOrigin = '';
 		slot.closest('.pp-page')?.animate([{ transform: 'translateY(0)' }, { transform: 'translateY(3px)' }, { transform: 'translateY(0)' }], { duration: 220 });
 		navigator.vibrate?.(30);
 		const p = document.createElement('div');
