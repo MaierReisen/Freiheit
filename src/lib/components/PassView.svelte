@@ -314,6 +314,77 @@
 		if (e.key === 'ArrowRight') goPage(cur + 1);
 		else if (e.key === 'ArrowLeft') goPage(cur - 1);
 	}
+	/* Schnellwahl: Seitenleiste gedrückt halten → wird zum Schieberegler, Finger ziehen wählt die Seite, Loslassen blättert hin.
+	   Während des Ziehens wird nur die kleine Vorschau (Nummer, Jahre, Flaggen) erneuert – die Seiten selbst erst beim Loslassen. */
+	const PAD = 26; // Rand des Reglers links/rechts (px)
+	let scrub = $state<{ i: number; x: number; w: number } | null>(null);
+	let hold: { x: number; y: number; id: ReturnType<typeof setTimeout> } | null = null;
+	let swallowStrip = false;
+	function scrubAt(x: number) {
+		const r = strip.getBoundingClientRect(),
+			f = Math.max(0, Math.min(1, (x - r.left - PAD) / (r.width - 2 * PAD))),
+			i = Math.round(f * (pages.length - 1));
+		if (scrub && i !== scrub.i) navigator.vibrate?.(4);
+		scrub = { i, x: PAD + f * (r.width - 2 * PAD), w: r.width };
+	}
+	function sDown(x: number, y: number) {
+		if (pages.length < 3) return;
+		sCancel();
+		swallowStrip = false;
+		hold = { x, y, id: setTimeout(() => { hold = null; swallowStrip = true; navigator.vibrate?.(10); scrubAt(x); }, 280) };
+	}
+	/** true = Regler aktiv (Scrollen der Leiste verhindern) */
+	function sMove(x: number, y: number) {
+		if (scrub) {
+			scrubAt(x);
+			return true;
+		}
+		if (hold && Math.hypot(x - hold.x, y - hold.y) > 8) sCancel(); // bewegt statt gehalten: normales Scrollen der Leiste
+		return false;
+	}
+	function sUp(ok: boolean) {
+		sCancel();
+		const s = scrub;
+		scrub = null;
+		if (s && ok) goPage(s.i);
+	}
+	function sCancel() {
+		if (hold) clearTimeout(hold.id);
+		hold = null;
+	}
+	$effect(() => {
+		const s = strip;
+		if (!s) return;
+		const ts = (e: TouchEvent) => (e.touches.length === 1 ? sDown(e.touches[0].clientX, e.touches[0].clientY) : sUp(false));
+		const tm = (e: TouchEvent) => { if (e.touches.length === 1 && sMove(e.touches[0].clientX, e.touches[0].clientY)) e.preventDefault(); };
+		const te = (e: TouchEvent) => sUp(e.type === 'touchend');
+		s.addEventListener('touchstart', ts, { passive: true });
+		s.addEventListener('touchmove', tm, { passive: false });
+		s.addEventListener('touchend', te);
+		s.addEventListener('touchcancel', te);
+		return () => {
+			sCancel();
+			s.removeEventListener('touchstart', ts);
+			s.removeEventListener('touchmove', tm);
+			s.removeEventListener('touchend', te);
+			s.removeEventListener('touchcancel', te);
+		};
+	});
+	// Maus (Rechner): gedrückt halten und ziehen
+	function spDown(e: PointerEvent) {
+		if (e.pointerType !== 'mouse' || e.button !== 0) return;
+		sDown(e.clientX, e.clientY);
+		try { strip.setPointerCapture(e.pointerId); } catch { /* egal */ }
+	}
+	const spMove = (e: PointerEvent) => e.pointerType === 'mouse' && sMove(e.clientX, e.clientY);
+	const spUp = (e: PointerEvent) => e.pointerType === 'mouse' && sUp(e.type === 'pointerup');
+	function onStripClick(e: MouseEvent) {
+		if (swallowStrip) { e.stopPropagation(); e.preventDefault(); swallowStrip = false; }
+	}
+	const preview = $derived(
+		scrub ? { ...pages[scrub.i], flags: pages[scrub.i].slots.map((s) => (s.kind === 'stamp' ? flag(s.st.code) : '?')).join(' ') } : null
+	);
+
 	// aktive Seitenzahl in der Leiste mittig halten
 	$effect(() => {
 		const i = shown;
@@ -580,12 +651,37 @@
 					{/each}
 				</div>
 				{#if pages.length > 1}
-					<div class="pp-strip" bind:this={strip} role="group" aria-label="Seite wählen">
-						<button type="button" class="pp-arrow" aria-label="Vorherige Seite" disabled={cur <= 0} onclick={() => goPage(cur - 1)}>‹</button>
-						{#each pages as _, pi (pi)}
-							<button type="button" class:on={pi === shown} aria-label="Seite {pi + 1}" aria-current={pi === shown ? 'page' : undefined} onclick={() => goPage(pi)}>{pi + 1}</button>
-						{/each}
-						<button type="button" class="pp-arrow" aria-label="Nächste Seite" disabled={cur >= pages.length - 1} onclick={() => goPage(cur + 1)}>›</button>
+					<div class="pp-nav">
+						<!-- svelte-ignore a11y_no_static_element_interactions -->
+						<div
+							class="pp-strip"
+							bind:this={strip}
+							role="group"
+							aria-label="Seite wählen – gedrückt halten und ziehen zum schnellen Blättern"
+							onpointerdown={spDown}
+							onpointermove={spMove}
+							onpointerup={spUp}
+							onpointercancel={spUp}
+							onclickcapture={onStripClick}
+							oncontextmenu={(e) => e.preventDefault()}
+						>
+							<button type="button" class="pp-arrow" aria-label="Vorherige Seite" disabled={cur <= 0} onclick={() => goPage(cur - 1)}>‹</button>
+							{#each pages as _, pi (pi)}
+								<button type="button" class:on={pi === shown} aria-label="Seite {pi + 1}" aria-current={pi === shown ? 'page' : undefined} onclick={() => goPage(pi)}>{pi + 1}</button>
+							{/each}
+							<button type="button" class="pp-arrow" aria-label="Nächste Seite" disabled={cur >= pages.length - 1} onclick={() => goPage(cur + 1)}>›</button>
+						</div>
+						{#if scrub && preview}
+							<div class="pp-scrub" aria-hidden="true">
+								<i class="pp-track"></i>
+								<b class="pp-knob" style="left:{scrub.x}px">{scrub.i + 1}</b>
+								<div class="pp-bubble" style="left:{Math.max(90, Math.min(scrub.w - 90, scrub.x))}px">
+									<b>Seite {scrub.i + 1} <small>von {pages.length}</small></b>
+									{#if preview.years}<span>{preview.years}</span>{/if}
+									<span class="pp-flags">{preview.flags}</span>
+								</div>
+							</div>
+						{/if}
 					</div>
 				{/if}
 			{/if}

@@ -610,6 +610,15 @@ button.pp-tile:active{transform:scale(.98)}
 .pp-book:focus-visible{outline:2px solid var(--primary);outline-offset:3px;border-radius:var(--r-lg)}
 .pp-strip{display:flex;gap:6px;margin:0 0 20px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
 .pp-strip::-webkit-scrollbar{display:none}
+.pp-nav{position:relative;margin:0 0 20px}.pp-nav .pp-strip{margin:0;-webkit-touch-callout:none;user-select:none;-webkit-user-select:none}
+/* Schnellwahl-Regler über der Seitenleiste (gedrückt halten + ziehen) */
+.pp-scrub{position:absolute;inset:0;z-index:5;border-radius:var(--r-md);background:var(--surface);border:1px solid var(--line);pointer-events:none;animation:pp-in .12s ease-out}
+.pp-track{position:absolute;left:26px;right:26px;top:50%;height:6px;margin-top:-3px;border-radius:3px;background:var(--chip)}
+.pp-knob{position:absolute;top:50%;width:44px;height:44px;margin:-22px 0 0 -22px;border-radius:50%;display:grid;place-items:center;background:var(--sun);color:#0D2B3A;font:800 15px var(--text);font-variant-numeric:tabular-nums;box-shadow:0 4px 12px -4px rgba(13,43,58,.45)}
+.pp-bubble{position:absolute;bottom:calc(100% + 12px);width:172px;margin-left:-86px;padding:10px 12px;border-radius:var(--r-lg);background:var(--paper);border:1px solid var(--line);box-shadow:0 10px 26px -12px rgba(13,43,58,.5);text-align:center;display:flex;flex-direction:column;gap:2px}
+.pp-bubble b{font:800 18px var(--display);color:var(--ink)}.pp-bubble small{font:600 12px var(--text);color:var(--muted)}
+.pp-bubble span{font-size:12.5px;font-weight:600;color:var(--muted)}.pp-bubble .pp-flags{font-size:17px;letter-spacing:1px;color:var(--ink)}
+@keyframes pp-in{from{opacity:0;transform:scale(.97)}}
 .pp-strip button{flex:none;min-width:42px;height:42px;padding:0 8px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface);color:var(--muted);font:700 14px var(--text);font-variant-numeric:tabular-nums;-webkit-tap-highlight-color:transparent}
 .pp-strip button.on{background:var(--sun);border-color:var(--sun);color:#0D2B3A}
 .pp-strip .pp-arrow{font-size:22px;color:var(--ink)}

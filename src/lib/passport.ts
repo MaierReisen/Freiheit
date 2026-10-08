@@ -1,7 +1,7 @@
 import { CONT, nameOf } from './countries';
 
 /* Reisepass: Ränge und Stempel. Ein Stempel ist ein SVG-Text (Rahmen + Motiv + Name/Datum), eingefärbt über
-   currentColor. Rund 110 Länder haben ein eigenes Motiv, alle anderen einen schlichten Stempel mit Regions- bzw.
+   currentColor. Rund 140 Länder haben ein eigenes Motiv, alle anderen einen schlichten Stempel mit Regions- bzw.
    Kontinent-Symbol. Das Tinten-Aussehen kommt aus gemeinsamen Filtern (#pf0–#pf3, einmal in der Pass-Ansicht). */
 
 /* ---------- Ränge ---------- */
@@ -985,6 +985,247 @@ ${sun(14, 14, 6)}<path d="M14,4 V2 M14,24 V26 M4,14 H2 M24,14 H26 M7,7 L5.5,5.5 
 		return M(`<path d="M2,76 L18,56 L40,40 L58,34 L80,38 L98,54 V76 Z" ${HALF} stroke-width="2.6"/><path d="M24,58 L30,64 M60,44 L64,52 M80,50 L84,58" stroke-width="1.4"/>
 ${tw(24, 52)}${tw(54, 36)}${tw(80, 40)}<path d="M28,48 L50,34 M58,34 L76,38" stroke-width="1.6" stroke-dasharray="2 2"/>${GROUND}`, [0, 0, 100, 80]);
 	},
+	// Albanien: Berat, Stadt der tausend Fenster
+	AL: () => {
+		const house = (x: number, y: number) =>
+			`<path d="M${x - 1},${y} L${x + 6},${y - 5} L${x + 13},${y} Z" ${SOLID}/><rect x="${x}" y="${y}" width="12" height="9" fill="var(--paper)" stroke-width="1.6"/><path d="M${x + 2},${y + 3} h2 v3.5 h-2 Z M${x + 5},${y + 3} h2 v3.5 h-2 Z M${x + 8},${y + 3} h2 v3.5 h-2 Z" ${SOLID}/>`;
+		let h = '';
+		for (const [y, xs] of [[37, [50, 64, 78]], [50, [26, 40, 54, 68, 82]], [64, [4, 18, 32, 46, 60, 74, 86]]] as [number, number[]][]) for (const x of xs) h += house(x, y);
+		return M(`<path d="M2,76 V62 L30,48 L56,32 L76,22 H98 V76 Z" ${HALF} stroke-width="2.4"/><path d="M74,22 V16 H78 V19 H82 V16 H86 V19 H90 V16 H94 V19 H98" stroke-width="2"/>${h}${GROUND}`);
+	},
+	// Andorra: romanischer Kirchturm vor den Pyrenäen
+	AD: () => {
+		let w = '';
+		for (const y of [31, 45, 59]) w += `<path d="M43,${y + 9} V${y + 3} a2.5,2.5 0 0 1 5,0 V${y + 9} Z M52,${y + 9} V${y + 3} a2.5,2.5 0 0 1 5,0 V${y + 9} Z" ${SOLID}/>`;
+		return M(`<path d="M2,76 V60 L22,26 L34,40 L50,16 L68,42 L80,30 L98,56 V76 Z" ${HALF} stroke-width="2.2"/><path d="M18,33 L22,26 L26,32 L23,30 Z M45,24 L50,16 L55,24 L52,22 L50,25 L47,22 Z M76,36 L80,30 L84,36 Z" ${SOLID}/>
+<rect x="40" y="28" width="20" height="48" fill="var(--paper)" stroke-width="2.6"/><path d="M38,28 L50,20 L62,28 Z" ${SOLID}/><path d="M40,42 H60 M40,56 H60" stroke-width="1.6"/>${w}
+<rect x="60" y="50" width="30" height="26" fill="var(--paper)" stroke-width="2.4"/><path d="M58,50 L75,42 L92,50 Z" ${SOLID}/><path d="M70,76 V68 a5,5 0 0 1 10,0 V76 Z" ${SOLID}/>${GROUND}`);
+	},
+	// Luxemburg: Adolphe-Brücke mit den Türmen der Kathedrale
+	LU: () =>
+		M(`${sun(14, 14, 7)}<path d="M66,33 L69,12 L72,33 Z M76,33 L79,6 L82,33 Z M86,33 L89,12 L92,33 Z" ${HALF} stroke-width="1.8"/>
+<path d="M2,36 H98 V76 H90 V62 Q90,52 86,52 Q82,52 82,62 V76 H76 Q76,42 50,42 Q24,42 24,76 H18 V62 Q18,52 14,52 Q10,52 10,62 V76 H2 Z" ${HALF} stroke-width="2.6"/>
+<rect x="2" y="32" width="96" height="5" ${SOLID}/><path d="M38,76 q-6,-8 0,-14 q6,6 0,14 Z M60,76 q-5,-7 0,-12 q5,5 0,12 Z M49,76 q-4,-5 0,-9 q4,4 0,9 Z" ${SOLID}/>${GROUND}`),
+	// Liechtenstein: Schloss Vaduz über den Weinbergen
+	LI: () =>
+		M(`<path d="M2,48 L20,22 L32,34 L46,14 L62,36 L76,24 L98,46" stroke-width="2"/><path d="M16,28 L20,22 L24,28 Z M42,20 L46,14 L50,20 Z M72,30 L76,24 L80,30 Z" ${SOLID}/>
+<path d="M2,76 Q20,58 40,56 Q60,52 74,58 Q90,64 98,76 Z" ${HALF} stroke-width="2.4"/><path d="M10,72 L18,66 M18,74 L28,66 M68,64 L76,70 M80,66 L88,72" stroke-width="1.6" stroke-dasharray="2 2"/>
+<rect x="30" y="40" width="40" height="16" fill="var(--paper)" stroke-width="2.4"/><path d="M28,40 L36,32 H66 L72,40 Z" ${SOLID}/>
+<rect x="64" y="30" width="12" height="26" fill="var(--paper)" stroke-width="2.4"/><path d="M62,30 L70,21 L78,30 Z" ${SOLID}/>
+<rect x="38" y="18" width="14" height="22" fill="var(--paper)" stroke-width="2.4"/><path d="M36,18 L45,9 L54,18 Z" ${SOLID}/>
+<path d="M34,45 h2.4 v4 h-2.4 Z M40,45 h2.4 v4 h-2.4 Z M46,45 h2.4 v4 h-2.4 Z M52,45 h2.4 v4 h-2.4 Z M58,45 h2.4 v4 h-2.4 Z M42,24 h2.4 v4 h-2.4 Z M47,24 h2.4 v4 h-2.4 Z M69,36 h2.4 v4 h-2.4 Z" ${SOLID}/>`),
+	// Litauen: Wasserburg Trakai mit Spiegelung
+	LT: () =>
+		M(`<rect x="40" y="20" width="20" height="22" fill="var(--paper)" stroke-width="2.4"/><path d="M38,20 L50,8 L62,20 Z" ${SOLID}/><path d="M46,26 h3 v5 h-3 Z M51,26 h3 v5 h-3 Z" ${SOLID}/>
+<rect x="18" y="38" width="64" height="16" fill="var(--paper)" stroke-width="2.4"/><path d="M24,44 v4 M32,44 v4 M40,44 v4 M60,44 v4 M68,44 v4 M76,44 v4" stroke-width="2"/><path d="M46,54 V47 a4,4 0 0 1 8,0 V54 Z" ${SOLID}/>
+<rect x="12" y="32" width="10" height="22" fill="var(--paper)" stroke-width="2.4"/><path d="M10,32 L17,23 L24,32 Z" ${SOLID}/><rect x="78" y="32" width="10" height="22" fill="var(--paper)" stroke-width="2.4"/><path d="M76,32 L83,23 L90,32 Z" ${SOLID}/>
+<path d="M4,55 H96" stroke-width="3"/><path d="M14,58 H86 V64 H14 Z M40,64 H60 V68 L50,76 L40,68 Z" ${HALF} stroke="none"/>
+<path d="${waves(8, 62, 6, 14, 3)}" stroke-width="1.8"/><path d="${waves(16, 71, 5, 14, 3)}" stroke-width="1.8"/>`),
+	// Lettland: Schwarzhäupterhaus in Riga
+	LV: () =>
+		M(`<path d="M26,76 V40 H30 V32 H34 V24 H40 V16 H46 V8 H54 V16 H60 V24 H66 V32 H70 V40 H74 V76 Z" ${HALF} stroke-width="2.6"/><path d="M50,8 V2" stroke-width="2"/>
+${[[30, 32], [34, 24], [40, 16], [60, 16], [66, 24], [70, 32]].map(([x, y]) => `<circle cx="${x}" cy="${y - 2}" r="1.6" ${SOLID}/>`).join('')}
+<circle cx="50" cy="28" r="5" fill="var(--paper)" stroke-width="2"/><path d="M50,25 V28 L52,29" stroke-width="1.4"/>
+<path d="M31,44 h5 v8 h-5 Z M40,44 h5 v8 h-5 Z M55,44 h5 v8 h-5 Z M64,44 h5 v8 h-5 Z M31,58 h5 v8 h-5 Z M64,58 h5 v8 h-5 Z M40,58 h5 v8 h-5 Z M55,58 h5 v8 h-5 Z M38,32 h4 v6 h-4 Z M58,32 h4 v6 h-4 Z" ${SOLID}/>
+<path d="M46,76 V68 a4,4 0 0 1 8,0 V76 Z" ${SOLID}/><path d="M76,76 V44 L86,34 L96,44 V76 M81,48 h4 v6 h-4 Z M88,48 h4 v6 h-4 Z" stroke-width="2"/><path d="M4,76 V48 H22 V76 M8,54 h4 v6 h-4 M14,54 h4 v6 h-4" stroke-width="2"/>${GROUND}`),
+	// Slowakei: Burg Bratislava über der Donau
+	SK: () =>
+		M(`<path d="M2,66 Q28,50 50,50 Q74,50 98,66 Z" ${HALF} stroke-width="2.4"/>
+<rect x="26" y="26" width="48" height="24" fill="var(--paper)" stroke-width="2.6"/><path d="M26,26 L32,20 H68 L74,26 Z" ${SOLID}/>
+${[37, 44, 51, 58].map((x) => `<path d="M${x},31 h3 v4 h-3 Z M${x},40 h3 v4 h-3 Z" ${SOLID}/>`).join('')}
+<rect x="20" y="14" width="10" height="36" fill="var(--paper)" stroke-width="2.4"/><path d="M19,14 L25,7 L31,14 Z" ${SOLID}/><rect x="70" y="14" width="10" height="36" fill="var(--paper)" stroke-width="2.4"/><path d="M69,14 L75,7 L81,14 Z" ${SOLID}/>
+<path d="M24,20 h2 v4 h-2 Z M24,32 h2 v4 h-2 Z M74,20 h2 v4 h-2 Z M74,32 h2 v4 h-2 Z" ${SOLID}/><path d="${waves(4, 72, 6, 15, 3)}" stroke-width="2"/><path d="${waves(12, 78, 5, 15, 2.4)}" stroke-width="1.6"/>`),
+	// Serbien: Ćevapi mit Zwiebeln und Ajvar
+	RS: () => {
+		let c = '';
+		for (let i = 0; i < 5; i++) c += `<rect x="${22 + i * 2}" y="${36 + i * 5}" width="38" height="7" rx="3.5" fill="currentColor" stroke="var(--paper)" stroke-width="1.4" transform="rotate(-8 ${41 + i * 2} ${39 + i * 5})"/>`;
+		let o = '';
+		for (const [x, y, r] of [[68, 52, 10], [74, 57, -20], [65, 59, 30], [76, 50, 5], [71, 62, -10], [80, 55, 25]]) o += `<rect x="${x}" y="${y}" width="3.4" height="3.4" fill="var(--paper)" stroke-width="1.3" transform="rotate(${r} ${x + 1.7} ${y + 1.7})"/>`;
+		return M(`<ellipse cx="50" cy="56" rx="46" ry="19" stroke-width="2.8"/><ellipse cx="50" cy="56" rx="38" ry="13" stroke-width="1.4" stroke-dasharray="2 3"/>
+<path d="M16,54 Q18,40 46,36 Q66,36 70,46 Q50,58 16,54 Z" ${HALF} stroke-width="2"/>${c}<path d="M74,40 q6,-4 10,1 q2,6 -5,7 q-7,0 -5,-8 Z" ${HALF} stroke-width="1.8"/>${o}
+<path d="M34,26 q-4,-5 0,-9 q4,-4 0,-9 M48,24 q-4,-5 0,-9 q4,-4 0,-9 M62,26 q-4,-5 0,-9 q4,-4 0,-9" stroke-width="1.8"/>`);
+	},
+	// Nordmazedonien: Kirche Kaneo über dem Ohridsee
+	MK: () =>
+		M(`<path d="M2,46 Q20,38 34,42 Q50,34 64,40" stroke-width="1.8"/>
+<path d="M50,76 V60 Q54,50 60,46 L66,40 H98 V76 Z" ${HALF} stroke-width="2.4"/><path d="M58,56 l6,4 M70,50 l8,6 M84,58 l6,6" stroke-width="1.4"/>
+<rect x="70" y="28" width="22" height="12" fill="var(--paper)" stroke-width="2"/><path d="M70,40 V32 Q64,32 64,36 V40 Z" fill="var(--paper)" stroke-width="2"/><path d="M68,28 L81,22 L94,28 Z" ${SOLID}/>
+<rect x="77" y="12" width="8" height="10" fill="var(--paper)" stroke-width="2"/><path d="M75,12 L81,6 L87,12 Z" ${SOLID}/><path d="M81,6 V1 M79.2,2.8 H82.8" stroke-width="1.4"/><path d="M80,15 h2 v4 h-2 Z M74,32 h2 v4 h-2 Z M86,32 h2 v4 h-2 Z" ${SOLID}/>
+<path d="M12,58 H32 L28,62 H16 Z" ${SOLID}/><path d="M22,58 V48 L30,56 Z" ${HALF} stroke-width="1.6"/><path d="${waves(4, 66, 3, 14, 3)}" stroke-width="2"/><path d="${waves(8, 74, 3, 13, 3)}" stroke-width="2"/>`),
+	// Moldau: Weinfass, Trauben und ein Glas Rotwein
+	MD: () => {
+		let g = '';
+		for (const [x, y] of [[72, 30], [80, 30], [88, 30], [76, 37], [84, 37], [80, 44]]) g += `<circle cx="${x}" cy="${y}" r="4.2" fill="currentColor" stroke="var(--paper)" stroke-width="1.2"/>`;
+		return M(`<path d="M22,30 Q16,52 22,74 H58 Q64,52 58,30 Z" ${HALF} stroke-width="2.6"/><ellipse cx="40" cy="30" rx="18" ry="4" fill="var(--paper)" stroke-width="2.4"/>
+<path d="M19,42 Q40,48 61,42 M19,64 Q40,70 61,64" stroke-width="2.4"/><path d="M36,54 h8 v4 h-8 Z M39,58 v4" ${SOLID}/><path d="M39,58 v5" stroke-width="2"/>
+<path d="M80,24 Q76,14 66,16 Q70,24 80,24 Z" ${SOLID}/><path d="M80,26 V20 q2,-4 6,-4" stroke-width="1.8"/>${g}
+<path d="M70,52 Q70,64 80,64 Q90,64 90,52 Z" fill="var(--paper)" stroke-width="2"/><path d="M71,56 Q72,63 80,63 Q88,63 89,56 Z" ${SOLID}/><path d="M80,64 V74 M73,75 H87" stroke-width="2.2"/>${GROUND}`);
+	},
+	// Färöer: Wasserfall Múlafossur und Grasdachhäuser
+	FO: () =>
+		M(`<path d="M58,40 Q72,22 90,26 Q96,30 98,40" stroke-width="2"/><path d="M2,26 H44 Q46,28 46,32 V76 H2 Z" ${HALF} stroke-width="2.6"/><path d="M2,24 H44 Q47,25 46,30 H2 Z" ${SOLID}/>
+<rect x="8" y="16" width="10" height="8" fill="var(--paper)" stroke-width="1.6"/><path d="M6,16 L13,10 L20,16 Z" ${SOLID}/><rect x="26" y="17" width="9" height="7" fill="var(--paper)" stroke-width="1.6"/><path d="M24,17 L30.5,11 L37,17 Z" ${SOLID}/>
+<path d="M44,30 Q50,32 50,42 V66 M47,30 Q53,33 53,42 V66" stroke-width="2.2" stroke-dasharray="6 3"/><path d="M44,68 q4,-4 8,0 q4,-4 8,0" stroke-width="1.8"/>
+<path d="M70,76 V52 L74,46 L78,52 V76 Z M84,76 V60 L88,54 L92,60 V76 Z" ${HALF} stroke-width="2"/><path d="M62,12 q3,-3 6,0 q3,-3 6,0 M80,8 q2,-2 4,0 q2,-2 4,0" stroke-width="1.6"/>
+<path d="${waves(54, 70, 3, 14, 3)}" stroke-width="2"/><path d="${waves(58, 77, 3, 13, 2.4)}" stroke-width="1.6"/>`),
+	// Gibraltar: Berberaffe vor dem Felsen
+	GI: () =>
+		M(`${sun(84, 12, 6)}<path d="M2,76 V54 Q6,46 10,40 L18,20 Q20,14 26,14 L40,18 L60,26 L82,44 L98,52 V76 Z" ${HALF} stroke-width="2.6"/><path d="M22,24 L28,34 M44,26 L48,36 M66,36 L70,44" stroke-width="1.4"/>
+<ellipse cx="74" cy="62" rx="12" ry="14" ${SOLID}/><ellipse cx="65" cy="72" rx="9" ry="5" ${SOLID}/><path d="M66,52 Q58,60 61,72" stroke="var(--paper)" stroke-width="1.6"/>
+<circle cx="70" cy="44" r="8" ${SOLID}/><ellipse cx="67" cy="46" rx="4.4" ry="5" ${PAPER}/><circle cx="65.6" cy="44.6" r="1" ${SOLID}/><circle cx="68.6" cy="44.6" r="1" ${SOLID}/><path d="M65.6,48.6 Q67,49.6 68.4,48.6" stroke-width="1"/>${GROUND}`),
+	// Israel: Zeitunglesen im Toten Meer
+	IL: () =>
+		M(`${sun(84, 12, 7)}<path d="M2,40 V36 Q20,24 36,30 Q54,20 70,28 Q86,22 98,30 V40 Z" ${HALF} stroke-width="2"/><path d="M2,48 H98" stroke-width="1.8"/>
+<path d="M34,49 Q50,44 62,48 Q50,53 34,51 Z" ${SOLID}/><circle cx="30" cy="47" r="5" ${SOLID}/><path d="M62,48 L80,46 M62,50 L80,51" stroke-width="3.2"/><path d="M80,46 l2,-4 M80,51 l2,-4" stroke-width="2.4"/>
+<path d="M38,47 L42,37 M50,46 L52,37" stroke-width="2.6"/><path d="M34,26 L56,23 L58,38 L37,41 Z" fill="var(--paper)" stroke-width="2"/><path d="M39,29 H52 M39,32.5 H54 M40,36 H50" stroke-width="1.2"/>
+<path d="${waves(4, 58, 6, 15, 3)}" stroke-width="2"/><path d="${waves(10, 68, 6, 15, 3)}" stroke-width="2"/><path d="M4,76 h6 l2,-3 l3,3 h8 M80,76 h6 l2,-4 l3,4 h6" stroke-width="1.8"/>`),
+	// Iran: Granatäpfel
+	IR: () => {
+		let s = '';
+		for (let i = 0; i < 10; i++) { const a = (i * Math.PI) / 5; s += `<ellipse cx="${f1(70 + 10 * Math.cos(a))}" cy="${f1(54 + 10 * Math.sin(a))}" rx="2.3" ry="2.7" ${SOLID}/>`; }
+		for (let i = 0; i < 5; i++) { const a = (i * Math.PI * 2) / 5 + 0.3; s += `<ellipse cx="${f1(70 + 4.6 * Math.cos(a))}" cy="${f1(54 + 4.6 * Math.sin(a))}" rx="2.1" ry="2.5" ${SOLID}/>`; }
+		return M(`<path d="M42,22 Q54,8 66,14 Q56,24 42,22 Z" ${SOLID}/><path d="M44,21 Q54,16 62,15" stroke="var(--paper)" stroke-width="1.2"/>
+<circle cx="34" cy="48" r="22" ${HALF} stroke-width="2.8"/><path d="M27,28 L28,20 L31,25 L34,18 L37,25 L40,20 L41,28 Z" ${SOLID}/><path d="M22,40 Q24,34 30,32" stroke-width="2"/>
+<circle cx="70" cy="54" r="18" ${SOLID}/><circle cx="70" cy="54" r="15" ${PAPER}/>${s}<ellipse cx="50" cy="73" rx="2.3" ry="2.7" ${SOLID}/><ellipse cx="94" cy="72" rx="2.3" ry="2.7" ${SOLID}/>${GROUND}`);
+	},
+	// Pakistan: bunt bemalter Lastwagen
+	PK: () => {
+		let d = '';
+		for (let x = 36; x < 92; x += 8) d += `L${x + 4},34 L${x + 8},40 `;
+		return M(`<rect x="34" y="30" width="60" height="34" ${HALF} stroke-width="2.6"/><path d="M36,40 ${d}" stroke-width="1.6"/><circle cx="64" cy="50" r="6" ${SOLID}/><circle cx="64" cy="50" r="2.4" ${PAPER}/>
+${[40, 48, 56, 72, 80, 88].map((x) => `<circle cx="${x}" cy="58" r="1.8" ${SOLID}/>`).join('')}
+<path d="M10,64 V44 L16,34 H32 V64 Z" fill="var(--paper)" stroke-width="2.6"/><path d="M17,38 L14,46 H30 V38 Z" ${HALF} stroke-width="1.6"/>
+<path d="M12,34 L8,12 Q21,4 35,12 L32,34 Z" ${SOLID}/><circle cx="21" cy="20" r="3.4" ${PAPER}/><path d="M13,28 H29 M15,14 l2,-2 M27,14 l-2,-2" stroke="var(--paper)" stroke-width="1.4"/>
+<path d="M6,64 H96" stroke-width="3"/><path d="M36,67 H62" stroke-width="1.4" stroke-dasharray="1 2"/>
+${[22, 70, 84].map((x) => `<circle cx="${x}" cy="68" r="7" fill="var(--paper)" stroke-width="3"/><circle cx="${x}" cy="68" r="2.2" ${SOLID}/>`).join('')}`);
+	},
+	// Bangladesch: Fahrradrikscha
+	BD: () => {
+		const wheel = (x: number, y: number, r: number) => {
+			let s = '';
+			for (let i = 0; i < 4; i++) { const a = (i * Math.PI) / 4; s += `M${f1(x + r * Math.cos(a))},${f1(y + r * Math.sin(a))} L${f1(x - r * Math.cos(a))},${f1(y - r * Math.sin(a))} `; }
+			return `<circle cx="${x}" cy="${y}" r="${r}" stroke-width="2.6"/><path d="${s}" stroke-width="1"/>`;
+		};
+		return M(`${wheel(18, 64, 11)}${wheel(66, 62, 13)}<path d="M18,64 L30,46 L40,56 L66,62 M30,46 L28,40 M24,40 H32 M40,56 L38,44" stroke-width="2.4"/>
+<circle cx="34" cy="22" r="4" ${SOLID}/><path d="M34,26 L38,42 M38,42 L44,52 L40,60 M35,30 L28,40" stroke-width="3.2"/>
+<path d="M50,48 Q50,20 70,18 Q88,18 88,48 Z" ${SOLID}/><path d="M56,40 Q64,26 80,26 M58,46 Q68,34 84,36" stroke="var(--paper)" stroke-width="1.6"/>${[[62, 30], [74, 32], [80, 42]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="1.8" ${PAPER}/>`).join('')}
+<path d="M52,48 H84 V56 H52 Z" ${HALF} stroke-width="2"/>${GROUND}`);
+	},
+	// Uganda: Schuhschnabel im Papyrus
+	UG: () =>
+		M(`<path d="M80,76 Q78,50 82,30 M90,76 Q92,56 88,40" stroke-width="1.8"/>${[[82, 30], [88, 40]].map(([x, y]) => `<path d="M${x},${y} l-8,-6 M${x},${y} l-4,-9 M${x},${y} l0,-10 M${x},${y} l4,-9 M${x},${y} l8,-6" stroke-width="1.4"/>`).join('')}
+<path d="M50,76 V58 M56,76 V58" stroke-width="2.4"/><path d="M44,76 H52 M54,76 H62" stroke-width="2"/>
+<path d="M42,56 Q36,38 46,30 Q56,26 62,34 Q68,48 60,58 Q52,62 42,56 Z" ${HALF} stroke-width="2.6"/><path d="M48,38 Q56,44 58,54 M46,44 Q52,50 52,56" stroke-width="1.4"/>
+<path d="M46,32 Q44,26 42,22" stroke-width="5"/><circle cx="40" cy="16" r="8" ${HALF} stroke-width="2.6"/><path d="M46,10 l4,-3" stroke-width="2"/>
+<path d="M33,13 Q20,11 14,17 Q12,24 18,26 Q26,26 34,21 Z" ${SOLID}/><path d="M14,18 q-2,4 2,6" stroke-width="2"/><circle cx="40" cy="14" r="2.4" ${PAPER}/><circle cx="40" cy="14" r="1.2" ${SOLID}/>${GROUND}`),
+	// Kap Verde: Vulkan Fogo mit Weinreben
+	CV: () =>
+		M(`${sun(14, 14, 6)}<path d="M4,70 L42,18 Q50,12 58,18 L96,70 Z" ${HALF} stroke-width="2.6"/><path d="M50,14 q-4,-4 0,-8 q4,-4 0,-8" stroke-width="1.8"/><path d="M45,22 Q40,40 34,50 M55,22 Q60,38 66,48" stroke-width="1.6"/>
+<path d="M14,64 H34 M64,64 H86 M18,58 H30 M68,58 H82" stroke-width="1.8" stroke-dasharray="2 2.4"/>
+<rect x="38" y="58" width="10" height="8" fill="var(--paper)" stroke-width="1.8"/><path d="M37,58 L43,53 L49,58 Z" ${SOLID}/><rect x="52" y="60" width="9" height="6" fill="var(--paper)" stroke-width="1.8"/><path d="M51,60 L56.5,56 L62,60 Z" ${SOLID}/>
+<path d="${waves(4, 75, 6, 15, 3)}" stroke-width="2"/>`),
+	// Réunion: Lava des Piton de la Fournaise und Tropikvogel
+	RE: () =>
+		M(`<path d="M10,20 Q18,14 24,20 Q30,14 38,18" stroke-width="2.2"/><path d="M24,20 Q22,32 14,40 M24,20 Q26,32 20,40" stroke-width="1.3"/>
+<path d="M2,64 Q30,36 44,30 H58 Q70,36 86,64 Z" ${HALF} stroke-width="2.6"/><path d="M44,30 Q51,34 58,30" stroke-width="2"/>
+<path d="M48,30 Q45,20 50,12 Q55,20 52,30 Z" ${SOLID}/>${[[43, 18], [58, 20], [53, 6], [46, 8]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="1.6" ${SOLID}/>`).join('')}
+<path d="M54,32 Q62,44 60,54 Q64,62 76,68" stroke-width="4"/><path d="M78,66 q-2,-4 2,-6 q4,-2 2,-6 M84,68 q-2,-4 2,-6" stroke-width="1.4"/>
+<path d="${waves(2, 70, 7, 14, 3)}" stroke-width="2"/><path d="${waves(8, 77, 6, 14, 2.4)}" stroke-width="1.6"/>`),
+	// Aruba: Divi-Divi-Baum am Strand
+	AW: () =>
+		M(`<path d="M24,62 H30 M74,62 H98" stroke-width="1.8"/><path d="${waves(70, 68, 2, 12, 2.4)}" stroke-width="1.6"/>
+<path d="M30,76 Q30,60 38,52 Q50,44 64,42" stroke-width="4.4"/><path d="M44,48 L58,38 M52,46 L72,38" stroke-width="2"/>
+<path d="M36,52 Q40,36 60,32 Q80,30 96,36 Q88,42 74,42 Q60,44 50,50 Q44,54 36,52 Z" ${SOLID}/><path d="M48,44 Q64,36 86,36" stroke="var(--paper)" stroke-width="1.4"/>
+<path d="M22,76 Q50,70 98,74" ${HALF} stroke-width="2.4"/><path d="M22,76 H98" stroke-width="3.6"/>`, [22, 26, 78, 52]),
+	// Curaçao: bunte Giebelhäuser in Willemstad
+	CW: () => {
+		const gab = [
+			(x: number) => `V34 H${x + 3} V28 H${x + 6} V22 H${x + 12} V28 H${x + 15} V34 H${x + 18}`,
+			(x: number) => `Q${x},30 ${x + 5},30 Q${x + 6},22 ${x + 9},20 Q${x + 12},22 ${x + 13},30 Q${x + 18},30 ${x + 18},40`,
+			(x: number) => `L${x + 9},24 L${x + 18},40`
+		];
+		let h = '';
+		for (let i = 0; i < 5; i++) {
+			const x = 5 + i * 18,
+				dark = i % 2 === 1;
+			h += `<path d="M${x},64 V40 ${gab[i % 3](x)} V64 Z" ${dark ? SOLID : HALF} stroke-width="2"/>`;
+			h += `<path d="M${x + 4},44 h3 v5 h-3 Z M${x + 11},44 h3 v5 h-3 Z M${x + 4},53 h3 v5 h-3 Z M${x + 11},53 h3 v5 h-3 Z M${x + 7.5},31 h3 v4 h-3 Z" ${dark ? PAPER : SOLID}/>`;
+		}
+		return M(`${h}<path d="M2,64 H98" stroke-width="3"/><path d="${waves(4, 70, 6, 15, 3)}" stroke-width="2"/><path d="${waves(10, 77, 6, 14, 2.4)}" stroke-width="1.6"/>`);
+	},
+	// St. Lucia: die Pitons im Abendlicht
+	LC: () =>
+		M(`${sun(56, 34, 5)}<path d="M2,68 Q18,62 24,40 Q30,14 38,14 Q46,16 50,42 Q54,58 60,60 Q64,40 70,22 Q74,14 78,22 Q84,44 90,62 Q94,68 98,68 V70 H2 Z" ${HALF} stroke-width="2.6"/>
+<path d="M30,30 l4,6 M40,40 l4,6 M72,32 l4,8" stroke-width="1.4"/><path d="M6,70 H22 L19,74 H9 Z" ${SOLID}/><path d="M14,70 V52" stroke-width="1.6"/><path d="M14,54 L21,68 H14 Z" ${HALF} stroke-width="1.6"/>
+<path d="${waves(26, 74, 5, 14, 3)}" stroke-width="2"/>`),
+	// Belize: Great Blue Hole im Riff
+	BZ: () =>
+		M(`<path d="M10,40 Q10,14 50,12 Q90,12 92,40 Q92,68 50,70 Q10,68 10,40 Z" ${HALF} stroke-width="2" stroke-dasharray="5 3"/>
+<circle cx="50" cy="40" r="23" stroke-width="1.6" stroke-dasharray="2 3"/><circle cx="50" cy="40" r="19" ${SOLID}/><path d="M38,32 Q46,26 56,28" stroke="var(--paper)" stroke-width="1.4"/>
+<path d="M16,22 q4,-3 8,0 M80,58 q4,-3 8,0 M18,58 q3,-2 6,0" stroke-width="1.6"/><path d="M72,66 Q80,62 90,64 Q82,68 72,66 Z" ${SOLID}/><path d="M70,68 q-6,2 -12,0 M70,64 q-6,-2 -12,0" stroke-width="1.2"/>`),
+	// Macau: Pastéis de Nata
+	MO: () => {
+		const tart = (x: number, y: number) =>
+			`<path d="M${x - 14},${y} Q${x - 14},${y + 10} ${x - 10},${y + 12} H${x + 10} Q${x + 14},${y + 10} ${x + 14},${y} Z" ${HALF} stroke-width="2.2"/><path d="M${x - 8},${y + 3} V${y + 11} M${x - 4},${y + 3} V${y + 12} M${x},${y + 3} V${y + 12} M${x + 4},${y + 3} V${y + 12} M${x + 8},${y + 3} V${y + 11}" stroke-width="1.2"/>
+<ellipse cx="${x}" cy="${y}" rx="14" ry="5" fill="var(--paper)" stroke-width="2.2"/><ellipse cx="${x - 4}" cy="${y - 0.5}" rx="3" ry="1.4" ${SOLID}/><ellipse cx="${x + 4}" cy="${y + 1}" rx="2.4" ry="1.2" ${SOLID}/><ellipse cx="${x + 2}" cy="${y - 2.4}" rx="1.6" ry=".9" ${SOLID}/>`;
+		return M(`<ellipse cx="50" cy="64" rx="46" ry="12" stroke-width="2.6"/>${tart(50, 42)}${tart(30, 54)}${tart(70, 54)}<path d="M44,28 q-3,-5 0,-9 q3,-4 0,-9 M56,28 q-3,-5 0,-9 q3,-4 0,-9" stroke-width="1.6"/>`);
+	},
+	// Kirgisistan: Steinadler auf dem Arm des Jägers
+	KG: () =>
+		M(`<path d="M2,60 L20,36 L30,46 L46,26 L62,48 L76,34 L98,58" stroke-width="2"/><path d="M16,41 L20,36 L24,41 Z M42,31 L46,26 L50,31 Z M72,39 L76,34 L80,39 Z" ${SOLID}/>
+<path d="M100,76 Q82,73 64,67" stroke-width="9"/><circle cx="62" cy="65" r="6" ${SOLID}/>
+<path d="M54,62 L50,76 H62 L64,62 Z" ${SOLID}/><path d="M50,62 Q42,46 52,30 Q60,24 68,30 Q74,42 68,58 Q62,66 50,62 Z" ${SOLID}/>
+<circle cx="54" cy="24" r="7" ${SOLID}/><path d="M48,21 Q41,21 43,28 L49,27 Z" ${SOLID}/><circle cx="52" cy="22" r="1.4" ${PAPER}/>
+<path d="M58,34 Q66,44 64,58 M54,38 Q60,48 58,60" stroke="var(--paper)" stroke-width="1.4"/>`),
+	// Turkmenistan: brennender Gaskrater von Darvaza
+	TM: () => {
+		let f = '';
+		for (const [x, h] of [[24, 40], [33, 32], [42, 42], [51, 30], [60, 40], [69, 34], [77, 44]]) f += `<path d="M${x - 4},60 Q${x - 6},${h + 10} ${x},${h} Q${x + 6},${h + 10} ${x + 4},60 Z" ${HALF} stroke-width="1.8"/>`;
+		return M(`${star(10, 10, 2.2)}${star(24, 18, 1.6)}${star(84, 10, 2.4)}${star(92, 26, 1.6)}${star(60, 8, 1.4)}
+<ellipse cx="50" cy="62" rx="38" ry="12" ${SOLID}/>${f}<ellipse cx="50" cy="62" rx="38" ry="12" stroke-width="2.4"/>
+<circle cx="92" cy="54" r="1.8" ${SOLID}/><path d="M92,56 V63 M92,63 L90,69 M92,63 L94,69" stroke-width="1.6"/>${GROUND}`);
+	},
+	// Papua-Neuguinea: Paradiesvogel
+	PG: () => {
+		let p = '';
+		for (const [cx, cy, ex, ey, w] of [[60, 40, 96, 56, 2.4], [62, 48, 92, 66, 1.4], [58, 54, 84, 74, 2.4], [52, 58, 72, 78, 1.4], [46, 60, 60, 78, 2.4], [42, 58, 50, 74, 1.4]])
+			p += `<path d="M38,40 Q${cx},${cy} ${ex},${ey}" stroke-width="${w}"/>`;
+		return M(`<path d="M2,40 Q30,36 60,40" stroke-width="3.6"/><path d="M14,38 Q10,28 20,26 Q22,34 14,38 Z M54,40 Q60,30 68,32 Q64,40 54,40 Z" ${HALF} stroke-width="1.6"/>${p}
+<path d="M34,42 Q30,60 40,74 q4,4 8,0" stroke-width="1.2"/><path d="M30,38 Q28,28 36,24 Q44,22 46,30 Q46,38 38,42 Z" ${SOLID}/><circle cx="42" cy="20" r="5" ${SOLID}/><path d="M46,19 L52,21 L46,23 Z" ${SOLID}/><circle cx="43" cy="19" r="1" ${PAPER}/>`);
+	},
+	// Vanuatu: Lianenspringer auf Pentecost
+	VU: () => {
+		let s = '';
+		for (let y = 18; y <= 70; y += 8) { const k = (76 - y) / 66; s += `M${f1(42 - 8 * k)},${y} H${f1(50 + 8 * k)} `; }
+		return M(`<path d="M34,76 L42,10 M58,76 L50,10" stroke-width="2.6"/><path d="${s}" stroke-width="1.6"/><path d="M36,62 L56,46 M38,46 L54,30 M40,30 L52,18" stroke-width="1.2"/>
+<path d="M38,14 H56 M50,14 H72" stroke-width="3"/><path d="M71,14 Q76,30 78,44 M71,14 Q80,28 81,44" stroke-width="1.4"/>
+<path d="M79,44 L80,54" stroke-width="3"/><path d="M80,54 V63" stroke-width="4"/><path d="M80,58 L74,64 M80,58 L86,64" stroke-width="2.4"/><circle cx="80" cy="67" r="3.2" ${SOLID}/>
+<path d="M8,76 V60 M8,60 q-6,-2 -6,-8 M8,60 q6,-2 6,-8 M8,60 q-2,-6 0,-10" stroke-width="2"/>${GROUND}`);
+	},
+	// Falklandinseln: Felsenpinguin
+	FK: () =>
+		M(`<path d="M30,76 Q34,62 50,60 Q70,58 76,68 L80,76 Z" ${HALF} stroke-width="2.4"/>
+<path d="M42,60 Q38,40 44,26 Q48,16 54,16 Q60,18 62,28 Q66,42 62,60 Z" ${SOLID}/><path d="M46,58 Q42,44 48,32 Q54,30 58,36 Q62,48 58,58 Z" ${PAPER}/>
+<path d="M44,36 Q36,44 38,52" stroke-width="3.2"/><path d="M46,60 l-4,2 M58,60 l4,2" stroke-width="2.4"/><circle cx="55" cy="22" r="1.4" ${PAPER}/><path d="M59,23 L65,25 L59,27 Z" ${SOLID}/>
+<path d="M52,20 L42,14 M53,19 L44,9 M54,19 L48,7 M51,17 L49,10" stroke-width="1.6"/><path d="${waves(2, 72, 2, 12, 3)}" stroke-width="2"/><path d="${waves(80, 72, 1, 14, 3)}" stroke-width="2"/>
+<path d="M8,64 q2,-4 0,-8 M14,62 q2,-4 0,-6" stroke-width="1.4"/>`),
+	// Malawi: Buntbarsch im Malawisee
+	MW: () =>
+		M(`<circle cx="12" cy="22" r="2" stroke-width="1.4"/><circle cx="8" cy="14" r="1.4" stroke-width="1.4"/><circle cx="14" cy="8" r="1" stroke-width="1.2"/>
+<path d="M30,28 Q44,14 66,24 L58,27 Q44,22 34,30 Z" ${SOLID}/><path d="M78,38 L94,26 Q90,38 94,52 Z" ${SOLID}/>
+<path d="M18,40 Q30,22 56,24 Q72,26 78,38 Q72,50 56,54 Q30,56 18,40 Z" ${HALF} stroke-width="2.6"/><path d="M34,28 Q32,40 34,52 M44,25 Q42,40 44,54 M54,24 Q52,40 54,54 M64,26 Q62,40 64,51" stroke-width="3"/>
+<path d="M44,54 Q54,62 64,52" stroke-width="2"/><circle cx="52" cy="57" r="1.6" ${SOLID}/><circle cx="26" cy="36" r="3" fill="var(--paper)" stroke-width="1.6"/><circle cx="26" cy="36" r="1.4" ${SOLID}/><path d="M18,40 l3,1" stroke-width="1.6"/>
+<path d="M2,76 Q8,64 18,68 Q24,60 34,68 Q40,64 46,70 Q56,62 66,70 Q76,64 84,70 Q92,66 98,72 V76 Z" ${HALF} stroke-width="2"/><path d="M88,68 Q86,58 90,50 M92,68 Q94,60 92,54" stroke-width="1.6"/>`),
+	// Jemen: Drachenblutbaum auf Sokotra
+	YE: () =>
+		M(`<path d="M46,76 Q48,64 48,56 H52 Q52,64 54,76 Z" ${SOLID}/><path d="M50,58 Q44,46 30,34 M50,58 Q46,44 42,34 M50,58 V34 M50,58 Q54,44 58,34 M50,58 Q58,46 72,34 M38,40 L34,34 M62,40 L66,34" stroke-width="3"/>
+<path d="M10,30 Q12,14 50,12 Q88,14 90,30 Q70,36 50,34 Q30,36 10,30 Z" ${SOLID}/><path d="M20,26 Q50,18 80,26 M30,20 Q50,15 70,20" stroke="var(--paper)" stroke-width="1.4"/>
+<path d="M76,56 Q86,48 96,56 Q86,58 76,56 Z" ${SOLID}/><path d="M86,57 V76" stroke-width="2.4"/><path d="M2,76 Q14,66 28,72 M64,72 Q74,66 84,70" stroke-width="1.8"/>${GROUND}`),
+	// Lesotho: Basotho-Hut vor den Bergen
+	LS: () =>
+		M(`<path d="M2,76 V70 L18,46 L28,54 L44,34 L60,52 L72,40 L98,66 V76 Z" ${HALF} stroke-width="2"/>
+<path d="M22,64 Q50,58 78,64 Q64,46 54,26 L52,18 H48 L46,26 Q36,46 22,64 Z" ${SOLID}/><path d="M30,57 Q50,51 70,57 M36,48 Q50,44 64,48 M41,39 Q50,36 59,39" stroke="var(--paper)" stroke-width="1.6" stroke-dasharray="2 2"/>
+<ellipse cx="50" cy="64" rx="28" ry="4" ${SOLID}/><circle cx="50" cy="14" r="3.4" ${SOLID}/><path d="M47,13 q-5,-6 0,-9 M53,13 q5,-6 0,-9" stroke-width="1.6"/>${GROUND}`),
 	ZM: () => MOTIFS.ZW()
 };
 
@@ -1288,7 +1529,39 @@ const DEFS: Record<string, StampDef> = {
 	LB: { f: 'diamond', c: 'green' },
 	PR: { f: 'arch', c: 'navy' },
 	TT: { f: 'perf', c: 'red' },
-	SM: { f: 'banner', c: 'plum' }
+	SM: { f: 'banner', c: 'plum' },
+	AL: { f: 'arch', c: 'red' },
+	AD: { f: 'shield', c: 'blue' },
+	LU: { f: 'perf', c: 'blue' },
+	LI: { f: 'shield', c: 'navy' },
+	LT: { f: 'scallop', c: 'red' },
+	LV: { f: 'arch', c: 'plum' },
+	SK: { f: 'oct', c: 'blue' },
+	RS: { f: 'circle', c: 'coral' },
+	MK: { f: 'shield', c: 'gold', short: 'NORD-MAZEDONIEN' },
+	MD: { f: 'diamond', c: 'plum' },
+	FO: { f: 'hex', c: 'teal' },
+	GI: { f: 'notch', c: 'brown' },
+	IL: { f: 'oct', c: 'blue' },
+	IR: { f: 'circle', c: 'red' },
+	PK: { f: 'rrect', c: 'green' },
+	BD: { f: 'perf', c: 'green' },
+	UG: { f: 'hex', c: 'brown' },
+	CV: { f: 'zig', c: 'blue' },
+	RE: { f: 'tri', c: 'coral' },
+	AW: { f: 'scallop', c: 'teal' },
+	CW: { f: 'perf', c: 'coral' },
+	LC: { f: 'banner', c: 'green' },
+	BZ: { f: 'circle', c: 'teal' },
+	MO: { f: 'hex', c: 'gold' },
+	KG: { f: 'oct', c: 'brown' },
+	TM: { f: 'diamond', c: 'red' },
+	PG: { f: 'arch', c: 'gold', short: 'PAPUA-NEUGUINEA' },
+	VU: { f: 'zig', c: 'green' },
+	FK: { f: 'rrect', c: 'navy', short: 'FALKLAND' },
+	MW: { f: 'notch', c: 'blue' },
+	YE: { f: 'oct', c: 'plum' },
+	LS: { f: 'banner', c: 'blue' }
 };
 /** Kurze Stempelnamen für lange amtliche Namen (Länder ohne eigenen Kurznamen im Stempel) */
 const SHORT: Record<string, string> = {
