@@ -1442,6 +1442,14 @@ const SCENES: Record<string, () => string> = {
 ${pine(14, 170, 52)}${pine(34, 170, 38, L4)}${pine(160, 170, 44)}<path d="M4,150 q6,-8 12,0 M138,16 q5,-6 10,0 q5,-6 10,0 M150,68 q4,-5 8,0 q4,-5 8,0" stroke-width="1.8"/>
 <path d="${waves(0, 160, 13, 14, 3)}" stroke-width="2" stroke="var(--paper)"/><path d="${waves(4, 166, 12, 14, 3)}" stroke-width="2"/>`
 };
+/** Massives Namensschild (Tinte gefüllt, Schrift in Papierfarbe): hebt den Spezialstempel von normalen ab */
+function plate(t: Txt) {
+	const lines = split(t.name),
+		fs = Math.min(...lines.map((l) => fit(l, 164, lines.length > 1 ? 17 : 21))),
+		y0 = lines.length > 1 ? 241 : 248;
+	const txt = lines.map((l, i) => `<text class="k" x="120" y="${f1(y0 + i * fs * 1.1)}" font-family="var(--display)" font-weight="800" font-size="${fs}" text-anchor="middle" letter-spacing=".5">${esc(l)}</text>`).join('');
+	return `<path d="M26,220 H214 V280 H26 Z" fill="currentColor" stroke="currentColor" stroke-width="4"/>${txt}<text class="k" x="120" y="${lines.length > 1 ? 274 : 269}" font-size="11.5" text-anchor="middle">${esc(below(t))}</text>`;
+}
 let sealId = 0;
 /** Großes Siegel (Torbogen): Szene füllt den Bogen, darüber „SELTEN“, darunter Name und Datum. Frame/Szene/Name tragen Klassen für die Zeichen-Animation. */
 function sealFrame(t: Txt, scene: string | null, m: Motif): [string, string] {
@@ -1451,9 +1459,9 @@ function sealFrame(t: Txt, scene: string | null, m: Motif): [string, string] {
 	return [
 		'0 0 240 300',
 		`<clipPath id="${id}"><path d="M34,214 V112 A86,86 0 0 1 206,112 V214 Z"/></clipPath>
-<g class="fr"><path pathLength="1" d="${arch}" ${TINT} stroke-width="4.5"/><path pathLength="1" d="M26,280 V112 A94,94 0 0 1 214,112 V280 Z" ${DOTS}/><path pathLength="1" d="M34,214 V112 A86,86 0 0 1 206,112 V214 Z" stroke-width="2.4"/><path pathLength="1" d="M34,214 H206" stroke-width="2.4"/></g>
+<g class="fr"><path pathLength="1" d="${arch}" fill="currentColor" fill-opacity=".16" stroke-width="5.5"/><path pathLength="1" d="M26,280 V112 A94,94 0 0 1 214,112 V280 Z" ${DOTS}/><path pathLength="1" d="M34,214 V112 A86,86 0 0 1 206,112 V214 Z" stroke-width="2.6"/></g>
 <g class="sc"><g clip-path="url(#${id})"><g transform="translate(30,44)">${art}</g></g></g>
-<g class="nm">${pill(120, 8, 'SELTEN', 11)}${star(78, 19, 6.5)}${star(162, 19, 6.5)}${nameBlock(t.name, 120, 244, 168, 20)}${small(120, 266, below(t), 11.5)}</g>`
+<g class="nm">${plate(t)}${pill(120, 8, 'SELTEN', 11)}${star(78, 19, 6.5)}${star(162, 19, 6.5)}</g>`
 	];
 }
 
@@ -1648,7 +1656,7 @@ export function stamp(code: string, nr: number, entered?: string, special = fals
 	const wide = !special && +vb.split(' ')[2] / +vb.split(' ')[3] > 1.25;
 	const s: Stamp = {
 		svg: special
-			? `<span class="pp-sw"><svg class="pp-stamp sp" viewBox="${vb}" aria-hidden="true"><g filter="url(#pf${h % 4})" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-linecap="round">${inner}</g></svg><i class="gl"></i><i class="sk k1"></i><i class="sk k2"></i><i class="sk k3"></i></span>`
+			? `<span class="pp-sw" style="--gd:${(h >>> 8) % 8000}ms"><svg class="pp-stamp sp" viewBox="${vb}" aria-hidden="true"><g filter="url(#pf${h % 4})" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-linecap="round">${inner}</g></svg><i class="gl"></i><i class="sk k1"></i><i class="sk k2"></i><i class="sk k3"></i></span>`
 			: `<svg class="pp-stamp" viewBox="${vb}" aria-hidden="true"><g filter="url(#pf${h % 4})" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-linecap="round">${inner}</g></svg>`,
 		color: `var(--st-${def?.c ?? COLORS[(h >>> 3) % COLORS.length]})`,
 		rot: special ? (((h >>> 6) % 7) - 3) : ((h >>> 6) % 15) - 7,

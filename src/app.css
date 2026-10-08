@@ -643,13 +643,13 @@ button.pp-tile:active{transform:scale(.98)}
 .pp-slot.sp::after{display:none}
 .pp-slot.sp.wait .pp-sw>i,.pp-slot.sp.wait::before{display:none}
 /* Glanz: goldener Lichtstreifen wandert über das Siegel; Funkeln an den Rändern */
-.pp-sw .gl{position:absolute;inset:.7% 5.8% 2.7% 5.8%;border-radius:50% 50% 3% 3% / 36% 36% 3% 3%;pointer-events:none;background:linear-gradient(112deg,transparent 38%,rgba(255,205,90,.5) 46%,rgba(255,252,235,.95) 50%,rgba(255,205,90,.5) 54%,transparent 62%) no-repeat;background-size:320% 100%;background-position:130% 0;animation:spGlint 3.4s ease-in-out infinite 1s}
-.pp-sw .sk{position:absolute;width:var(--z,14px);height:var(--z,14px);pointer-events:none;opacity:0;background:radial-gradient(circle,#fff 0 22%,#FFD45E 23% 45%,transparent 46%);clip-path:polygon(50% 0,60% 40%,100% 50%,60% 60%,50% 100%,40% 60%,0 50%,40% 40%);filter:drop-shadow(0 0 3px #E8A800);animation:spTwinkle 3.4s ease-in-out infinite}
-.pp-sw .k1{--z:26px;left:-4%;top:16%;animation-delay:1.2s}
-.pp-sw .k2{--z:19px;right:-5%;top:42%;animation-delay:2.1s}
-.pp-sw .k3{--z:22px;left:8%;bottom:2%;animation-delay:2.8s}
-@keyframes spGlint{0%{background-position:130% 0}45%,100%{background-position:-30% 0}}
-@keyframes spTwinkle{0%,45%,100%{opacity:0;transform:scale(.2) rotate(0)}58%{opacity:1;transform:scale(1) rotate(45deg)}72%{opacity:0;transform:scale(.3) rotate(90deg)}}
+.pp-sw .gl{position:absolute;inset:.7% 5.8% 2.7% 5.8%;border-radius:50% 50% 3% 3% / 36% 36% 3% 3%;pointer-events:none;background:linear-gradient(112deg,transparent 38%,rgba(255,205,90,.3) 47%,rgba(255,252,235,.7) 50%,rgba(255,205,90,.3) 53%,transparent 60%) no-repeat;background-size:320% 100%;background-position:130% 0;animation:spGlint 9s ease-in-out infinite var(--gd,1s)}
+.pp-sw .sk{position:absolute;width:var(--z,14px);height:var(--z,14px);pointer-events:none;opacity:0;background:radial-gradient(circle,#fff 0 22%,#FFD45E 23% 45%,transparent 46%);clip-path:polygon(50% 0,60% 40%,100% 50%,60% 60%,50% 100%,40% 60%,0 50%,40% 40%);filter:drop-shadow(0 0 3px #E8A800);animation:spTwinkle 9s ease-in-out infinite}
+.pp-sw .k1{--z:26px;left:-4%;top:16%;animation-delay:calc(var(--gd,1s) + 1.2s)}
+.pp-sw .k2{--z:19px;right:-5%;top:42%;animation-delay:calc(var(--gd,1s) + 3.4s)}
+.pp-sw .k3{--z:22px;left:8%;bottom:2%;animation-delay:calc(var(--gd,1s) + 5.6s)}
+@keyframes spGlint{0%,8%{background-position:130% 0}24%,100%{background-position:-30% 0}}
+@keyframes spTwinkle{0%,16%,100%{opacity:0;transform:scale(.2) rotate(0)}22%{opacity:1;transform:scale(1) rotate(45deg)}30%{opacity:0;transform:scale(.3) rotate(90deg)}}
 @keyframes spFloat{0%,100%{transform:translateY(1.5px)}50%{transform:translateY(-2.5px)}}
 @keyframes spHalo{0%,100%{opacity:.45;transform:scale(.92)}50%{opacity:1;transform:scale(1.12)}}
 @media (prefers-reduced-motion:reduce){.pp-sw,.pp-slot.sp::before,.pp-sw .gl,.pp-sw .sk{animation:none}.pp-sw .gl,.pp-sw .sk{display:none}}
