@@ -46,8 +46,12 @@ export function rankInfo(count: number, total: number) {
 	const next = all[i + 1] ?? null;
 	const from = rank?.n ?? 0;
 	const p = next ? (count - from) / (next.n - from) : 1;
-	return { rank, next, left: next ? next.n - count : 0, p: Math.max(0, Math.min(1, p)) };
+	return { rank, next, left: next ? next.n - count : 0, p: Math.max(0, Math.min(1, p)), tier: coverTier(i, all.length) };
 }
+
+/** Aussehen des Pass-Umschlags: 0 = noch kein Rang … 7 = Weltmeister (je zwei Ränge teilen sich eine Stufe) */
+export const coverTier = (rankIdx: number, rankCount: number) =>
+	rankIdx < 0 ? 0 : rankIdx >= rankCount - 1 ? 7 : Math.min(6, 1 + (rankIdx >> 1));
 
 /* ---------- Datum ---------- */
 const MON = ['Jan.', 'Feb.', 'März', 'Apr.', 'Mai', 'Juni', 'Juli', 'Aug.', 'Sept.', 'Okt.', 'Nov.', 'Dez.'];

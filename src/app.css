@@ -720,6 +720,31 @@ button.pp-tile:active{transform:scale(.98)}
 .cs-date-x{display:grid;place-items:center;width:28px;height:28px;margin-left:-4px;border:0;border-radius:50%;background:var(--chip);color:var(--muted)}
 .cs-date-x svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round}
 
+/* Pass-Umschlag je Stufe (0 = kein Rang … 7 = Weltmeister): Material, Prägung, Glanz wachsen mit dem Rang */
+.pp-cover svg{width:38px;height:38px;overflow:visible}
+.pp-cover svg .fill{fill:currentColor;stroke:none}
+.pp-cover svg{stroke-width:2}
+.pp-cover.t0{color:#7FA0A8;filter:saturate(.6)}
+.pp-cover.t0::before{border-style:dashed;border-color:rgba(127,160,168,.4)}
+.pp-cover.t1{color:#C9A24D}
+.pp-cover.t2{color:#D4AE55;background:radial-gradient(90% 60% at 30% 15%,rgba(255,255,255,.12),transparent 60%),repeating-linear-gradient(45deg,rgba(255,255,255,.04) 0 1px,transparent 1px 3px),linear-gradient(155deg,#1d5a4c,#0B2F28 70%)}
+.pp-cover.t3{color:#E0BC62;background:radial-gradient(90% 60% at 30% 15%,rgba(255,255,255,.14),transparent 60%),repeating-linear-gradient(45deg,rgba(255,255,255,.05) 0 1px,transparent 1px 3px),linear-gradient(155deg,#7a2538,#3A0F1B 72%)}
+.pp-cover.t3::before{border-width:2px;border-color:rgba(224,188,98,.7);box-shadow:inset 0 0 0 3px transparent,inset 0 0 0 4px rgba(224,188,98,.35)}
+.pp-cover.t4{color:#EBCB74;background:radial-gradient(90% 60% at 30% 15%,rgba(255,255,255,.18),transparent 60%),repeating-linear-gradient(45deg,rgba(255,255,255,.05) 0 1px,transparent 1px 3px),linear-gradient(155deg,#244e9c,#0A1D45 72%)}
+.pp-cover.t4::before{border-width:2px;border-color:rgba(235,203,116,.8);box-shadow:inset 0 0 0 3px transparent,inset 0 0 0 4px rgba(235,203,116,.4)}
+.pp-cover.t5{color:#F0D27F;background:radial-gradient(70% 50% at 50% 38%,rgba(240,210,127,.22),transparent 70%),repeating-linear-gradient(45deg,rgba(255,255,255,.06) 0 1px,transparent 1px 3px),linear-gradient(155deg,#26262c,#070709 72%);box-shadow:inset 4px 0 0 rgba(0,0,0,.4),inset 0 0 0 1px rgba(0,0,0,.5),0 8px 18px -6px rgba(0,0,0,.7),0 0 18px -4px rgba(240,210,127,.45)}
+.pp-cover.t5::before{border-width:2px;border-color:rgba(240,210,127,.85);box-shadow:inset 0 0 0 3px transparent,inset 0 0 0 4px rgba(240,210,127,.45)}
+.pp-cover.t6{color:#F6DB8C;background:radial-gradient(60% 40% at 70% 20%,rgba(160,140,255,.35),transparent 70%),radial-gradient(1.2px 1.2px at 20% 30%,#fff,transparent),radial-gradient(1.2px 1.2px at 78% 62%,#fff,transparent),radial-gradient(1px 1px at 40% 82%,#fff,transparent),linear-gradient(155deg,#2b1f6b,#07061f 75%);box-shadow:inset 4px 0 0 rgba(0,0,0,.4),inset 0 0 0 1px rgba(0,0,0,.5),0 8px 20px -6px rgba(20,10,80,.8),0 0 22px -3px rgba(246,219,140,.6)}
+.pp-cover.t6::before{border-width:2px;border-color:rgba(246,219,140,.9);box-shadow:inset 0 0 0 3px transparent,inset 0 0 0 4px rgba(246,219,140,.5)}
+.pp-cover.t7{color:#3A2706;background:radial-gradient(90% 60% at 30% 15%,rgba(255,255,255,.55),transparent 60%),linear-gradient(135deg,#f7e08e,#d9a73a 40%,#fff1b0 55%,#c08a22 80%);box-shadow:inset 4px 0 0 rgba(120,80,0,.35),inset 0 0 0 1px rgba(90,60,0,.5),0 8px 20px -6px rgba(120,80,0,.7),0 0 26px -2px rgba(255,214,90,.8)}
+.pp-cover.t7::before{border-width:2px;border-color:rgba(90,60,0,.65);box-shadow:inset 0 0 0 3px transparent,inset 0 0 0 4px rgba(90,60,0,.3)}
+.pp-cover.t7 b{text-shadow:0 1px 0 rgba(255,255,255,.5)}
+.pp-cover.t4::after,.pp-cover.t5::after,.pp-cover.t6::after,.pp-cover.t7::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:linear-gradient(110deg,transparent 35%,rgba(255,255,255,.35) 50%,transparent 65%);background-size:250% 100%;background-position:150% 0;animation:ppShine 5s ease-in-out infinite}
+.pp-pips{display:flex;gap:2px;margin-top:-2px}
+.pp-pips u{width:3px;height:3px;border-radius:50%;background:currentColor;text-decoration:none}
+@keyframes ppShine{0%,55%{background-position:150% 0}100%{background-position:-50% 0}}
+[data-motion="reduce"] .pp-cover::after{animation:none}
+
 /* Reisepass-Kachel: neue Stempel – leuchtet, wippt, lädt zum Antippen ein */
 .pp-tile.fresh{position:relative;overflow:hidden;border-color:color-mix(in srgb,var(--sun) 75%,var(--line));box-shadow:0 0 0 0 color-mix(in srgb,var(--sun) 55%,transparent);animation:ppRing 2.2s ease-out infinite}
 .pp-tile.fresh .pp-cover{animation:ppWiggle 2.6s ease-in-out infinite;transform-origin:50% 90%}

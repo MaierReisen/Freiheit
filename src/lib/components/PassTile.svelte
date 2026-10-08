@@ -18,9 +18,19 @@
 </script>
 
 {#snippet body()}
-	<span class="pp-cover" aria-hidden="true"
-		><svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="16" /><ellipse cx="20" cy="20" rx="7" ry="16" /><path d="M4 20h32" /></svg><b>REISEPASS</b></span
-	>
+	<span class="pp-cover t{info.tier}" aria-hidden="true">
+		<svg viewBox="0 0 60 60">
+			{#if info.tier >= 6}<path class="fill" d="M14 30c-6-1-10-5-12-10 5 1 8 0 11-3-4-1-7-3-9-7 6 0 10 1 14 4zM46 30c6-1 10-5 12-10-5 1-8 0-11-3 4-1 7-3 9-7-6 0-10 1-14 4z" />{/if}
+			{#if info.tier >= 5}{#each Array(12) as _, k}<circle class="fill" cx={30 + 27 * Math.sin((k * Math.PI) / 6)} cy={32 - 27 * Math.cos((k * Math.PI) / 6)} r="1.1" />{/each}{/if}
+			{#if info.tier >= 2}<path class="fill" d="M30 6l2.2 5h-4.4zM54 32l-5 2.2v-4.4zM30 58l-2.2-5h4.4zM6 32l5-2.2v4.4z" />{/if}
+			<circle cx="30" cy="32" r="16" /><ellipse cx="30" cy="32" rx="7" ry="16" /><path d="M14 32h32" />
+			{#if info.tier >= 3}<path d="M17.5 23q12.5 4 25 0M17.5 41q12.5-4 25 0" />{/if}
+			{#if info.tier >= 4}<ellipse cx="30" cy="32" rx="12" ry="16" />{/if}
+			{#if info.tier >= 7}<path class="fill" d="M19 14l3 4 4-6 4 6 4-6 4 6 3-4-2 9H21z" />{/if}
+		</svg>
+		<b>REISEPASS</b>
+		{#if info.tier >= 2}<i class="pp-pips">{#each Array(Math.min(info.tier, 7)) as _}<u></u>{/each}</i>{/if}
+	</span>
 	<span class="pp-tile-txt">
 		<span class="pp-tile-n">{n}<small>Stempel</small>{#if fresh && !inPass}<em class="pp-new">✨ {fresh} neu</em>{/if}</span>
 		{#if info.rank}<span class="pp-rank">{info.rank.icon} {info.rank.name}</span>{/if}
