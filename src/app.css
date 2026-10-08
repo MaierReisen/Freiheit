@@ -677,7 +677,8 @@ button.pp-tile:active{transform:scale(.98)}
 .pp-badge:not(.t1,.t2,.t3) .pp-medal i,.pp-sheet:not(.t1,.t2,.t3) .pp-medal i{filter:grayscale(1) brightness(1.25);opacity:.7}
 .t1 .pp-medal{--t:var(--bz);background:var(--bzg)}.t2 .pp-medal{--t:var(--sv);background:var(--svg)}.t3 .pp-medal{--t:var(--gd);background:var(--gdg)}
 .pp-badge:is(.t1,.t2,.t3) .pp-medal,.pp-sheet:is(.t1,.t2,.t3) .pp-medal{box-shadow:inset 0 1px 1px rgba(255,255,255,.6),inset 0 -1px 2px rgba(0,0,0,.35),0 2px 6px -2px rgba(0,0,0,.45)}
-.pp-badge:is(.t1,.t2,.t3) .pp-medal span,.pp-sheet:is(.t1,.t2,.t3) .pp-medal span{border:0;background:radial-gradient(circle at 32% 26%,rgba(255,255,255,.55),transparent 38%),radial-gradient(circle at 50% 55%,color-mix(in srgb,var(--t) 40%,var(--paper)),color-mix(in srgb,var(--t) 12%,var(--paper)) 75%);box-shadow:inset 0 2px 3px rgba(0,0,0,.3),inset 0 -1px 1px rgba(255,255,255,.4)}
+.pp-badge:is(.t1,.t2,.t3) .pp-medal span,.pp-sheet:is(.t1,.t2,.t3) .pp-medal span{border:3px solid var(--t);background:radial-gradient(circle at 35% 30%,color-mix(in srgb,var(--t) 28%,var(--paper)),var(--paper) 70%)}
+.max.t3 .pp-medal span{border-color:#B0841C}
 /* höchste Stufe: zusätzlich Glanz nach außen */
 .pp-badge.max.t1 .pp-medal,.pp-sheet.max.t1 .pp-medal{box-shadow:inset 0 1px 1px rgba(255,255,255,.6),0 4px 14px -4px rgba(156,90,43,.7)}
 .pp-badge.max.t2 .pp-medal,.pp-sheet.max.t2 .pp-medal{box-shadow:inset 0 1px 1px rgba(255,255,255,.7),0 4px 14px -4px rgba(137,148,160,.8)}
