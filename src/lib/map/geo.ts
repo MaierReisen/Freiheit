@@ -154,7 +154,11 @@ function polysOf(feats: CountryFeature[]): Poly[] {
 				if (p[1] < mny) mny = p[1];
 				if (p[1] > mxy) mxy = p[1];
 			}
-			out.push({ id: f.id, g: { type: 'Polygon', coordinates: rings }, size: Math.max(mxx - mnx, mxy - mny) });
+			// Kippt bei einer Detailstufe die Umlaufrichtung (winzige/zusammengefallene Ringe), würde d3 „alles außer dem Land“ füllen
+			// – dann färbt sich der ganze Globus in der Farbe des Landes. Deshalb hier für jede Stufe umdrehen.
+			let g: GeoJSON.Polygon = { type: 'Polygon', coordinates: rings };
+			if (geoArea(g) > 2 * Math.PI) g = { type: 'Polygon', coordinates: rings.map((r) => [...r].reverse()) };
+			out.push({ id: f.id, g, size: Math.max(mxx - mnx, mxy - mny) });
 		}
 	}
 	return out;
@@ -206,8 +210,6 @@ let PRE: Topology | null = null,
 	PRE_FINE: Topology | null = null;
 function simpLod(pre: Topology, w: number, keep?: Lod): Lod {
 	const lod = makeLod(simplify(pre, w));
-	// sehr kleine Ringe können beim Vereinfachen die Umlaufrichtung verlieren; d3 würde dann „alles außer der Insel“ füllen
-	for (const pg of lod.polys) if (geoArea(pg.g) > 2 * Math.PI) pg.g = { type: 'Polygon', coordinates: pg.g.coordinates.map((r) => [...r].reverse()) };
 	// Die Antarktis umschließt den Südpol: die Vereinfachung (ebene Dreiecksflächen) lässt ihr Festland zu einem Punkt
 	// zusammenfallen. Sie behält deshalb die unvereinfachte Form (50m: rund 260 Punkte, kostet beim Zeichnen nichts).
 	if (keep) {
