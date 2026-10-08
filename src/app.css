@@ -638,28 +638,14 @@ button.pp-tile:active{transform:scale(.98)}
 .pp-empty{width:112px;height:112px;border-radius:50%;border:2.5px dashed var(--line);display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--muted);text-align:center;font-size:11.5px;font-weight:600;line-height:1.25}
 .pp-empty b{font:800 30px/1 var(--display);color:var(--sun);margin-bottom:4px}
 .pp-slot.sp{z-index:1}
-.pp-sw{position:relative;display:block;height:182px;aspect-ratio:240/300;margin:-16px 0;animation:spFloat 5s ease-in-out infinite}
-.pp-slot.sp .pp-stamp{width:100%;height:100%;max-height:none}
-.pp-slot.sp::before{content:'';position:absolute;left:50%;top:50%;width:76%;height:118%;translate:-50% -50%;border-radius:999px 999px 18px 18px;pointer-events:none;background:radial-gradient(closest-side,color-mix(in srgb,var(--c) 26%,transparent),transparent);animation:spHalo 4s ease-in-out infinite}
-.pp-slot.sp::after{display:none}
-.pp-slot.sp.wait .pp-sw>i,.pp-slot.sp.wait::before{display:none}
-/* Glanz: goldener Lichtstreifen wandert über das Siegel; Funkeln an den Rändern */
-.pp-sw .gl{position:absolute;inset:.7% 5.8% 2.7% 5.8%;border-radius:50% 50% 3% 3% / 36% 36% 3% 3%;pointer-events:none;background:linear-gradient(112deg,transparent 38%,rgba(255,205,90,.3) 47%,rgba(255,252,235,.7) 50%,rgba(255,205,90,.3) 53%,transparent 60%) no-repeat;background-size:320% 100%;background-position:130% 0;animation:spGlint 9s ease-in-out infinite var(--gd,1s)}
-.pp-sw .sk{position:absolute;width:var(--z,14px);height:var(--z,14px);pointer-events:none;opacity:0;background:radial-gradient(circle,#fff 0 22%,#FFD45E 23% 45%,transparent 46%);clip-path:polygon(50% 0,60% 40%,100% 50%,60% 60%,50% 100%,40% 60%,0 50%,40% 40%);filter:drop-shadow(0 0 3px #E8A800);animation:spTwinkle 9s ease-in-out infinite}
-.pp-sw .k1{--z:26px;left:-4%;top:16%;animation-delay:calc(var(--gd,1s) + 1.2s)}
-.pp-sw .k2{--z:19px;right:-5%;top:42%;animation-delay:calc(var(--gd,1s) + 3.4s)}
-.pp-sw .k3{--z:22px;left:8%;bottom:2%;animation-delay:calc(var(--gd,1s) + 5.6s)}
-@keyframes spGlint{0%,8%{background-position:130% 0}24%,100%{background-position:-30% 0}}
-@keyframes spTwinkle{0%,16%,100%{opacity:0;transform:scale(.2) rotate(0)}22%{opacity:1;transform:scale(1) rotate(45deg)}30%{opacity:0;transform:scale(.3) rotate(90deg)}}
-@keyframes spFloat{0%,100%{transform:translateY(1.5px)}50%{transform:translateY(-2.5px)}}
-@keyframes spHalo{0%,100%{opacity:.45;transform:scale(.92)}50%{opacity:1;transform:scale(1.12)}}
-@media (prefers-reduced-motion:reduce){.pp-sw,.pp-slot.sp::before,.pp-sw .gl,.pp-sw .sk{animation:none}.pp-sw .gl,.pp-sw .sk{display:none}}
-.pp-stamp.sp .fr path{stroke-dasharray:1}
-.pp-stamp.draw .fr path{animation:spDraw 1.5s ease-in-out both}
-.pp-stamp.draw .sc{animation:spFade .9s 1.2s ease-out both}
-.pp-stamp.draw .nm{animation:spFade .5s 1.9s ease-out both}
-@keyframes spDraw{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}
-@keyframes spFade{from{opacity:0}to{opacity:1}}
+/* Seltene Länder: eingeklebte Briefmarke (gedruckt, nicht gestempelt) – Papier --stp, Goldrand für Legenden --stg */
+:root{--stp:#FFFFFF;--stg:#D6A740;--stt:16%}@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--stp:#26404A;--stg:#B48A33;--stt:30%}}:root[data-theme="dark"]{--stp:#26404A;--stg:#B48A33;--stt:30%}
+.pp-stamp.sp{width:auto;height:140px;max-height:none;mix-blend-mode:normal;opacity:1;filter:drop-shadow(0 1px 1.5px rgba(13,43,58,.3))}
+.pp-stamp .pp{fill:var(--stp);stroke:none}
+.pp-stamp .gd{fill:var(--stg);stroke:none}
+.pp-stamp .pic{--paper:color-mix(in srgb,currentColor var(--stt),var(--stp))}
+.pp-stamp .bg{fill:var(--paper);stroke:none}
+.pp-stamp .v{font-family:var(--display);font-weight:800;fill:currentColor;stroke:var(--paper);stroke-width:6px;paint-order:stroke}
 .pp-fx{position:fixed;z-index:80;pointer-events:none}
 .pp-plus{font:800 22px var(--display);color:var(--primary);white-space:nowrap}
 

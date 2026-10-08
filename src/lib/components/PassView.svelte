@@ -8,7 +8,7 @@
 	import { loadFacts, type Facts } from '$lib/facts';
 	import { scopeTotal } from '$lib/scope';
 	import { markSeen, passSeen } from '$lib/passSeen.svelte';
-	import { isSpecial, rollSpecials } from '$lib/special.svelte';
+	import { specialLevel, rollSpecials } from '$lib/special.svelte';
 	import PassTile from './PassTile.svelte';
 
 	/* Reisepass (Vollbild): Seiten zum Blättern mit je 6 Stempeln in der Reihenfolge „Land Nr. X“, danach „?“-Plätze für
@@ -79,7 +79,11 @@
 		};
 	});
 
-	const stamps = $derived(countedCountries().map((c, i) => ({ code: c.code, name: c.name, nr: i + 1, entered: c.entered, s: stamp(c.code, i + 1, c.entered, isSpecial(c.code)), sp: isSpecial(c.code) })));
+	const withLevel = (code: string, nr: number, entered?: string) => {
+		const sp = specialLevel(code);
+		return { s: stamp(code, nr, entered, sp), sp };
+	};
+	const stamps = $derived(countedCountries().map((c, i) => ({ code: c.code, name: c.name, nr: i + 1, entered: c.entered, ...withLevel(c.code, i + 1, c.entered) })));
 	const wishes = $derived(atlas.data.wishlist.slice(0, 4));
 	const pages = $derived.by(() => {
 		const slots: ({ kind: 'stamp'; st: (typeof stamps)[number] } | { kind: 'wish'; code: string; name: string })[] = [
@@ -519,20 +523,14 @@
 			if (pi !== cur) { goPage(pi); await wait(350); }
 			slot.scrollIntoView({ behavior: 'smooth', block: 'center' });
 			await wait(500);
-			const sp = isSpecial(code);
+			const sp = specialLevel(code);
 			pending = pending.filter((c) => c !== code);
 			await tick();
 			const el = slot.querySelector<HTMLElement>('.pp-stamp');
 			if (!el) continue;
 			if (sp) {
-				// Spezialstempel: kein Aufprall, das Siegel zeichnet sich selbst – erst Rahmen, dann Szene, dann Name
-				navigator.vibrate?.([40, 90, 40]);
-				el.classList.add('draw');
-				await wait(2000);
-				await el.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.05)' }, { transform: 'scale(1)' }], { duration: 420, easing: 'ease-out' }).finished;
-				ripple(slot);
-				navigator.vibrate?.(30);
-				await wait(1200);
+				await tearOff(slot, el, sp > 1);
+				await wait(900);
 				continue;
 			}
 			// Stempel fällt mit Schwung herunter, quetscht und federt nach
@@ -553,49 +551,75 @@
 		pending = [];
 	}
 
-	/** Spezialstempel: ruhige Tintenwelle um den Stempel und die Zeile „Seltener Stempel“ */
-	function ripple(slot: HTMLElement) {
-		const r = slot.getBoundingClientRect(),
-			cx = r.left + r.width / 2,
-			cy = r.top + r.height / 2,
-			col = getComputedStyle(slot).getPropertyValue('--c') || css('--primary');
-		for (const delay of [0, 220]) {
-			const e = document.createElement('i');
-			e.className = 'pp-fx';
-			Object.assign(e.style, { left: cx + 'px', top: cy + 'px', width: '120px', height: '150px', border: `2px solid ${col}`, borderRadius: '60px 60px 8px 8px' });
-			document.body.appendChild(e);
-			e.animate([{ transform: 'translate(-50%,-50%) scale(.9)', opacity: 0.7 }, { transform: 'translate(-50%,-50%) scale(1.9)', opacity: 0 }], { duration: 1100, delay, easing: 'ease-out', fill: 'backwards' }).finished.then(() => e.remove());
-		}
-		// goldene Funkelsterne, wie beim „Shiny“
-		for (let i = 0; i < 14; i++) {
-			const e = document.createElement('i'),
-				a = (i / 14) * Math.PI * 2 + Math.random() * 0.4,
-				d = 70 + Math.random() * 60,
-				sz = 9 + Math.random() * 12;
-			e.className = 'pp-fx';
-			Object.assign(e.style, {
-				left: cx + 'px',
-				top: cy + 'px',
-				width: sz + 'px',
-				height: sz + 'px',
-				background: 'radial-gradient(circle,#fff 0 22%,#FFD45E 23% 45%,transparent 46%)',
-				clipPath: 'polygon(50% 0,60% 40%,100% 50%,60% 60%,50% 100%,40% 60%,0 50%,40% 40%)',
-				filter: 'drop-shadow(0 0 3px #E8A800)'
-			});
-			document.body.appendChild(e);
-			e.animate(
-				[
-					{ transform: 'translate(-50%,-50%) scale(.2) rotate(0)', opacity: 0 },
-					{ transform: `translate(${Math.cos(a) * d * 0.7}px,${Math.sin(a) * d * 0.7}px) scale(1) rotate(60deg)`, opacity: 1, offset: 0.4 },
-					{ transform: `translate(${Math.cos(a) * d}px,${Math.sin(a) * d * 1.1}px) scale(.2) rotate(140deg)`, opacity: 0 }
-				],
-				{ duration: 1100 + Math.random() * 500, delay: Math.random() * 250, easing: 'ease-out', fill: 'backwards' }
-			).finished.then(() => e.remove());
-		}
+	/** Seltene Briefmarke: hängt mit der Nachbarmarke am Bogen über dem Feld, wird abgerissen und klebt sich fest */
+	async function tearOff(slot: HTMLElement, el: HTMLElement, legend: boolean) {
+		const r = el.getBoundingClientRect(),
+			col = getComputedStyle(slot).getPropertyValue('--c') || css('--primary'),
+			up = 'translate(0,-56px) scale(1.12)',
+			k = r.right + r.width > innerWidth ? -1 : 1; // Nachbarmarke rechts, in der rechten Spalte links
+		// Nachbarmarke (Kopie) daneben – bleibt nach dem Abreißen am Bogen und verschwindet
+		const twin = document.createElement('div');
+		twin.className = 'pp-fx';
+		Object.assign(twin.style, { left: (k > 0 ? r.right - 1 : r.left - r.width + 1) + 'px', top: r.top + 'px', width: r.width + 'px', height: r.height + 'px', color: col, transformOrigin: k > 0 ? '0 50%' : '100% 50%' });
+		twin.innerHTML = el.outerHTML;
+		(twin.firstElementChild as HTMLElement).style.cssText = 'width:100%;height:100%';
+		document.body.appendChild(twin);
+		el.style.transformOrigin = k > 0 ? '100% 50%' : '0 50%';
+		const D = 1900,
+			o = { duration: D, easing: 'ease-in-out', fill: 'backwards' } as const;
+		twin.animate(
+			[
+				{ transform: up, opacity: 0 },
+				{ transform: up, opacity: 1, offset: 0.12 },
+				{ transform: `translate(${3 * k}px,-56px) scale(1.12)`, offset: 0.3 },
+				{ transform: up, offset: 0.36 },
+				{ transform: `translate(${4 * k}px,-56px) scale(1.12)`, offset: 0.46 },
+				{ transform: `translate(${16 * k}px,-56px) scale(1.12) rotate(${4 * k}deg)`, opacity: 1, offset: 0.52 },
+				{ transform: `translate(${70 * k}px,-34px) scale(1.04) rotate(${12 * k}deg)`, opacity: 0, offset: 0.76 },
+				{ transform: `translate(${70 * k}px,-34px) scale(1.04) rotate(${12 * k}deg)`, opacity: 0 }
+			],
+			o
+		).finished.then(() => twin.remove());
+		navigator.vibrate?.(15);
+		setTimeout(() => {
+			// Abreißen: kleine Papierfasern an der Zähnung
+			navigator.vibrate?.([10, 30, 10]);
+			for (let i = 0; i < 7; i++) {
+				const e = document.createElement('i'),
+					sz = 3 + Math.random() * 4;
+				e.className = 'pp-fx';
+				Object.assign(e.style, { left: (k > 0 ? r.right : r.left) + 'px', top: r.top - 56 + r.height * (0.15 + Math.random() * 0.7) + 'px', width: sz + 'px', height: sz + 'px', background: css('--stp') || '#fff', border: '1px solid ' + css('--line'), borderRadius: '1px' });
+				document.body.appendChild(e);
+				e.animate(
+					[
+						{ transform: 'translate(-50%,-50%) rotate(0)', opacity: 1 },
+						{ transform: `translate(${k * (10 + Math.random() * 30)}px,${30 + Math.random() * 50}px) rotate(${Math.random() * 360}deg)`, opacity: 0 }
+					],
+					{ duration: 700 + Math.random() * 400, easing: 'ease-in' }
+				).finished.then(() => e.remove());
+			}
+		}, D * 0.5);
+		await el.animate(
+			[
+				{ transform: up, opacity: 0 },
+				{ transform: up, opacity: 1, offset: 0.12 },
+				{ transform: `translate(${-3 * k}px,-56px) scale(1.12)`, offset: 0.3 },
+				{ transform: up, offset: 0.36 },
+				{ transform: `translate(${-4 * k}px,-56px) scale(1.12)`, offset: 0.46 },
+				{ transform: `translate(${-12 * k}px,-64px) scale(1.12) rotate(${-7 * k}deg)`, offset: 0.54 },
+				{ transform: 'translate(0,3px) scale(.96) rotate(0)', offset: 0.84 },
+				{ transform: 'translate(0,0) scale(1.02)', offset: 0.92 },
+				{ transform: 'none' }
+			],
+			o
+		).finished;
+		el.style.transformOrigin = '';
+		slot.closest('.pp-page')?.animate([{ transform: 'translateY(0)' }, { transform: 'translateY(3px)' }, { transform: 'translateY(0)' }], { duration: 220 });
+		navigator.vibrate?.(30);
 		const p = document.createElement('div');
 		p.className = 'pp-fx pp-plus';
-		p.textContent = 'Seltener Stempel';
-		Object.assign(p.style, { left: cx + 'px', top: r.top + 6 + 'px', color: col });
+		p.textContent = legend ? 'Legende!' : 'Seltene Marke';
+		Object.assign(p.style, { left: r.left + r.width / 2 + 'px', top: r.top + 6 + 'px', color: col });
 		document.body.appendChild(p);
 		p.animate([{ transform: 'translate(-50%,0)', opacity: 0 }, { transform: 'translate(-50%,-18px)', opacity: 1, offset: 0.3 }, { transform: 'translate(-50%,-34px)', opacity: 0 }], { duration: 1600, easing: 'ease-out' }).finished.then(() => p.remove());
 	}
@@ -696,9 +720,9 @@
 											class="pp-slot"
 											data-stamp={sl.st.code}
 											class:wait={pending.includes(sl.st.code)}
-											class:sp={sl.st.sp}
+											class:sp={sl.st.sp > 0}
 											style="transform:translateY({sl.st.s.dy}px) rotate({sl.st.s.rot}deg);--c:{sl.st.s.color};--w:{sl.st.s.w}%"
-											aria-label="{sl.st.name}, Land Nr. {sl.st.nr}{sl.st.sp ? ', seltener Spezialstempel' : ''}"
+											aria-label="{sl.st.name}, Land Nr. {sl.st.nr}{sl.st.sp > 1 ? ', Legenden-Briefmarke' : sl.st.sp ? ', seltene Briefmarke' : ''}"
 											onclick={() => openCountry(sl.st.code)}>{@html sl.st.s.svg}</button
 										>
 									{:else}

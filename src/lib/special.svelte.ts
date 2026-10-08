@@ -20,10 +20,13 @@ function load(): Record<string, boolean> {
 
 export const special = $state<{ map: Record<string, boolean> }>({ map: typeof window === 'undefined' ? {} : load() });
 
-/** Vorschau: ?spezial in der Adresse macht alle Stempel zu Spezialstempeln */
-export const specialPreview = () => typeof location !== 'undefined' && new URLSearchParams(location.search).has('spezial');
+/** Vorschau: ?spezial in der Adresse macht alle Stempel zu Spezialstempeln, ?spezial=legende alle zu Legenden */
+const preview = () => (typeof location === 'undefined' ? null : new URLSearchParams(location.search).get('spezial'));
 
-export const isSpecial = (code: string) => specialPreview() || special.map[code] === true;
+export const isSpecial = (code: string) => preview() !== null || special.map[code] === true;
+
+/** 0 = normal, 1 = seltene Briefmarke, 2 = Legende (goldener Rand) */
+export const specialLevel = (code: string): 0 | 1 | 2 => (!isSpecial(code) ? 0 : LEGEND.includes(code) || preview() === 'legende' ? 2 : 1);
 
 /** Lost für noch nicht ausgeloste Länder einmal aus; gibt die neu besonderen Codes zurück */
 export function rollSpecials(codes: string[]): string[] {
