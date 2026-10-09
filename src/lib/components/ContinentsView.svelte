@@ -70,7 +70,8 @@
 		if (!m) return;
 		m.flyToContinent(s.k);
 		// bereiste Länder leuchten auf, wenn der Globus ankommt
-		if (s.n) m.highlight([...s.have], reduceMotion() ? 0 : 800, 2600);
+		// ohne Ringe je Land (wirkt überladen): die bereisten Länder färben sich als ruhige Welle von West nach Ost ein
+		if (s.n) m.highlight([...s.have], reduceMotion() ? 0 : 800, 3200, { rings: false, wave: reduceMotion() ? 0 : Math.min(1000, s.n * 90) });
 		requestAnimationFrame(() => m.scrollIntoView());
 	}
 	function showBadge(k: ContinentCode) {

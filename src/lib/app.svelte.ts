@@ -105,7 +105,7 @@ export interface MapHooks {
 	flyToCountry(code: string, opts?: { keepK?: boolean; ms?: number }): void;
 	flyToContinent(code: string): void;
 	/** Länder kurz aufleuchten lassen (delay/dur in ms) */
-	highlight(codes: string | string[], delay?: number, dur?: number): void;
+	highlight(codes: string | string[], delay?: number, dur?: number, opts?: { rings?: boolean; at?: number[]; wave?: number }): void;
 	scrollIntoView(): void;
 }
 export const hooks: { map: MapHooks | null } = { map: null };

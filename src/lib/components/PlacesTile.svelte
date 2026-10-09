@@ -13,7 +13,8 @@
 	const total = $derived(scopeTotal(atlas.settings.countryScope));
 	const pct = $derived(total ? (n / total) * 100 : 0);
 	const pctT = $derived(pct.toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 }));
-	const last = $derived(list.slice(-3).reverse());
+	// zuletzt bereiste Länder: „… 3 2 1“, ganz rechts das neueste
+	const last = $derived(list.slice(-3));
 </script>
 
 <button type="button" class="cat-row" aria-label="Deine Länder öffnen: {n} von {total}" onclick={() => openPlaces()}>
@@ -26,5 +27,5 @@
 		<span class="cat-sub">{pctT} % der Welt entdeckt</span>
 		<span class="cat-bar"><i style="width:{pct}%"></i></span>
 	</span>
-	{#if last.length}<span class="cat-flags" aria-hidden="true">{#each last as c (c.code)}<span>{flag(c.code)}</span>{/each}</span>{/if}
+	{#if last.length}<span class="cat-flags" aria-hidden="true">{#if n > 3}<span class="cat-more">…</span>{/if}{#each last as c (c.code)}<span>{flag(c.code)}</span>{/each}</span>{/if}
 </button>

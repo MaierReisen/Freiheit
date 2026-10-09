@@ -4,7 +4,7 @@
 	import { openContinents } from '$lib/app.svelte';
 
 	/* Zeile „Deine Kontinente“ im Bereich „Deine Welt“: wie viele der 7 Kontinente bereist sind, hinter der Zahl je bereistem
-	   Kontinent ein farbiger Punkt (Farben --ct-XX in app.css). Antippen öffnet die Seite „Deine Kontinente“. */
+	   Kontinent ein farbiger Punkt, je noch offenem ein leerer Kreis (Farben --ct-XX in app.css). Antippen öffnet die Seite „Deine Kontinente“. */
 
 	const KEYS = Object.keys(CONT_NAMES) as ContinentCode[];
 	const have = $derived.by(() => {
@@ -25,7 +25,7 @@
 	</span>
 	<span class="cat-txt">
 		<span class="cat-name">Deine Kontinente</span>
-		<span class="cat-sub">{n} von {KEYS.length} Kontinenten{#if n}<span class="cat-dots" aria-hidden="true">{#each have as k (k)}<i style="--cc:var(--ct-{k})" title={CONT_NAMES[k]}></i>{/each}</span>{/if}</span>
+		<span class="cat-sub">{n} von {KEYS.length} Kontinenten<span class="cat-dots" aria-hidden="true">{#each have as k (k)}<i style="--cc:var(--ct-{k})" title={CONT_NAMES[k]}></i>{/each}{#each { length: KEYS.length - n } as _, i (i)}<i class="off"></i>{/each}</span></span>
 		<span class="cat-bar"><i style="width:{(n / KEYS.length) * 100}%"></i></span>
 	</span>
 </button>

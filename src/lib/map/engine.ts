@@ -144,7 +144,7 @@ export function createWorldMap(o: MapOptions) {
 		emaMove = 8,
 		calmFrames = 0;
 	// Neu hinzugefügtes Land kurz hervorheben (Sonnen-Leuchten, Sonar-Ringe, Name)
-	let hl: { codes: string[]; t0: number; dur: number; polys: GeoJSON.Polygon[] } | null = null;
+	let hl: { codes: string[]; t0: number; dur: number; polys: GeoJSON.Polygon[][]; at: number[] | null; rings: boolean } | null = null;
 	const HL_MS = 2800;
 	// weicher Übergang von der groben (Bewegung) zur feinen Darstellung statt sichtbarem Umspringen
 	let fadeCv: HTMLCanvasElement | null = null,
@@ -762,20 +762,31 @@ export function createWorldMap(o: MapOptions) {
 		const env = t < 0.12 ? t / 0.12 : Math.pow(1 - (t - 0.12) / 0.88, 1.6);
 		const pulse = 0.82 + 0.18 * Math.cos(t * Math.PI * 6);
 		const path = geoPath(P, c);
+		const glow = (polys: GeoJSON.Polygon[], a: number, blur: number) => {
+			if (a <= 0 || !polys.length) return;
+			c.beginPath();
+			for (const g of polys) path(g);
+			c.globalAlpha = a * 0.85;
+			c.fillStyle = PAL.wish;
+			c.shadowColor = PAL.wish;
+			c.shadowBlur = blur;
+			c.fill();
+			c.shadowBlur = 0;
+			c.globalAlpha = Math.min(1, a / 0.82);
+			c.lineWidth = 1.6;
+			c.strokeStyle = '#FFF4CC';
+			c.lineJoin = 'round';
+			c.stroke();
+		};
 		c.save();
-		c.beginPath();
-		for (const g of hl.polys) path(g);
-		c.globalAlpha = env * pulse * 0.85;
-		c.fillStyle = PAL.wish;
-		c.shadowColor = PAL.wish;
-		c.shadowBlur = 18;
-		c.fill();
-		c.shadowBlur = 0;
-		c.globalAlpha = env;
-		c.lineWidth = 1.6;
-		c.strokeStyle = '#FFF4CC';
-		c.lineJoin = 'round';
-		c.stroke();
+		if (hl.at) {
+			// viele Länder: ruhig nacheinander „eingefärbt“ (im Takt der Länderzahl), kein Pulsieren, dann gemeinsam ausblenden
+			const out = t < 0.7 ? 1 : Math.pow(1 - (t - 0.7) / 0.3, 1.4);
+			hl.polys.forEach((polys, k) => {
+				const s = (t - hl!.at![k]) / 0.07;
+				if (s > 0) glow(polys, Math.min(1, s) * out * 0.9, 10);
+			});
+		} else glow(hl.polys.flat(), env * pulse, 18);
 		c.restore();
 		const one = hl.codes.length === 1;
 		for (const code of hl.codes) {
@@ -783,8 +794,8 @@ export function createWorldMap(o: MapOptions) {
 		if (!i || !onFront(i.c)) continue;
 		const p = P(i.c);
 		if (!p) continue;
-		// zwei Sonar-Ringe vom Mittelpunkt aus
-		if (!reduce()) {
+		// zwei Sonar-Ringe vom Mittelpunkt aus (nur beim einzeln hinzugefügten Land)
+		if (hl.rings && !reduce()) {
 			const R0 = Math.max(10, Math.min(60, i.size * pxPerDeg() * 0.5));
 			for (const d of [0, 0.22]) {
 				const k = (t - d) / 0.55;
@@ -805,12 +816,20 @@ export function createWorldMap(o: MapOptions) {
 		}
 	}
 
-	/** Neu hinzugefügtes Land hervorheben, beginnend nach `delay` ms (z. B. wenn der Flug ankommt) */
-	function highlight(code: string | string[], delay = 0, dur = HL_MS) {
+	/** Neu hinzugefügtes Land hervorheben, beginnend nach `delay` ms (z. B. wenn der Flug ankommt).
+	    rings: Sonar-Ringe (nur beim einzelnen Land); at: Startzeit je Land in ms ab `delay` (nacheinander einfärben);
+	    wave: statt `at` eine Welle von West nach Ost über so viele ms */
+	function highlight(code: string | string[], delay = 0, dur = HL_MS, opts: { rings?: boolean; at?: number[]; wave?: number } = {}) {
 		const lod = getLod('full');
 		const codes = (Array.isArray(code) ? code : [code]).filter((c) => INFO[c]);
 		if (!lod || !codes.length) return;
-		hl = { codes, t0: performance.now() + delay, dur, polys: lod.polys.filter((pg) => codes.includes(pg.id)).map((pg) => pg.g) };
+		let at = opts.at && opts.at.length === codes.length ? opts.at.map((ms) => ms / dur) : null;
+		if (opts.wave && codes.length > 1) {
+			const ord = [...codes].sort((x, y) => INFO[x].c[0] - INFO[y].c[0]);
+			at = codes.map((c) => (ord.indexOf(c) / (codes.length - 1)) * (opts.wave! / dur));
+		}
+		const polys = codes.map((id) => lod.polys.filter((pg) => pg.id === id).map((pg) => pg.g));
+		hl = { codes, t0: performance.now() + delay, dur, polys, at, rings: opts.rings ?? true };
 		markDirty(false);
 	}
 

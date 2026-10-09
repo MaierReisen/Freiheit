@@ -204,13 +204,14 @@
 			map.highlight(all, 0, 1600);
 		} else if (plan.overview) {
 			map.flyToCountries(all, plan.fly);
-			map.highlight(all, plan.fly - 200, plan.glow);
+			// statt Ringen um jedes Land: Länder färben sich ruhig nacheinander ein, im Takt der Länderzahl
+			map.highlight(all, 0, plan.fly + plan.glow, { rings: false, at: plan.arrive });
 		} else {
 			all.forEach((c, i) => {
 				tourT.push(
 					setTimeout(() => {
 						map?.flyToCountry(c, { ms: plan.fly, zoom: 0.3 });
-						map?.highlight(c, plan.fly - 150, plan.glow);
+						map?.highlight(c, plan.fly - 150, plan.glow, { rings: false });
 						const k = CONT[c];
 						if (k && CONT_VIEW[k]) ui.focusContinent = k;
 					}, i * plan.step)
