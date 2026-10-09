@@ -4,6 +4,7 @@
 </script>
 
 <script lang="ts">
+	import { haptic } from '$lib/haptics.svelte';
 	import type { Snippet } from 'svelte';
 	import { reduceMotion } from '$lib/app.svelte';
 
@@ -88,7 +89,7 @@
 		else if (nx < -W) nx = -W + (nx + W) * (fromOpen ? 0.85 : 0.3);
 		x = nx;
 		const arm = fromOpen && nx < -(W + ARM);
-		if (arm && !armed) navigator.vibrate?.(10);
+		if (arm && !armed) haptic(10);
 		armed = arm;
 	}
 	function up() {

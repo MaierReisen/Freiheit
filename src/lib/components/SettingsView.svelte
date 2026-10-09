@@ -4,6 +4,7 @@
 	import { auth, signOut } from '$lib/auth.svelte';
 	import { CONT_NAMES, CONT_VIEW, type ContinentCode } from '$lib/countries';
 	import { closeSettings, hooks, prefs, setMotionPref, setThemePref, toast, ui, type MotionPref, type ThemePref } from '$lib/app.svelte';
+	import { haptics, setHaptics } from '$lib/haptics.svelte';
 
 	/* Einstellungen: Darstellung (Design, Animationen – nur dieses Gerät), Karte (Startregion), Statistik (Was zählt als Land?), Konto (E-Mail, Sync, Abmelden), Daten (Export/Import) */
 
@@ -89,6 +90,15 @@
 					{#each MOTIONS as o (o.id)}
 						<button type="button" class="chip" aria-pressed={prefs.motion === o.id} onclick={() => setMotionPref(o.id)}>{o.label}</button>
 					{/each}
+				</div>
+			</div>
+			<div class="field" style="margin-bottom:0">
+				<span class="lbl" id="hapticLbl"
+					>Haptisches Feedback<small>Kurzes Vibrieren bei Halten, Stempeln, Einrasten und Rang-Aufstieg. Auf dem iPhone nur ein leichter Tick.</small></span
+				>
+				<div class="chips" role="group" aria-labelledby="hapticLbl">
+					<button type="button" class="chip" aria-pressed={haptics.on} onclick={() => setHaptics(true)}>An</button>
+					<button type="button" class="chip" aria-pressed={!haptics.on} onclick={() => setHaptics(false)}>Aus</button>
 				</div>
 			</div>
 			<p class="note" style="margin-bottom:0">Gilt nur auf diesem Gerät.</p>

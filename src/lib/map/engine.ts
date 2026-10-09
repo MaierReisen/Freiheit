@@ -1,3 +1,4 @@
+import { haptic } from '../haptics.svelte';
 import { geoContains, geoDistance, geoGraticule10, geoNaturalEarth1, geoOrthographic, geoPath, type GeoProjection } from 'd3-geo';
 import { CONT_VIEW, nameOf, type ContinentCode } from '../countries';
 import LABEL_JSON from '../data/labels.json';
@@ -1322,7 +1323,7 @@ export function createWorldMap(o: MapOptions) {
 				clearTimeout(holdTimer);
 				tapOnly = null;
 				o.onActivate();
-				navigator.vibrate?.(8);
+				haptic(8);
 				cancelMotion();
 				for (const id of [f.id, e.pointerId]) {
 					try {
@@ -1347,7 +1348,7 @@ export function createWorldMap(o: MapOptions) {
 					if (tapOnly !== t || t.moved >= 10 || lastScroll > t.t - 350 || ptrs.size) return;
 					tapOnly = null;
 					o.onActivate();
-					navigator.vibrate?.(8);
+					haptic(8);
 					// derselbe Finger dreht/verschiebt gleich weiter (ohne loszulassen); Loslassen ohne Bewegung öffnet kein Land
 					try {
 						cv.setPointerCapture(t.id);
