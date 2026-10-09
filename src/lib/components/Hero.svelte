@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { haptic } from '$lib/haptics.svelte';
 	import { untrack } from 'svelte';
 	import { atlas, countedCountries } from '$lib/atlas.svelte';
 	import { scopeTotal } from '$lib/scope';
@@ -96,7 +95,7 @@
 			clearTimeout(bumpT);
 			bump = { key: bump.key + 1, from: before, on: true };
 			bumpT = setTimeout(() => (bump = { ...bump, on: false }), 1400);
-			haptic(cont > contBefore ? [14, 70, 24] : 12);
+			navigator.vibrate?.(cont > contBefore ? [14, 70, 24] : 12);
 		});
 	});
 	// Ziffern für das Zählwerk: rechtsbündig gegen die alte Zahl verglichen

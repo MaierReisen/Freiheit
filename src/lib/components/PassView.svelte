@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { haptic } from '$lib/haptics.svelte';
 	import { tick, untrack } from 'svelte';
 	import { fade } from 'svelte/transition';
 	import { atlas, countedCountries, setWonder, visitedSet } from '$lib/atlas.svelte';
@@ -218,7 +217,7 @@
 		turn = null;
 		if (ok) {
 			cur = shown = t.to;
-			haptic(6);
+			navigator.vibrate?.(6);
 		}
 		// Ebenen erst lösen, wenn Svelte die neue aktuelle Seite markiert hat (sonst blitzt die alte kurz auf)
 		tick().then(() => clearTurn(t));
@@ -350,7 +349,7 @@
 		const r = strip.getBoundingClientRect(),
 			f = Math.max(0, Math.min(1, (x - r.left - KNOB / 2) / (r.width - KNOB))),
 			i = Math.round(f * (pages.length - 1));
-		if (slide && i !== slide.i) haptic(4);
+		if (slide && i !== slide.i) navigator.vibrate?.(4);
 		slide = { ...d, i, f, w: r.width };
 	}
 	function nDown(e: PointerEvent) {
@@ -564,7 +563,7 @@
 			).finished;
 			el.animate([{ transform: 'scale(.86,.8)' }, { transform: 'scale(1.08,1.05)' }, { transform: 'scale(.97)' }, { transform: 'scale(1)' }], { duration: 480, easing: 'ease-out' });
 			slot.closest('.pp-page')?.animate([{ transform: 'translateY(0)' }, { transform: 'translateY(4px)' }, { transform: 'translateY(-1px)' }, { transform: 'translateY(0)' }], { duration: 260 });
-			haptic(20);
+			navigator.vibrate?.(20);
 			burst(slot);
 			await wait(700 * k);
 		}
@@ -605,10 +604,10 @@
 	async function tearOff(slot: HTMLElement, el: SVGSVGElement, tier: Tier | 4, label = TIER_LABEL[tier]) {
 		const r = el.getBoundingClientRect(),
 			col = getComputedStyle(slot).getPropertyValue('--c') || css('--primary');
-		haptic(15);
+		navigator.vibrate?.(15);
 		await stickOn(el, tier, () => {
 			slot.closest('.pp-page')?.animate([{ transform: 'translateY(0)' }, { transform: 'translateY(3px)' }, { transform: 'translateY(0)' }], { duration: 220 });
-			haptic(30);
+			navigator.vibrate?.(30);
 			const p = document.createElement('div');
 			p.className = 'pp-fx pp-plus';
 			p.textContent = label;
