@@ -24,7 +24,7 @@ export function tourPlan(m: number): TourPlan {
 		return { overview: true, step: 0, fly, glow: 2000, arrive: Array.from({ length: m }, (_, i) => Math.round(((i + 1) / m) * fly)), end: fly + 1100 };
 	}
 	// je mehr Länder, desto schneller
-	const step = Math.round(Math.max(750, 1600 - (m - 2) * 140)),
+	const step = Math.round(Math.max(950, 2000 - (m - 2) * 170)),
 		fly = Math.round(step * 0.72),
 		glow = Math.round(step * 1.3);
 	const arrive = Array.from({ length: m }, (_, i) => i * step + fly);
