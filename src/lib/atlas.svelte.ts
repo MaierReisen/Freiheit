@@ -17,7 +17,7 @@ export interface CountryEntry {
 	position?: number;
 	/** Erste Einreise (für den Reisepass): "JJJJ-MM" oder "JJJJ" */
 	entered?: string;
-	/** Seltenheit des Stempels im Pass: 0 = Common, 1 = Rare, 2 = Super Rare (einmal ausgelost, fehlt = noch nicht ausgelost;
+	/** Seltenheit des Stempels im Pass: 0 = Common, 1 = Rare, 2 = Epic, 3 = Legendary (einmal ausgelost, fehlt = noch nicht ausgelost;
 	    true = altes Los bis v1.23 = Rare) */
 	special?: number | boolean;
 	[key: string]: unknown;

@@ -4,12 +4,13 @@
 	import { atlas, countedCountries } from '$lib/atlas.svelte';
 	import { closePass, openCountry, reduceMotion, ui } from '$lib/app.svelte';
 	import { flag } from '$lib/countries';
-	import { INK_FILTERS, rankIndex, ranks, stamp, TIER_LABEL, yearOf } from '$lib/passport';
+	import { INK_FILTERS, loadScenes, rankIndex, ranks, scenesLoaded, stamp, TIER_LABEL, yearOf } from '$lib/passport';
 	import { badgeLevels, badges, tierName, type Badge, type DetailItem } from '$lib/badges';
 	import { loadFacts, type Facts } from '$lib/facts';
 	import { scopeTotal } from '$lib/scope';
 	import { markSeen, passSeen } from '$lib/passSeen.svelte';
-	import { CHANCE, LEGEND, specialLevel, rollSpecials, type Tier } from '$lib/special.svelte';
+	import { stickOn } from '$lib/markfx';
+	import { CHANCE, specialLevel, rollSpecials, type Tier } from '$lib/special.svelte';
 	import PassTile from './PassTile.svelte';
 
 	/* Reisepass (Vollbild): Seiten zum Blättern mit je 6 Stempeln in der Reihenfolge „Land Nr. X“, danach „?“-Plätze für
@@ -80,11 +81,23 @@
 		};
 	});
 
+	/* Briefmarken-Bilder: im Leerlauf vorladen, spätestens beim Öffnen des Passes */
+	let scenesOk = $state(scenesLoaded());
+	const getScenes = () => loadScenes().then(() => (scenesOk = true));
+	$effect(() => {
+		if (scenesOk) return;
+		if (ui.passOpen) return void getScenes();
+		const id = 'requestIdleCallback' in window ? requestIdleCallback(getScenes, { timeout: 5000 }) : setTimeout(getScenes, 2000);
+		return () => ('cancelIdleCallback' in window ? cancelIdleCallback(id as number) : clearTimeout(id as ReturnType<typeof setTimeout>));
+	});
 	const withLevel = (code: string, nr: number, entered?: string) => {
 		const sp = specialLevel(code);
 		return { s: stamp(code, nr, entered, sp), sp };
 	};
-	const stamps = $derived(countedCountries().map((c, i) => ({ code: c.code, name: c.name, nr: i + 1, entered: c.entered, ...withLevel(c.code, i + 1, c.entered) })));
+	const stamps = $derived.by(() => {
+		void scenesOk; // nach dem Nachladen der Bilder neu berechnen
+		return countedCountries().map((c, i) => ({ code: c.code, name: c.name, nr: i + 1, entered: c.entered, ...withLevel(c.code, i + 1, c.entered) }));
+	});
 	const wishes = $derived(atlas.data.wishlist.slice(0, 4));
 	const pages = $derived.by(() => {
 		const slots: ({ kind: 'stamp'; st: (typeof stamps)[number] } | { kind: 'wish'; code: string; name: string })[] = [
@@ -525,7 +538,7 @@
 			legend = false;
 			return;
 		}
-		if (opened) return;
+		if (opened || !scenesOk) return;
 		opened = true;
 		untrack(() => {
 			const codes = stamps.map((s) => s.code);
@@ -558,7 +571,7 @@
 			const sp = specialLevel(code);
 			pending = pending.filter((c) => c !== code);
 			await tick();
-			const el = slot.querySelector<HTMLElement>('.pp-stamp');
+			const el = slot.querySelector<SVGSVGElement>('.pp-stamp');
 			if (!el) continue;
 			if (sp) {
 				await tearOff(slot, el, sp);
@@ -583,44 +596,36 @@
 		pending = [];
 	}
 
-	/** Briefmarke (Rare und höher): wird von oben aufgeklebt und angedrückt (kein zweites Bild) */
-	async function tearOff(slot: HTMLElement, el: HTMLElement, tier: Tier) {
+	/** Briefmarke (Rare und höher): je Stufe etwas anders aufgeklebt (markfx.ts) */
+	async function tearOff(slot: HTMLElement, el: SVGSVGElement, tier: Tier) {
 		const r = el.getBoundingClientRect(),
 			col = getComputedStyle(slot).getPropertyValue('--c') || css('--primary');
 		navigator.vibrate?.(15);
-		await el.animate(
-			[
-				{ transform: 'translateY(-48px) scale(1.15) rotate(-5deg)', opacity: 0 },
-				{ transform: 'translateY(-48px) scale(1.15) rotate(-5deg)', opacity: 1, offset: 0.2 },
-				{ transform: 'translateY(-6px) scale(1.04) rotate(-1deg)', offset: 0.7 },
-				{ transform: 'translateY(2px) scale(.97)', offset: 0.85 },
-				{ transform: 'none' }
-			],
-			{ duration: 1100, easing: 'ease-in-out', fill: 'backwards' }
-		).finished;
-		slot.closest('.pp-page')?.animate([{ transform: 'translateY(0)' }, { transform: 'translateY(3px)' }, { transform: 'translateY(0)' }], { duration: 220 });
-		navigator.vibrate?.(30);
-		const p = document.createElement('div');
-		p.className = 'pp-fx pp-plus';
-		p.textContent = TIER_LABEL[tier];
-		Object.assign(p.style, { left: r.left + r.width / 2 + 'px', top: r.top + 6 + 'px', color: col });
-		document.body.appendChild(p);
-		p.animate([{ transform: 'translate(-50%,0)', opacity: 0 }, { transform: 'translate(-50%,-18px)', opacity: 1, offset: 0.3 }, { transform: 'translate(-50%,-34px)', opacity: 0 }], { duration: 1600, easing: 'ease-out' }).finished.then(() => p.remove());
+		await stickOn(el, tier, () => {
+			slot.closest('.pp-page')?.animate([{ transform: 'translateY(0)' }, { transform: 'translateY(3px)' }, { transform: 'translateY(0)' }], { duration: 220 });
+			navigator.vibrate?.(30);
+			const p = document.createElement('div');
+			p.className = 'pp-fx pp-plus';
+			p.textContent = TIER_LABEL[tier];
+			Object.assign(p.style, { left: r.left + r.width / 2 + 'px', top: r.top + 6 + 'px', color: col });
+			document.body.appendChild(p);
+			p.animate([{ transform: 'translate(-50%,0)', opacity: 0 }, { transform: 'translate(-50%,-18px)', opacity: 1, offset: 0.3 }, { transform: 'translate(-50%,-34px)', opacity: 0 }], { duration: 1600, easing: 'ease-out' }).finished.then(() => p.remove());
+		});
 	}
 
 	/* ---------- Legende: Seltenheitsstufen (Blatt von unten, Runterwischen oder Tippen daneben schließt) ---------- */
-	const TIER_NAME = ['Common', 'Rare', 'Super Rare', 'Legendary'];
+	const TIER_NAME = ['Common', 'Rare', 'Epic', 'Legendary'];
 	const pct = (p: number) => Math.round(p * 100) + ' %';
 	let legend = $state(false);
 	let legSheet = $state<HTMLDivElement>();
 	let legList = $state<HTMLDivElement>();
 	const legRows = $derived(
-		legend
+		legend && scenesOk
 			? [
-					{ t: 0, p: pct(1 - CHANCE.rare - CHANCE.super), d: 'Normaler Stempel – so sieht es bei den meisten Ländern aus.', s: stamp('BT', 12, undefined, 0) },
-					{ t: 1, p: pct(CHANCE.rare), d: 'Eingeklebte Briefmarke statt Stempel.', s: stamp('BT', 12, undefined, 1) },
-					{ t: 2, p: pct(CHANCE.super), d: 'Briefmarke mit Silberrand.', s: stamp('BT', 12, undefined, 2) },
-					{ t: 3, p: 'immer', d: `Briefmarke mit Goldrand – nur die ${LEGEND.length} entlegensten Länder der Welt, z. B. Tuvalu.`, s: stamp('TV', 12, undefined, 3) }
+					{ t: 0, p: pct(1 - CHANCE.rare - CHANCE.epic - CHANCE.legend), d: 'Normaler Stempel – so sieht es bei den meisten Ländern aus.', s: stamp('JP', 12, undefined, 0) },
+					{ t: 1, p: pct(CHANCE.rare), d: 'Eingeklebte Briefmarke statt Stempel.', s: stamp('JP', 12, undefined, 1) },
+					{ t: 2, p: pct(CHANCE.epic), d: 'Breite Briefmarke mit Silberrand und eigenem Bild.', s: stamp('JP', 12, undefined, 2) },
+					{ t: 3, p: pct(CHANCE.legend), d: 'Prachtvolle Briefmarke mit Goldrand – ganz selten.', s: stamp('JP', 12, undefined, 3) }
 				]
 			: []
 	);
@@ -737,7 +742,7 @@
 		<h1 class="set-title" id="passTitle">Reisepass</h1>
 	</div>
 	<div class="ov-body" bind:this={body} style:padding-bottom={pick ? sheetH + 16 + 'px' : null} onscroll={() => { if (ui.passOpen) lastScroll = body.scrollTop; }}>
-		{#if ui.passOpen}
+		{#if ui.passOpen && scenesOk}
 			<div style="margin-top:20px"><PassTile inPass /></div>
 			<ol class="pp-ranks" aria-label="Ränge">
 				{#each allRanks as r, i (r.n)}

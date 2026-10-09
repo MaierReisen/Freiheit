@@ -638,13 +638,10 @@ button.pp-tile:active{transform:scale(.98)}
 .pp-empty{width:112px;height:112px;border-radius:50%;border:2.5px dashed var(--line);display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--muted);text-align:center;font-size:11.5px;font-weight:600;line-height:1.25}
 .pp-empty b{font:800 30px/1 var(--display);color:var(--sun);margin-bottom:4px}
 .pp-slot.sp{z-index:1}
-/* Rare/Super Rare/Legendary: eingeklebte Briefmarke (gedruckt, nicht gestempelt) – Papier --stp, Silberrand --sv1–3, Goldrand --stg */
+/* Rare/Epic/Legendary: eingeklebte Briefmarke (gedruckt, nicht gestempelt) – Papier --stp, Silberrand --sv1–3, Goldrand --stg */
 :root{--stp:#FFFFFF;--stg:#D6A740;--stt:16%;--sv1:#7E8892;--sv2:#DCE3E9;--sv3:#FFFFFF}@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--stp:#26404A;--stg:#B48A33;--stt:30%;--sv1:#6C7680;--sv2:#BCC5CD;--sv3:#E8EDF1}}:root[data-theme="dark"]{--stp:#26404A;--stg:#B48A33;--stt:30%;--sv1:#6C7680;--sv2:#BCC5CD;--sv3:#E8EDF1}
-.pp-stamp.sp{width:auto;height:140px;max-height:none;mix-blend-mode:normal;opacity:1;filter:drop-shadow(0 1px 1.5px rgba(13,43,58,.3))}
-/* Leichte Daueranimation: ab und zu hebt ein Windstoß die Marke kurz an (je Land versetzt) */
-.pp-stamp.sp{transform-origin:50% 90%;animation:spLift 9s ease-in-out infinite}
-@keyframes spLift{0%,72%,100%{transform:none}78%{transform:perspective(500px) rotateX(9deg) rotateY(-7deg) translateY(-3px)}85%{transform:perspective(500px) rotateX(-3deg) rotateY(2deg)}91%{transform:none}}
-@media (prefers-reduced-motion:reduce){.pp-stamp.sp{animation:none}}
+.pp-stamp.sp{transform-origin:50% 90%;width:auto;height:140px;max-height:none;mix-blend-mode:normal;opacity:1;filter:drop-shadow(0 1px 1.5px rgba(13,43,58,.3))}
+.pp-stamp.sp.wd{width:108%;max-width:none;height:auto;max-height:140px;flex:none}
 .pp-stamp .pp{fill:var(--stp);stroke:none}
 .pp-stamp .gd{fill:var(--stg);stroke:none}
 .pp-stamp .pic{--paper:color-mix(in srgb,currentColor var(--stt),var(--stp))}
@@ -652,6 +649,7 @@ button.pp-tile:active{transform:scale(.98)}
 .pp-stamp .v{font-family:var(--display);font-weight:800;fill:currentColor;stroke:var(--paper);stroke-width:6px;paint-order:stroke}
 .pp-fx{position:fixed;z-index:80;pointer-events:none}
 .pp-plus{font:800 22px var(--display);color:var(--primary);white-space:nowrap}
+.pp-spark{font-size:14px;line-height:1;color:#E6B446;text-shadow:0 0 6px rgba(255,220,120,.9)}
 
 .pp-say{margin:-12px 4px 20px;font-size:13px;font-style:italic;color:var(--muted)}
 .unlock-disc.emo{font-size:32px}
