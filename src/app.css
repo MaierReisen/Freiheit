@@ -309,14 +309,34 @@ button.cont{border:0;font:inherit;font-size:14px;color:inherit}
 /* Dreistellige Länderzahl etwas kleiner, damit der „+ Land“-Button daneben bleibt */
 .count.d3{font-size:clamp(72px,24vw,140px)}
 
-/* Länderliste unter dem Globus */
-.visited{scroll-margin-top:calc(16px + env(safe-area-inset-top,0px))}
-.visited h2{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+/* Blöcke unter dem Globus (Pass, Deine Länder, später weitere) */
+.blocks{display:flex;flex-direction:column;margin-top:18px}
+.blk-ico{flex:none;display:grid;place-items:center;width:56px;height:56px;border-radius:16px;background:color-mix(in srgb,var(--primary) 14%,var(--chip));color:var(--primary)}
+.blk-ico svg{width:30px;height:30px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.blk-title{font:700 13px var(--text);letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin-bottom:5px}
+.blk-flags{display:inline-flex;gap:2px;margin-right:8px;font-size:15px;vertical-align:-1px}
+
+/* Seite „Deine Länder“ */
+.lv-head .set-title{font-size:22px;white-space:nowrap}
+.set-title .ov-of{display:block}
+.lv-sel{flex:none;border:0;border-radius:999px;padding:11px 14px;background:var(--chip);color:var(--ink);font-weight:700;font-size:15px}
+.lv-hint{margin:10px 0 0}
+.lv-body.withbar{padding-bottom:calc(110px + env(safe-area-inset-bottom,0px))}
+.lv-bar{position:absolute;left:0;right:0;bottom:0;z-index:3;display:flex;align-items:center;gap:10px;max-width:760px;margin:0 auto;padding:12px 20px calc(12px + env(safe-area-inset-bottom,0px));background:var(--surface);border-top:1px solid var(--line);box-shadow:0 -8px 24px -14px rgba(13,43,58,.4)}
+.lv-bar-n{flex:1;font-weight:600}
+.btn.danger{background:#E5383D;border-color:#E5383D;color:#fff}
+.btn.danger:disabled{background:var(--chip);border-color:var(--chip);color:var(--muted);opacity:1}
+.list.dragging li{user-select:none;-webkit-user-select:none}
+.list li{-webkit-touch-callout:none}
+.list li.lifted{position:relative;z-index:5;border-radius:12px;box-shadow:0 12px 28px -8px rgba(13,43,58,.45);transition:box-shadow .15s}
+.list li.lifted .swipe-fg{background:var(--surface)}
+.list li.sel-li button{gap:12px}
+.chk{flex:none;display:grid;place-items:center;width:24px;height:24px;border-radius:50%;border:2px solid var(--line);color:transparent;transition:background .12s,border-color .12s}
+.chk svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.list li.sel-li.on .chk{background:var(--primary);border-color:var(--primary);color:var(--on-primary)}
 .h-count{font-family:var(--text);font-size:14px;font-weight:600;color:var(--muted);letter-spacing:0}
 .list-sub .h-count{font-size:13px}
 .sort-seg{margin:14px 0 12px}.sort-seg button{white-space:nowrap}
-.visited .search{margin-top:0}
-.visited .list-sub:first-of-type{margin-top:18px}
 
 /* Globus per Tipp aktiviert (Touch): Rahmen zeigt den Modus, Ziehen dreht statt zu scrollen */
 .map-box.active #mapTop{touch-action:none}

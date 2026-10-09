@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { TABS, closePass, closeSettings, closeSheet, goTab, hooks, initFromHash, onHashChange, setFull, startIntro, ui } from '$lib/app.svelte';
+	import { TABS, closePass, closePlaces, closeSettings, closeSheet, goTab, initFromHash, onHashChange, setFull, startIntro, ui } from '$lib/app.svelte';
 	import ContinentChips from './ContinentChips.svelte';
 	import Hero from './Hero.svelte';
 	import SettingsView from './SettingsView.svelte';
@@ -8,7 +8,9 @@
 	import ContinentUnlock from './ContinentUnlock.svelte';
 	import PassView from './PassView.svelte';
 	import TabBar from './TabBar.svelte';
-	import VisitedList from './VisitedList.svelte';
+	import PassTile from './PassTile.svelte';
+	import PlacesTile from './PlacesTile.svelte';
+	import PlacesView from './PlacesView.svelte';
 	import WorldMap from './WorldMap.svelte';
 
 	function onKeydown(e: KeyboardEvent) {
@@ -18,13 +20,16 @@
 			closeSettings(false);
 			return;
 		}
+		if (ui.placesOpen && !ui.sheetOpen && !ui.settingsOpen && !ui.passOpen) {
+			closePlaces(false);
+			return;
+		}
 		if (ui.passOpen && !ui.sheetOpen) {
 			closePass(false);
 			return;
 		}
 		if (ui.full && !ui.sheetOpen) setFull(false);
 		closeSheet();
-		if (ui.placesOpen && !ui.sheetOpen) hooks.places?.close(false);
 	}
 
 	/* Wischen zwischen den Tabs */
@@ -68,7 +73,7 @@
 			if (ui.passOpen) closePass(true);
 			ui.focusContinent = null;
 			if (ui.full) setFull(false, true);
-			ui.placesOpen = false;
+			if (ui.placesOpen) closePlaces(true);
 			document.body.classList.remove('noscroll');
 		};
 	});
@@ -87,12 +92,16 @@
 		<Hero />
 		<ContinentChips id="continents" />
 		<WorldMap />
-		<VisitedList />
+		<div class="blocks">
+			<PassTile />
+			<PlacesTile />
+		</div>
 	</main>
 </div>
 
 {#if TABS.length > 1}<TabBar />{/if}
 <SettingsView />
 <PassView />
+<PlacesView />
 <Sheet />
 <ContinentUnlock />

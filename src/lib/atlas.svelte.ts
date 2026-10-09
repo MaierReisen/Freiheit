@@ -61,6 +61,7 @@ const isContinent = (c: unknown): c is ContinentCode => typeof c === 'string' &&
 type Op =
 	| { t: 'addCountry'; code: string; name: string; position: number }
 	| { t: 'removeCountry'; code: string }
+	| { t: 'reorder'; rows: { code: string; name: string; position: number }[] }
 	| { t: 'setEntered'; code: string; entered: string | null }
 	| { t: 'setSpecial'; code: string; special: number }
 	| { t: 'addWish'; code: string; name: string }
@@ -185,6 +186,9 @@ async function runOp(op: Op, user: string) {
 			if (r.error && !noColumn(r.error) && !oldSpecial(r.error)) throw r.error;
 			return;
 		}
+		case 'reorder':
+			ok(await supabase.from('visited_countries').upsert(op.rows.map((r) => ({ user_id: user, code: r.code, name: r.name, position: r.position }))));
+			return;
 		case 'removeCountry':
 			ok(await supabase.from('visited_countries').delete().eq('user_id', user).eq('code', op.code));
 			return;
@@ -408,6 +412,31 @@ export function removeCountry(code: string) {
 	persist();
 	enqueue({ t: 'removeCountry', code });
 	toast(`${nameOf(code)} entfernt`);
+}
+/** Mehrere Länder auf einmal entfernen */
+export function removeCountries(codes: string[]) {
+	const del = new Set(codes);
+	const gone = atlas.data.countries.filter((c) => del.has(c.code));
+	if (!gone.length) return;
+	atlas.data = { ...atlas.data, countries: atlas.data.countries.filter((c) => !del.has(c.code)) };
+	persist();
+	enqueue(...gone.map((c) => ({ t: 'removeCountry', code: c.code }) as Op));
+	toast(gone.length === 1 ? `${nameOf(gone[0].code)} entfernt` : `${gone.length} Länder entfernt`);
+}
+/** Eigene Reihenfolge der zählenden Länder ("Land Nr. X"): codes = alle zählenden Länder in neuer Reihenfolge.
+    Gebiete, die nicht zählen, behalten ihren Platz in der Gesamtliste. Pass, Länderseite und Liste folgen automatisch. */
+export function reorderCountries(codes: string[]) {
+	const s = atlas.data;
+	const byCode = new Map(s.countries.map((c) => [c.code, c]));
+	const order = codes.map((c) => byCode.get(c)).filter((c): c is CountryEntry => !!c);
+	if (order.length !== countedCountries().length) return;
+	let k = 0;
+	const next = s.countries.map((c, i) => ({ ...(isCounted(c.code) ? order[k++] : c), position: i }));
+	const rows = next.filter((c) => byCode.get(c.code)?.position !== c.position).map((c) => ({ code: c.code, name: c.name, position: c.position }));
+	if (!rows.length) return;
+	atlas.data = { ...s, countries: next };
+	persist();
+	enqueue({ t: 'reorder', rows });
 }
 /** Erste Einreise setzen ("JJJJ-MM" / "JJJJ") oder löschen (null) */
 export function setEntered(code: string, entered: string | null) {

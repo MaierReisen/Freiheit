@@ -2,7 +2,7 @@
 	import { addCountry, atlas, countedCountries, isCounted, removeCountry, setEntered, visitedSet } from '$lib/atlas.svelte';
 	import { longDate } from '$lib/passport';
 	import { SCOPES, inScope } from '$lib/scope';
-	import { contOf, flag, nameOf } from '$lib/countries';
+	import { compareNames, contOf, flag, nameOf } from '$lib/countries';
 	import { closeSheet, hooks, openCountry, reduceMotion, setSheetDetent, ui } from '$lib/app.svelte';
 	import { compareArea, currencies, factsNow, loadClimate, loadEntry, loadHighlights, fmtArea, fmtAreaShort, fmtDensity, fmtPop, languages, loadFacts, localTime, type Facts } from '$lib/facts';
 	import { fmtMoney, fmtRateDate, getRates, type Rates } from '$lib/rates';
@@ -69,7 +69,7 @@
 
 	// Nachbarländer: gemeinsame Landgrenze; ohne Landgrenze nur mit fester Verbindung (Brücke, Damm, Tunnel)
 	const neighbours = $derived(
-		(facts?.nb ?? []).map((c) => ({ code: c, name: nameOf(c), been: visited.has(c), via: facts?.fix?.[c] ?? '' })).sort((a, b) => a.name.localeCompare(b.name, 'de'))
+		(facts?.nb ?? []).map((c) => ({ code: c, name: nameOf(c), been: visited.has(c), via: facts?.fix?.[c] ?? '' })).sort((a, b) => compareNames(a.name, b.name))
 	);
 	const nbBeen = $derived(neighbours.filter((n) => n.been).length);
 

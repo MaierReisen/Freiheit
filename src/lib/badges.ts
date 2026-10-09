@@ -1,4 +1,4 @@
-import { CONT, CONT_NAMES, nameOf, type ContinentCode } from './countries';
+import { CONT, CONT_NAMES, compareNames, nameOf, type ContinentCode } from './countries';
 import type { Facts } from './facts';
 import { scopeCodes, scopeTotalIn, type CountryScope } from './scope';
 
@@ -90,7 +90,7 @@ const nm = (d: Intl.DisplayNames | null, c: string) => {
 		return c;
 	}
 };
-const byName = (a: DetailItem, b: DetailItem) => a.label.localeCompare(b.label, 'de');
+const byName = (a: DetailItem, b: DetailItem) => compareNames(a.label, b.label);
 const land = (c: string, sub?: string): DetailItem => ({ code: c, label: nameOf(c), sub });
 /** Liste aus einer Länder-Menge: besuchte zählen, übrige fehlen */
 const pool =

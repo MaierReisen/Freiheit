@@ -76,6 +76,7 @@ export const ui = $state({
 	sheetDetent: 'full' as 'peek' | 'full',
 	/** Höhe der kompakten Karte in px (misst die Länderseite selbst) */
 	sheetPeek: 260,
+	/** Seite „Deine Länder“ (Vollbild, über den Block auf der Startseite) */
 	placesOpen: false,
 	full: false,
 	settingsOpen: false,
@@ -99,11 +100,7 @@ export interface MapHooks {
 	flyToContinent(code: string): void;
 	scrollIntoView(): void;
 }
-export interface PlacesHooks {
-	open(fromHash: boolean): void;
-	close(fromHash: boolean): void;
-}
-export const hooks: { map: MapHooks | null; places: PlacesHooks | null } = { map: null, places: null };
+export const hooks: { map: MapHooks | null } = { map: null };
 /** Zähler auf der Startseite: Ausgangspunkt der Öffnen-/Schließen-Animation der Übersicht */
 export const dom: { count: HTMLElement | null } = { count: null };
 
@@ -188,7 +185,7 @@ export function openSettings(fromHash = false) {
 	if (ui.settingsOpen) return;
 	if (ui.sheetOpen) closeSheet();
 	if (ui.full) setFull(false, true);
-	if (ui.placesOpen) hooks.places?.close(true);
+	if (ui.placesOpen) closePlaces(true);
 	if (ui.passOpen) closePass(true);
 	settingsReturnFocus = document.activeElement;
 	ui.settingsOpen = true;
@@ -213,6 +210,38 @@ export function closeSettings(fromHash = false) {
 }
 const isSettingsHash = (h: string) => h === 'einstellungen' || h === 'more';
 
+/* ---------- Deine Länder (Vollbild, wie die Einstellungen) ---------- */
+let pushedPlaces = false;
+let placesReturnFocus: Element | null = null;
+export function openPlaces(fromHash = false) {
+	if (ui.placesOpen) return;
+	if (ui.sheetOpen) closeSheet();
+	if (ui.full) setFull(false, true);
+	if (ui.settingsOpen) closeSettings(true);
+	if (ui.passOpen) closePass(true);
+	placesReturnFocus = document.activeElement;
+	ui.placesOpen = true;
+	document.body.classList.add('noscroll');
+	if (!fromHash) {
+		pushedPlaces = true;
+		location.hash = 'laender';
+	}
+	tick().then(() => document.getElementById('placesClose')?.focus({ preventScroll: true }));
+}
+export function closePlaces(fromHash = false) {
+	if (!ui.placesOpen) return;
+	ui.placesOpen = false;
+	if (ui.sheetOpen) closeSheet();
+	if (!ui.settingsOpen && !ui.passOpen) document.body.classList.remove('noscroll');
+	if (!fromHash) {
+		if (pushedPlaces && location.hash === '#laender') {
+			pushedPlaces = false;
+			history.back();
+		} else if (location.hash === '#laender') location.hash = 'home';
+	} else pushedPlaces = false;
+	if (placesReturnFocus instanceof HTMLElement) placesReturnFocus.focus({ preventScroll: true });
+}
+
 /* ---------- Reisepass (Vollbild, wie die Einstellungen) ---------- */
 let pushedPass = false;
 let passReturnFocus: Element | null = null;
@@ -220,6 +249,7 @@ export function openPass(fromHash = false) {
 	if (ui.passOpen) return;
 	if (ui.sheetOpen) closeSheet();
 	if (ui.full) setFull(false, true);
+	if (ui.placesOpen) closePlaces(true);
 	passReturnFocus = document.activeElement;
 	ui.passOpen = true;
 	document.body.classList.add('noscroll');
@@ -261,7 +291,7 @@ export function goTab(tab: string, push = true, dir?: number) {
 	const t: Tab = (TABS as readonly string[]).includes(tab) ? (tab as Tab) : 'home';
 	if (ui.sheetOpen) closeSheet();
 	if (ui.full) setFull(false, true);
-	if (ui.placesOpen) hooks.places?.close(true);
+	if (ui.placesOpen) closePlaces(true);
 	if (ui.settingsOpen) closeSettings(true);
 	if (ui.passOpen) closePass(true);
 	if (dir === undefined) dir = Math.sign(TABS.indexOf(t) - TABS.indexOf(ui.tab));
@@ -279,7 +309,7 @@ export function initFromHash() {
 		setFull(true, true);
 	} else if (h === 'laender' || h === 'places') {
 		showTab('home', 0);
-		hooks.places?.open(true);
+		openPlaces(true);
 	} else if (isSettingsHash(h)) {
 		showTab('home', 0);
 		openSettings(true);
@@ -293,7 +323,7 @@ export function initFromHash() {
 export function onHashChange() {
 	const h = location.hash.slice(1);
 	if (h === 'map') {
-		if (ui.placesOpen) hooks.places?.close(true);
+		if (ui.placesOpen) closePlaces(true);
 		if (ui.settingsOpen) closeSettings(true);
 		if (ui.tab !== 'home') showTab('home', 0);
 		setFull(true, true);
@@ -301,16 +331,17 @@ export function onHashChange() {
 		openSettings(true);
 	} else if (h === 'pass') {
 		if (ui.settingsOpen) closeSettings(true);
+		if (ui.placesOpen) closePlaces(true);
 		if (ui.full) setFull(false, true);
 		openPass(true);
 	} else if (h === 'laender' || h === 'places') {
 		if (ui.settingsOpen) closeSettings(true);
 		if (ui.full) setFull(false, true);
 		if (ui.tab !== 'home') showTab('home', 0);
-		hooks.places?.open(true);
+		openPlaces(true);
 	} else {
 		if (ui.full) setFull(false, true);
-		if (ui.placesOpen) hooks.places?.close(true);
+		if (ui.placesOpen) closePlaces(true);
 		if (ui.settingsOpen) closeSettings(true);
 		if (ui.passOpen) closePass(true);
 		if (h !== ui.tab && !(h === '' && ui.tab === 'home')) goTab(h, false);

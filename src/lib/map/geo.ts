@@ -3,7 +3,7 @@ import { feature, mesh } from 'topojson-client';
 import { presimplify, simplify } from 'topojson-simplify';
 import WORLD_JSON from '../data/world-50m.topo.json';
 import ISO_NUMERIC from '../data/iso-numeric.json';
-import { nameOf } from '../countries';
+import { compareNames, nameOf } from '../countries';
 
 /* Geodaten der Weltkarte: Länderflächen, Lage/Größe je Land und Detailstufen (LOD). */
 
@@ -284,7 +284,7 @@ export const fineLod = () => LODS.fine as Lod | undefined;
 export const lodReady = (name: string) => !!LODS[name];
 
 /** Alle Länder der Karte, alphabetisch nach deutschem Namen (für die Länderauswahl) */
-export const ALL = [...new Set(features.map((f) => f.id))].sort((a, b) => nameOf(a).localeCompare(nameOf(b), 'de'));
+export const ALL = [...new Set(features.map((f) => f.id))].sort((a, b) => compareNames(nameOf(a), nameOf(b)));
 
 /** Form eines Landes für Vorschaubilder: alle Teile nahe am Hauptgebiet (weit Entferntes wie Alaska, Hawaii oder
     Französisch-Guayana bleibt weg, damit das Land groß genug erscheint) – plus die Nachbarschaft als Umgebung. */

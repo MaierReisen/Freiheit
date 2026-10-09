@@ -3,7 +3,7 @@
 	import { atlas, countedCountries } from '$lib/atlas.svelte';
 	import { scopeTotal } from '$lib/scope';
 	import { CONT, CONT_NAMES, contOf } from '$lib/countries';
-	import { reduceMotion, dom, easeOutCubic, hooks, introProgress, openPicker, ui } from '$lib/app.svelte';
+	import { reduceMotion, dom, easeOutCubic, hooks, introProgress, openPicker, openPlaces, ui } from '$lib/app.svelte';
 	import { rankIndex, ranks } from '$lib/passport';
 	import { badges, tierName } from '$lib/badges';
 	import { loadFacts } from '$lib/facts';
@@ -113,7 +113,7 @@
 			class="count-btn"
 			id="countBtn"
 			aria-label="{n} von {total} Ländern bereist, {pct} Prozent. Zur Länderliste"
-			onclick={() => hooks.places?.open(false)}
+			onclick={() => openPlaces()}
 		>
 			<span class="count-wrap" class:bump={bump.on}
 				>{#if bump.on}{#key bump.key}<span class="count-halo" aria-hidden="true"></span>{/key}{/if}<span class="count" class:d3={n >= 100} id="count" bind:this={countEl}
