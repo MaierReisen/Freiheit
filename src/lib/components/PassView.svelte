@@ -704,6 +704,15 @@
 			tick().then(() => choose(id).then(() => body?.querySelector<HTMLElement>(`[data-badge="${id}"]`)?.scrollIntoView({ block: 'center', behavior: 'auto' })));
 		});
 	});
+	$effect(() => {
+		if (!ui.passRanks || !ui.passOpen) return;
+		untrack(() => {
+			ui.passRanks = false;
+			choose(null);
+			sOff = 0;
+			leaf = 'ranks';
+		});
+	});
 	function pickTab(t: typeof tab) {
 		if (t === tab) return;
 		choose(null);

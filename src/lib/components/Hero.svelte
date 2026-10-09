@@ -77,7 +77,12 @@
 			const card = (c: Partial<typeof ui.unlock>) => (ui.unlock = { key: ui.unlock.key + 1, cont: '', n: now, rank: '', badge: '', badgeId: '', icon: '', sub: '', added: '', ...c });
 			let slot = 0;
 			const base = plan ? plan.end : 0;
-			// Feier-Karten gibt es nur für Abzeichen (kein Kontinent, kein Rang, nicht bei mehreren Ländern auf einmal)
+			// Feier-Karten: neuer Rang (auch bei mehreren Ländern) und neue Abzeichen; kein Kontinent, Abzeichen nicht bei mehreren Ländern auf einmal
+			const ri = rankIndex(now, total);
+			if (ri > rankIndex(before, total)) {
+				const r = ranks(total)[ri];
+				at(base + slot++ * CARD, () => card({ rank: r.name, icon: r.icon }));
+			}
 			// neues Abzeichen bzw. neue Stufe: vorher/nachher vergleichen (Länderfakten werden dafür nachgeladen), jedes eine Karte
 			const list = counted,
 				slot0 = slot;

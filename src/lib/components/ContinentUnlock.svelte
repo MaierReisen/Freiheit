@@ -35,10 +35,12 @@
 	});
 
 	function onTap() {
-		const id = shown?.badgeId;
+		const id = shown?.badgeId,
+			rank = !!shown?.rank;
 		dismiss();
-		if (id) {
-			ui.passBadge = id;
+		if (id || rank) {
+			if (id) ui.passBadge = id;
+			else ui.passRanks = true;
 			openPass();
 		}
 	}
@@ -52,7 +54,7 @@
 {#if shown}
 	{#key shown.key}
 		<div class="unlock" class:leaving role="status" aria-live="polite">
-			<button type="button" class="unlock-card" onclick={onTap} aria-label="{shown.added ? `${shown.sub} neue Länder` : shown.badge ? `Neues Abzeichen: ${shown.badge}` : shown.rank ? `Neuer Rang: ${shown.rank}` : `Neuer Kontinent: ${shown.cont}`}. {shown.badgeId ? 'Im Reisepass öffnen' : 'Schließen'}">
+			<button type="button" class="unlock-card" onclick={onTap} aria-label="{shown.added ? `${shown.sub} neue Länder` : shown.badge ? `Neues Abzeichen: ${shown.badge}` : shown.rank ? `Neuer Rang: ${shown.rank}` : `Neuer Kontinent: ${shown.cont}`}. {shown.badgeId || shown.rank ? 'Im Reisepass öffnen' : 'Schließen'}">
 				<span class="unlock-medal" aria-hidden="true">
 					<span class="unlock-rays"></span>
 					<span class="unlock-disc" class:emo={!!shown.badge}>{shown.badge ? shown.icon : shown.n}</span>

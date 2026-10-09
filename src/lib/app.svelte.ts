@@ -92,6 +92,8 @@ export const ui = $state({
 	unlock: { key: 0, cont: '', n: 0, rank: '', badge: '', badgeId: '', icon: '', sub: '', added: '' },
 	/** Abzeichen, das der Pass nach dem Öffnen (per Tipp auf die Meldung) zeigen soll */
 	passBadge: '',
+	/** Pass soll nach dem Öffnen die Rangübersicht zeigen (Tipp auf die Rang-Meldung) */
+	passRanks: false,
 	toastMsg: '',
 	toastShow: false
 });
