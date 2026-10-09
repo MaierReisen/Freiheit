@@ -82,7 +82,7 @@ const badgesOut = badges.filter((b, i, a) => a.findIndex((x) => x.id === b.id) =
 const L = [];
 const push = (...x) => L.push(...x);
 push(`# Stempel – Übersicht`, '',
-	`> Automatisch erzeugt aus dem Code (App-Version ${pkg.version}). Nicht von Hand ändern, sondern neu erzeugen: \`node scripts/build-stempel-doc.mjs\`.`, '',
+	`> Automatisch erzeugt aus dem Code (App-Version ${pkg.version}). Nicht von Hand ändern, sondern neu erzeugen: \`node scripts/build-stempel-doc.mjs\`.`, '', '> **Bilder aller Stempel:** [stempel.html](stempel.html) öffnen (Galerie mit Suche; Common, Rare, Epic, Legendary je Land + Weltwunder).', '',
 	'## Inhalt', '', '1. So funktioniert der Pass', '2. Seltenheit der Stempel', '3. Ränge', '4. Weltwunder', '5. Abzeichen', `6. Alle ${rows.length} Länderstempel (nach Kontinent)`, '7. Stempel-Technik', '');
 
 push('## 1. So funktioniert der Pass', '',

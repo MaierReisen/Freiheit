@@ -2,6 +2,8 @@
 
 > Automatisch erzeugt aus dem Code (App-Version 1.28.9). Nicht von Hand ändern, sondern neu erzeugen: `node scripts/build-stempel-doc.mjs`.
 
+> **Bilder aller Stempel:** [stempel.html](stempel.html) öffnen (Galerie mit Suche; Common, Rare, Epic, Legendary je Land + Weltwunder).
+
 ## Inhalt
 
 1. So funktioniert der Pass

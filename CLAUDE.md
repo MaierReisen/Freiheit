@@ -30,7 +30,7 @@ Live: https://maierreisen.github.io/Freiheit/ · Repo: MaierReisen/Freiheit · n
 - `src/lib/badges.ts`: Abzeichen der Visa-Seite im Pass (Bronze/Silber/Gold, aus facts.json + Einreisedaten; Kachel mit Stufenleiste + „noch N bis …“, Blatt per Hochwischen aufklappbar mit Liste „zählt schon / fehlt noch“ aus `detail()`); neue Stufe → Feier-Karte über `ui.unlock.badge` (in `Hero`).
 - `src/lib/countries.ts`: `nameOf()` – Ländernamen zuerst aus `data/names.json` (feste deutsche Namen).
 
-- `docs/STEMPEL.md`: Übersicht aller Stempel (alle Länder mit Motiv/Form/Farbe/Rare/Epic/Legendary, Seltenheit & Chancen, Ränge, Weltwunder, Abzeichen). Wird erzeugt: `node scripts/build-stempel-doc.mjs` – nach Änderungen an Stempeln, Bildern, Chancen, Rängen oder Abzeichen neu erzeugen und mit committen; nicht von Hand ändern.
+- `docs/STEMPEL.md`: Übersicht aller Stempel (alle Länder mit Motiv/Form/Farbe/Rare/Epic/Legendary, Seltenheit & Chancen, Ränge, Weltwunder, Abzeichen). Wird erzeugt: `node scripts/build-stempel-doc.mjs` – nach Änderungen an Stempeln, Bildern, Chancen, Rängen oder Abzeichen neu erzeugen und mit committen; nicht von Hand ändern. `docs/stempel.html` = Bilder-Galerie aller Stempel (4 Stufen je Land + Weltwunder, mit Suche), erzeugt per `node scripts/build-stempel-galerie.mjs`; ebenfalls neu erzeugen und committen.
 
 ## Daten (`src/lib/data/`, erzeugt durch `scripts/`)
 - `facts.json` ← `build-facts.py` (Wikidata/Natural Earth: Hauptstadt, Einwohner, Fläche, Nachbarn nur Landgrenzen + feste Verbindungen, Berg).
