@@ -1,5 +1,5 @@
 import { geoNaturalEarth1, geoPath } from 'd3-geo';
-import { CONT_NAMES, type ContinentCode } from './countries';
+import { CONT, CONT_NAMES, type ContinentCode } from './countries';
 import { getLod, INFO } from './map/geo';
 import { INK_FILTERS, type Stamp } from './passport';
 
@@ -150,68 +150,95 @@ ${order.map(({ s, f: [x, y, w, r] }) => place(s.s, x, y, w, w * 0.82, r, true)).
 </svg>`;
 }
 
-/* ---------- Variante „Stempel-Collage“ ---------- */
+/* ---------- Variante „Stempel-Collage“: im Stil der App (Startseite + Passseite) ---------- */
+const INK = '#0D2B3A',
+	MUTED = '#587080',
+	LINE = '#D5DFE4',
+	CHIP = '#E1ECEE',
+	SUN = '#F4B400',
+	PRIMARY = '#0E6E74';
 function collage(d: ShareData) {
 	const all = rarest(d.stamps);
 	const n = all.length;
-	const [cols, rows] = n <= 4 ? [2, 2] : n <= 9 ? [3, 3] : n <= 12 ? [3, 4] : [4, 5];
+	// Kopf: Marke links, Rang rechts (wie die Rang-Plakette im Pass)
+	const rank = d.rank ? `${d.rank.icon} ${d.rank.name}` : '';
+	const rw = tw(rank, 34) + 56;
+	// große Zahl über dem „Horizont“ wie auf der Startseite
+	const num = String(n);
+	const nSize = num.length > 2 ? 270 : 320;
+	// Kontinente als Chips wie auf der Startseite: „12 Europa“ (nur bereiste, nach Anzahl)
+	const per = new Map<ContinentCode, number>();
+	for (const c of d.conts) per.set(c, d.stamps.filter((s) => CONT[s.code] === c).length);
+	const chips: string[] = [];
+	let x = 64,
+		y = 640;
+	for (const [c, k] of [...per].sort((p, q) => q[1] - p[1])) {
+		const label = CONT_NAMES[c],
+			kw = tw(String(k), 30, 0.6),
+			w = kw + 10 + tw(label, 30) + 44;
+		if (x + w > W - 64) {
+			x = 64;
+			y += 66;
+		}
+		chips.push(`<rect x="${r1(x)}" y="${y}" width="${r1(w)}" height="52" rx="26" fill="${CHIP}"/><text x="${r1(x + 22)}" y="${y + 36}" font-family="${FIG}" font-size="30" fill="${INK}"><tspan font-weight="800">${k}</tspan><tspan font-weight="500" dx="10">${esc(label)}</tspan></text>`);
+		x += w + 12;
+	}
+	// Passseite mit den Stempeln
+	const px = 48,
+		py = y + 96,
+		pw = W - 2 * px,
+		ph = 1790 - py;
+	const [cols, rows] = n <= 4 ? [2, 2] : n <= 9 ? [3, 3] : n <= 12 ? [3, 4] : n <= 16 ? [4, 4] : [4, 5];
 	const cap = cols * rows;
 	const shown = n > cap ? all.slice(0, cap - 1) : all;
 	const more = n - shown.length;
-	// Kontinente als Chips, umbrechend
-	const chips: string[] = [];
-	let x = 72,
-		y = 392;
-	for (const c of ['EU', 'AS', 'AF', 'NA', 'SA', 'OC', 'AN'] as ContinentCode[]) {
-		const label = CONT_NAMES[c],
-			on = d.conts.includes(c),
-			w = tw(label, 30) + 44;
-		if (x + w > W - 72) {
-			x = 72;
-			y += 64;
-		}
-		chips.push(`<g opacity="${on ? 1 : 0.4}"><rect x="${r1(x)}" y="${y}" width="${r1(w)}" height="50" rx="25" fill="#E1ECEE"/><text x="${r1(x + w / 2)}" y="${y + 35}" text-anchor="middle" font-family="${FIG}" font-weight="${on ? 700 : 500}" font-size="30" fill="#0D2B3A">${esc(label)}</text></g>`);
-		x += w + 12;
-	}
-	const gx = 56,
-		gy = y + 84,
-		gw = W - 2 * gx,
-		gh = 1740 - gy;
+	const gx = px + 24,
+		gy = py + 84,
+		gw = pw - 48,
+		gh = ph - 84 - 24;
 	const cw = gw / cols,
 		ch = gh / rows;
 	const cells = shown.map((s, i) => {
 		const cx = gx + (i % cols) * cw,
 			cy = gy + Math.floor(i / cols) * ch;
-		return place(s.s, cx + cw * 0.06, cy + ch * 0.06, cw * 0.88, ch * 0.88, s.s.rot, s.sp > 0);
+		return place(s.s, cx + cw * 0.07, cy + ch * 0.07, cw * 0.86, ch * 0.86, s.s.rot, s.sp > 0);
 	});
 	if (more) {
 		const i = shown.length,
 			cx = gx + (i % cols) * cw + cw / 2,
 			cy = gy + Math.floor(i / cols) * ch + ch / 2,
-			rr = Math.min(cw, ch) * 0.38;
+			rr = Math.min(cw, ch) * 0.36;
 		cells.push(
-			`<circle cx="${r1(cx)}" cy="${r1(cy)}" r="${r1(rr)}" fill="none" stroke="#0E6E74" stroke-width="4" stroke-dasharray="12 10"/><text x="${r1(cx)}" y="${r1(cy + 6)}" text-anchor="middle" font-family="${UNB}" font-weight="800" font-size="${more > 99 ? 46 : 54}" fill="#0E6E74">+${more}</text><text x="${r1(cx)}" y="${r1(cy + 48)}" text-anchor="middle" font-family="${FIG}" font-weight="700" font-size="28" fill="#587080">weitere</text>`
+			`<circle cx="${r1(cx)}" cy="${r1(cy)}" r="${r1(rr)}" fill="none" stroke="${LINE}" stroke-width="5" stroke-dasharray="14 10"/><text x="${r1(cx)}" y="${r1(cy + 8)}" text-anchor="middle" font-family="${UNB}" font-weight="800" font-size="${more > 99 ? 44 : 52}" fill="${PRIMARY}">+${more}</text><text x="${r1(cx)}" y="${r1(cy + 50)}" text-anchor="middle" font-family="${FIG}" font-weight="600" font-size="27" fill="${MUTED}">weitere</text>`
 		);
 	}
-	const num = String(d.n);
-	const nSize = num.length > 2 ? 200 : 250;
-	const rank = d.rank ? `${d.rank.icon} ${d.rank.name}` : '';
-	const rw = tw(rank, 34) + 56;
+	// Seite: links Bund (kleiner Radius + Schatten nach innen), rechts groß gerundet
+	const rl = 20,
+		rr2 = 48;
+	const page = `M${px + rl} ${py}H${px + pw - rr2}A${rr2} ${rr2} 0 0 1 ${px + pw} ${py + rr2}V${py + ph - rr2}A${rr2} ${rr2} 0 0 1 ${px + pw - rr2} ${py + ph}H${px + rl}A${rl} ${rl} 0 0 1 ${px} ${py + ph - rl}V${py + rl}A${rl} ${rl} 0 0 1 ${px + rl} ${py}Z`;
 	return `<svg class="sc" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">
 <defs>${INK_FILTERS}
-<pattern id="scDot" width="48" height="48" patternUnits="userSpaceOnUse"><circle cx="24" cy="24" r="2.6" fill="#D5DFE4"/></pattern>
-<filter id="scSh" x="-20%" y="-20%" width="140%" height="150%"><feDropShadow dx="0" dy="6" stdDeviation="6" flood-color="#0D2B3A" flood-opacity=".28"/></filter>
+<pattern id="scDot" width="32" height="32" patternUnits="userSpaceOnUse"><circle cx="16" cy="16" r="2" fill="${LINE}"/></pattern>
+<linearGradient id="scBund" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="${INK}" stop-opacity=".2"/><stop offset="1" stop-color="${INK}" stop-opacity="0"/></linearGradient>
+<clipPath id="scPg"><path d="${page}"/></clipPath>
+<filter id="scSh" x="-20%" y="-20%" width="140%" height="150%"><feDropShadow dx="0" dy="5" stdDeviation="5" flood-color="${INK}" flood-opacity=".28"/></filter>
+<filter id="scPgSh" x="-5%" y="-5%" width="110%" height="110%"><feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="${INK}" flood-opacity=".18"/></filter>
 <style>${STYLE}</style></defs>
-<rect width="${W}" height="${H}" fill="#FFFDF8"/><rect width="${W}" height="${H}" fill="url(#scDot)"/>
-<text x="64" y="${num.length > 2 ? 300 : 320}" font-family="${UNB}" font-weight="800" font-size="${nSize}" letter-spacing="-10" fill="#0E6E74">${num}</text>
-<text x="1008" y="150" text-anchor="end" font-family="${FIG}" font-weight="700" font-size="44" fill="#0D2B3A">${d.n === 1 ? 'Land bereist' : 'Länder bereist'}</text>
-${d.since ? `<text x="1008" y="200" text-anchor="end" font-family="${FIG}" font-weight="500" font-size="34" fill="#587080">seit ${d.since}</text>` : ''}
-${rank ? `<rect x="${r1(1008 - rw)}" y="232" width="${r1(rw)}" height="60" rx="30" fill="#F4B400"/><text x="${r1(1008 - rw / 2)}" y="273" text-anchor="middle" font-family="${FIG}" font-weight="800" font-size="34" fill="#0D2B3A">${esc(rank)}</text>` : ''}
+<rect width="${W}" height="${H}" fill="#EDF2F4"/>
+<text x="64" y="138" font-family="${UNB}" font-weight="800" font-size="54" fill="${INK}">Freiheit</text>
+<text x="66" y="184" font-family="${FIG}" font-weight="500" font-size="28" fill="${MUTED}">by Maier Reisen</text>
+${rank ? `<rect x="${r1(1016 - rw)}" y="96" width="${r1(rw)}" height="60" rx="30" fill="${SUN}"/><text x="${r1(1016 - rw / 2)}" y="137" text-anchor="middle" font-family="${FIG}" font-weight="700" font-size="34" fill="${INK}">${esc(rank)}</text>` : ''}
+<text x="56" y="500" font-family="${UNB}" font-weight="800" font-size="${nSize}" letter-spacing="${-nSize * 0.05}" fill="${INK}">${num}</text>
+<text x="64" y="570" font-family="${FIG}" font-weight="600" font-size="42" fill="${INK}">Stempel im Pass</text>
+${d.since ? `<text x="1016" y="570" text-anchor="end" font-family="${FIG}" font-weight="500" font-size="32" fill="${MUTED}">unterwegs seit ${d.since}</text>` : ''}
+<path d="M64 600H1016" stroke="${INK}" stroke-width="4"/>
 ${chips.join('')}
+<path d="${page}" fill="#FFFDF8" stroke="${LINE}" stroke-width="2" filter="url(#scPgSh)"/>
+<g clip-path="url(#scPg)"><rect x="${px}" y="${py}" width="${pw}" height="${ph}" fill="url(#scDot)" opacity=".7"/><rect x="${px}" y="${py}" width="34" height="${ph}" fill="url(#scBund)"/></g>
+<text x="${px + 48}" y="${py + 58}" font-family="${FIG}" font-weight="700" font-size="24" letter-spacing="4" fill="${MUTED}">STEMPEL</text>
+<text x="${px + pw - 40}" y="${py + 58}" text-anchor="end" font-family="${FIG}" font-weight="700" font-size="24" letter-spacing="4" fill="${MUTED}">${more ? 'SELTENSTE ZUERST' : all.some((s) => s.sp) ? 'SELTENSTE ZUERST' : ''}</text>
 ${cells.join('')}
-<path d="M64 1786H1016" stroke="#0D2B3A" stroke-width="3"/>
-<text x="64" y="1852" font-family="${FIG}" font-weight="600" font-size="32" fill="#587080">${d.wonders}/${d.wondersAll} Weltwunder · ${d.badges} Abzeichen</text>
-<text x="1016" y="1854" text-anchor="end" font-family="${UNB}" font-weight="800" font-size="44" fill="#0D2B3A">Freiheit</text>
+<text x="540" y="1860" text-anchor="middle" font-family="${FIG}" font-weight="600" font-size="30" fill="${MUTED}">${d.wonders}/${d.wondersAll} Weltwunder · ${d.badges} Abzeichen</text>
 </svg>`;
 }
 

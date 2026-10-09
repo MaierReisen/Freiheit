@@ -335,83 +335,35 @@
 		if (e.key === 'ArrowRight') goPage(cur + 1);
 		else if (e.key === 'ArrowLeft') goPage(cur - 1);
 	}
-	/* Schnellwahl: Seitenleiste gedrückt halten → wird zum Schieberegler, Finger ziehen wählt die Seite, Loslassen blättert hin.
-	   Während des Ziehens wird nur die kleine Vorschau (Nummer, Jahre, Flaggen) erneuert – die Seiten selbst erst beim Loslassen. */
-	const PAD = 26; // Rand des Reglers links/rechts (px)
-	let scrub = $state<{ i: number; x: number; w: number } | null>(null);
-	let hold: { x: number; y: number; id: ReturnType<typeof setTimeout> } | null = null;
-	let swallowStrip = false;
-	function scrubAt(x: number) {
+	/* Seitenwahl: Regler mit Knopf (Seitenzahl). Knopf direkt ziehen oder auf die Leiste tippen; beim Ziehen zeigt eine kleine
+	   Vorschau Seite, Jahre und Flaggen – geblättert wird erst beim Loslassen (die Seiten selbst werden währenddessen nicht neu gezeichnet). */
+	const KNOB = 40; // Durchmesser des Knopfs (px), so weit bleibt die Leiste links/rechts frei
+	let slide = $state<{ i: number; f: number; x0: number; moved: boolean; w: number } | null>(null);
+	function dragAt(x: number, d: { x0: number; moved: boolean }) {
 		const r = strip.getBoundingClientRect(),
-			f = Math.max(0, Math.min(1, (x - r.left - PAD) / (r.width - 2 * PAD))),
+			f = Math.max(0, Math.min(1, (x - r.left - KNOB / 2) / (r.width - KNOB))),
 			i = Math.round(f * (pages.length - 1));
-		if (scrub && i !== scrub.i) navigator.vibrate?.(4);
-		scrub = { i, x: PAD + f * (r.width - 2 * PAD), w: r.width };
+		if (slide && i !== slide.i) navigator.vibrate?.(4);
+		slide = { ...d, i, f, w: r.width };
 	}
-	function sDown(x: number, y: number) {
-		if (pages.length < 3) return;
-		sCancel();
-		swallowStrip = false;
-		hold = { x, y, id: setTimeout(() => { hold = null; swallowStrip = true; navigator.vibrate?.(10); scrubAt(x); }, 280) };
-	}
-	/** true = Regler aktiv (Scrollen der Leiste verhindern) */
-	function sMove(x: number, y: number) {
-		if (scrub) {
-			scrubAt(x);
-			return true;
-		}
-		if (hold && Math.hypot(x - hold.x, y - hold.y) > 8) sCancel(); // bewegt statt gehalten: normales Scrollen der Leiste
-		return false;
-	}
-	function sUp(ok: boolean) {
-		sCancel();
-		const s = scrub;
-		scrub = null;
-		if (s && ok) goPage(s.i);
-	}
-	function sCancel() {
-		if (hold) clearTimeout(hold.id);
-		hold = null;
-	}
-	$effect(() => {
-		const s = strip;
-		if (!s) return;
-		const ts = (e: TouchEvent) => (e.touches.length === 1 ? sDown(e.touches[0].clientX, e.touches[0].clientY) : sUp(false));
-		const tm = (e: TouchEvent) => { if (e.touches.length === 1 && sMove(e.touches[0].clientX, e.touches[0].clientY)) e.preventDefault(); };
-		const te = (e: TouchEvent) => sUp(e.type === 'touchend');
-		s.addEventListener('touchstart', ts, { passive: true });
-		s.addEventListener('touchmove', tm, { passive: false });
-		s.addEventListener('touchend', te);
-		s.addEventListener('touchcancel', te);
-		return () => {
-			sCancel();
-			s.removeEventListener('touchstart', ts);
-			s.removeEventListener('touchmove', tm);
-			s.removeEventListener('touchend', te);
-			s.removeEventListener('touchcancel', te);
-		};
-	});
-	// Maus (Rechner): gedrückt halten und ziehen
-	function spDown(e: PointerEvent) {
-		if (e.pointerType !== 'mouse' || e.button !== 0) return;
-		sDown(e.clientX, e.clientY);
+	function nDown(e: PointerEvent) {
+		if (e.button > 0 || pages.length < 2) return;
 		try { strip.setPointerCapture(e.pointerId); } catch { /* egal */ }
+		dragAt(e.clientX, { x0: e.clientX, moved: false });
 	}
-	const spMove = (e: PointerEvent) => e.pointerType === 'mouse' && sMove(e.clientX, e.clientY);
-	const spUp = (e: PointerEvent) => e.pointerType === 'mouse' && sUp(e.type === 'pointerup');
-	function onStripClick(e: MouseEvent) {
-		if (swallowStrip) { e.stopPropagation(); e.preventDefault(); swallowStrip = false; }
+	function nMove(e: PointerEvent) {
+		if (!slide) return;
+		dragAt(e.clientX, { x0: slide.x0, moved: slide.moved || Math.abs(e.clientX - slide.x0) > 6 });
 	}
+	function nUp(e: PointerEvent) {
+		const d = slide;
+		slide = null;
+		if (d && e.type === 'pointerup') goPage(d.i);
+	}
+	const knobF = $derived(slide ? slide.f : pages.length > 1 ? shown / (pages.length - 1) : 0);
 	const preview = $derived(
-		scrub ? { ...pages[scrub.i], flags: pages[scrub.i].slots.map((s) => (s.kind === 'stamp' ? flag(s.st.code) : '?')).join(' ') } : null
+		slide?.moved ? { ...pages[slide.i], flags: pages[slide.i].slots.map((s) => (s.kind === 'stamp' ? flag(s.st.code) : '?')).join(' ') } : null
 	);
-
-	// aktive Seitenzahl in der Leiste mittig halten
-	$effect(() => {
-		const i = shown;
-		const el = strip?.children[i + 1] as HTMLElement | undefined; // [0] = Zurück-Pfeil
-		if (el) strip.scrollTo({ left: el.offsetLeft - strip.clientWidth / 2 + el.clientWidth / 2, behavior: 'auto' });
-	});
 
 	/* ---------- Abzeichen (Leiste unter der Seite) ---------- */
 	let facts = $state.raw<Record<string, Facts> | null>(null);
@@ -551,7 +503,9 @@
 			markSeen(codes);
 			body?.scrollTo(0, 0);
 			stopTurn();
-			cur = shown = 0;
+			// Seite mit den neuesten Stempeln aufschlagen (dort kommt auch der nächste hin)
+			cur = shown = Math.max(0, Math.floor((stamps.length - 1) / PER_PAGE));
+			near = [cur - 1, cur, cur + 1];
 			if (!fresh.length || reduceMotion()) return;
 			pending = fresh;
 			play(fresh);
@@ -676,20 +630,24 @@
 	$effect(() => {
 		const el = legSheet;
 		if (!el) return;
-		let d: { y0: number; ly: number; lt: number; vy: number; dy: number; mode: 0 | 1 | 2 } | null = null;
+		let d: { x0: number; y0: number; ly: number; lt: number; vy: number; dy: number; mode: 0 | 1 | 2 } | null = null;
 		const ts = (e: TouchEvent) => {
 			e.stopPropagation();
 			if (e.touches.length !== 1) return (d = null);
 			const y = e.touches[0].clientY;
-			d = { y0: y, ly: y, lt: e.timeStamp, vy: 0, dy: 0, mode: 0 };
+			d = { x0: e.touches[0].clientX, y0: y, ly: y, lt: e.timeStamp, vy: 0, dy: 0, mode: 0 };
 		};
 		const tm = (e: TouchEvent) => {
 			e.stopPropagation();
 			if (!d) return;
 			const y = e.touches[0].clientY,
 				raw = y - d.y0;
-			// Liste scrollt selbst, solange sie nicht ganz oben steht oder nach oben gewischt wird
-			if (!d.mode) d.mode = legList?.contains(e.target as Node) && (legList.scrollTop > 0 || raw < 0) ? 2 : 1;
+			// Liste scrollt selbst, solange sie nicht ganz oben steht oder nach oben gewischt wird; waagerecht = Motive wechseln
+			if (!d.mode) {
+				const dx = Math.abs(e.touches[0].clientX - d.x0);
+				if (dx < 6 && Math.abs(raw) < 6) return;
+				d.mode = dx > Math.abs(raw) || (legList?.contains(e.target as Node) && (legList.scrollTop > 0 || raw < 0)) ? 2 : 1;
+			}
 			if (d.mode === 2) return;
 			e.preventDefault();
 			const dt = e.timeStamp - d.lt;
@@ -740,11 +698,8 @@
 	const list2 = (xs: string[], und: string) => (xs.length > 1 ? `${xs.slice(0, -1).join(', ')} ${und} ${xs[xs.length - 1]}` : (xs[0] ?? ''));
 	// Weltwunder, die auf „Hier war ich“ warten (Punkt am Reiter)
 	const wonderOpen = $derived(wonders.filter((w) => w.open && !w.have));
-	// Abzeichen: erreichte zuerst (höchste Stufe vorn), dann fast geschaffte (≥ 50 % zur ersten Stufe), Rest eingeklappt
-	let moreBadges = $state(false);
-	const bGot = $derived(bs.filter((b) => b.level > 0).sort((a, b) => b.level / b.tiers.length - a.level / a.tiers.length || b.p - a.p));
-	const bNear = $derived(bs.filter((b) => !b.level && b.p >= 0.5).sort((a, b) => b.p - a.p));
-	const bRest = $derived(bs.filter((b) => !b.level && b.p < 0.5).sort((a, b) => b.p - a.p));
+	// Abzeichen in einer Liste: höchste erreichte Stufe zuerst (Gold, Silber, Bronze, noch keine), innerhalb gleich weit nach Fortschritt zur nächsten Stufe
+	const bSorted = $derived(bs.map((b) => ({ b, t: +(tierClass(b).slice(1) || 0) })).sort((x, y) => y.t - x.t || y.b.p - x.b.p).map((x) => x.b));
 	const medals = $derived([3, 2, 1].map((t) => bs.filter((b) => tierClass(b) === 't' + t).length));
 
 	/* ---------- Teilen: Übersicht als Bild (zwei Varianten, ohne Namen) ---------- */
@@ -773,6 +728,22 @@
 		const png = await sc.toPng(svg);
 		if (!share) return;
 		share.cards[v] = { url: URL.createObjectURL(png), png };
+	}
+	const MOTIFS = [
+		{ v: 'cover', name: 'Pass-Umschlag' },
+		{ v: 'collage', name: 'Stempel-Collage' }
+	] as const;
+	let cardsEl = $state<HTMLDivElement>();
+	// Wischen zwischen den Motiven (einrastend); die Knöpfe darüber springen hin
+	function showMotif(i: number) {
+		if (!share || !cardsEl) return;
+		share.v = MOTIFS[i].v;
+		cardsEl.scrollTo({ left: i * cardsEl.clientWidth, behavior: reduceMotion() ? 'auto' : 'smooth' });
+	}
+	function onCards() {
+		if (!share || !cardsEl) return;
+		const v = MOTIFS[Math.round(cardsEl.scrollLeft / cardsEl.clientWidth)]?.v;
+		if (v && v !== share.v) share.v = v;
 	}
 	function openShare() {
 		choose(null);
@@ -929,37 +900,38 @@
 				</div>
 				{#if pages.length > 1}
 					<div class="pp-nav">
-						<!-- svelte-ignore a11y_no_static_element_interactions -->
+						<button type="button" class="pp-arrow" aria-label="Vorherige Seite" disabled={cur <= 0} onclick={() => goPage(cur - 1)}>‹</button>
 						<div
 							class="pp-strip"
+							class:drag={!!slide}
 							bind:this={strip}
-							role="group"
-							aria-label="Seite wählen – gedrückt halten und ziehen zum schnellen Blättern"
-							onpointerdown={spDown}
-							onpointermove={spMove}
-							onpointerup={spUp}
-							onpointercancel={spUp}
-							onclickcapture={onStripClick}
-							oncontextmenu={(e) => e.preventDefault()}
+							role="slider"
+							tabindex="0"
+							aria-label="Seite wählen"
+							aria-valuemin={1}
+							aria-valuemax={pages.length}
+							aria-valuenow={shown + 1}
+							aria-valuetext="Seite {shown + 1} von {pages.length}"
+							style="--f:{knobF}"
+							onpointerdown={nDown}
+							onpointermove={nMove}
+							onpointerup={nUp}
+							onpointercancel={nUp}
+							onkeydown={onKey}
 						>
-							<button type="button" class="pp-arrow" aria-label="Vorherige Seite" disabled={cur <= 0} onclick={() => goPage(cur - 1)}>‹</button>
-							{#each pages as _, pi (pi)}
-								<button type="button" class:on={pi === shown} aria-label="Seite {pi + 1}" aria-current={pi === shown ? 'page' : undefined} onclick={() => goPage(pi)}>{pi + 1}</button>
-							{/each}
-							<button type="button" class="pp-arrow" aria-label="Nächste Seite" disabled={cur >= pages.length - 1} onclick={() => goPage(cur + 1)}>›</button>
-						</div>
-						{#if scrub && preview}
-							<div class="pp-scrub" aria-hidden="true">
-								<i class="pp-track"></i>
-								<b class="pp-knob" style="left:{scrub.x}px">{scrub.i + 1}</b>
-								<div class="pp-bubble" style="left:{Math.max(90, Math.min(scrub.w - 90, scrub.x))}px">
-									<b>Seite {scrub.i + 1} <small>von {pages.length}</small></b>
+							<i class="pp-track"><i class="pp-fill"></i>{#if pages.length <= 30}{#each pages as _, pi (pi)}<u style="--p:{pi / (pages.length - 1)}" class:on={pi <= (slide ? slide.i : shown)}></u>{/each}{/if}</i>
+							<b class="pp-knob">{(slide ? slide.i : shown) + 1}</b>
+							{#if slide && preview}
+								<div class="pp-bubble" aria-hidden="true" style="left:{Math.max(90, Math.min(slide.w - 90, KNOB / 2 + slide.f * (slide.w - KNOB)))}px">
+									<b>Seite {slide.i + 1} <small>von {pages.length}</small></b>
 									{#if preview.years}<span>{preview.years}</span>{/if}
 									<span class="pp-flags">{preview.flags}</span>
 								</div>
-							</div>
-						{/if}
+							{/if}
+						</div>
+						<button type="button" class="pp-arrow" aria-label="Nächste Seite" disabled={cur >= pages.length - 1} onclick={() => goPage(cur + 1)}>›</button>
 					</div>
+					<p class="pp-pnum">Seite {shown + 1} von {pages.length}</p>
 				{/if}
 			{/if}
 				{#if stamps.length}
@@ -1015,28 +987,10 @@
 					<div class="pp-mcount" aria-label="{medals[0]} Gold, {medals[1]} Silber, {medals[2]} Bronze">
 						<span><i class="t3"></i>{medals[0]} Gold</span><span><i class="t2"></i>{medals[1]} Silber</span><span><i class="t1"></i>{medals[2]} Bronze</span>
 					</div>
-					{#if bGot.length}
-						<div class="pp-visa">
-							<div class="pp-page-h"><span>Erreicht</span><span>{bGot.length}</span></div>
-							<div class="pp-badges">{#each bGot as b (b.id)}{@render badge(b)}{/each}</div>
-						</div>
-					{/if}
-					{#if bNear.length}
-						<div class="pp-visa">
-							<div class="pp-page-h"><span>Fast geschafft</span><span>{bNear.length}</span></div>
-							<div class="pp-badges">{#each bNear as b (b.id)}{@render badge(b)}{/each}</div>
-						</div>
-					{/if}
-					{#if bRest.length}
-						{#if moreBadges || (!bGot.length && !bNear.length)}
-							<div class="pp-visa">
-								<div class="pp-page-h"><span>Weitere</span><span>{bRest.length}</span></div>
-								<div class="pp-badges">{#each bRest as b (b.id)}{@render badge(b)}{/each}</div>
-							</div>
-						{:else}
-							<button type="button" class="pp-morebtn" onclick={() => (moreBadges = true)}>Weitere Abzeichen zeigen ({bRest.length})</button>
-						{/if}
-					{/if}
+					<div class="pp-visa">
+						<div class="pp-page-h"><span>Abzeichen</span><span>{badgeLevels(bs)} / {bs.reduce((s, b) => s + b.tiers.length, 0)}</span></div>
+						<div class="pp-badges">{#each bSorted as b (b.id)}{@render badge(b)}{/each}</div>
+					</div>
 				{/if}
 			</div>
 		{/if}
@@ -1148,17 +1102,22 @@
 				{:else if share}
 					<h2 id="ppLegT">Pass teilen</h2>
 					<p>Als Bild – ohne deinen Namen. Passt für WhatsApp, Instagram & Co.</p>
-					<div class="pp-seg" role="group" aria-label="Aussehen">
-						<button type="button" aria-pressed={share.v === 'cover'} onclick={() => share && (share.v = 'cover')}>Pass-Umschlag</button>
-						<button type="button" aria-pressed={share.v === 'collage'} onclick={() => share && (share.v = 'collage')}>Stempel-Collage</button>
+					<div class="pp-seg" role="group" aria-label="Motiv">
+						{#each MOTIFS as m, i (m.v)}
+							<button type="button" aria-pressed={share.v === m.v} onclick={() => showMotif(i)}>{m.name}</button>
+						{/each}
 					</div>
-					<div class="pp-card">
-						{#if share.cards[share.v]}
-							<img src={share.cards[share.v]!.url} alt="Vorschau des Bildes zum Teilen" width="1080" height="1920" />
-						{:else}
-							<span class="pp-card-wait" aria-label="Bild wird erstellt"></span>
-						{/if}
+					<div class="pp-cards" bind:this={cardsEl} onscroll={onCards}>
+						{#each MOTIFS as m (m.v)}
+							{@const c = share.cards[m.v]}
+							<div class="pp-cardslot">
+								<div class="pp-card">
+									{#if c}<img src={c.url} alt="Motiv {m.name}" width="1080" height="1920" draggable="false" />{:else}<span class="pp-card-wait" aria-label="Bild wird erstellt"></span>{/if}
+								</div>
+							</div>
+						{/each}
 					</div>
+					<div class="pp-cdots" aria-hidden="true">{#each MOTIFS as m (m.v)}<i class:on={share.v === m.v}></i>{/each}</div>
 					<button type="button" class="pp-sharebtn" disabled={!share.cards[share.v] || share.busy} onclick={doShare}
 						><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V3M7 8l5-5 5 5M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6" /></svg>Bild teilen</button
 					>
