@@ -70,19 +70,30 @@ const rarest = (st: ShareStamp[]) => [...st].sort((a, b) => b.sp - a.sp || a.nr 
 const tw = (s: string, size: number, k = 0.56) => [...s].reduce((w, ch) => w + (/\p{Extended_Pictographic}/u.test(ch) ? 1.15 : /[A-ZÄÖÜ]/.test(ch) ? k * 1.18 : k), 0) * size;
 
 /* ---------- Weltkarte (Natural Earth, ohne Antarktis), bereiste Länder in Gold ---------- */
-const mapCache = new Map<string, string>();
-function worldMap(visited: Set<string>, x: number, y: number, w: number, on: string, off: string) {
-	const key = [...visited].sort().join(',') + `|${x}|${y}|${w}|${on}`;
-	const hit = mapCache.get(key);
-	if (hit) return hit;
+const mapCache = new Map<string, { h: number; y0: number; inner: string }>();
+/** Karte in der Breite w; liefert die Höhe und das SVG an Position (x, y) */
+function worldMap(visited: Set<string>, w: number, on: string, off: string) {
+	const key = [...visited].sort().join(',') + `|${w}|${on}|${off}`;
+	let m = mapCache.get(key);
+	if (!m) {
+		m = buildMap(visited, w, on, off);
+		if (mapCache.size > 4) mapCache.clear();
+		mapCache.set(key, m);
+	}
+	const { h, y0, inner } = m;
+	return { h, at: (x: number, y: number) => `<svg x="${x}" y="${y}" width="${w}" height="${h}" viewBox="0 ${y0} ${w} ${h}">${inner}</svg>` };
+}
+function buildMap(visited: Set<string>, w: number, on: string, off: string) {
 	const lod = getLod('v1')!;
-	const proj = geoNaturalEarth1().fitWidth(w, { type: 'Sphere' });
+	// eng an die Landmassen (ohne Antarktis) anpassen statt an die ganze Kugel: Karte wird größer
+	const land = lod.feats.filter((f) => f.id !== 'AQ');
+	const proj = geoNaturalEarth1().fitWidth(w, { type: 'FeatureCollection', features: land } as never);
 	const path = geoPath(proj).digits(1);
+	const [[, y0], [, y1]] = path.bounds({ type: 'FeatureCollection', features: land } as never);
 	let v = '',
 		o = '',
 		dots = '';
-	for (const f of lod.feats) {
-		if (f.id === 'AQ') continue;
+	for (const f of land) {
 		const d = path(f) ?? '';
 		if (visited.has(f.id)) {
 			v += d;
@@ -92,11 +103,8 @@ function worldMap(visited: Set<string>, x: number, y: number, w: number, on: str
 			if (p) dots += `<circle cx="${r1(p[0])}" cy="${r1(p[1])}" r="7"/>`;
 		} else o += d;
 	}
-	const h = Math.round((w / 1.95) * 0.86); // Natural Earth ≈ 1,95 : 1, unten ohne Antarktis
-	const out = `<svg x="${x}" y="${y}" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"><path d="${o}" fill="${off}"/><path d="${v}" fill="${on}"/><g fill="${on}">${dots}</g></svg>`;
-	if (mapCache.size > 4) mapCache.clear();
-	mapCache.set(key, out);
-	return out;
+	const h = Math.ceil(y1 - y0);
+	return { h, y0: r1(y0), inner: `<path d="${o}" fill="${off}"/><path d="${v}" fill="${on}"/><g fill="${on}">${dots}</g>` };
 }
 
 /* ---------- Variante „Pass-Umschlag“ ---------- */
@@ -110,14 +118,23 @@ function cover(d: ShareData, visited: Set<string>) {
 	];
 	const num = String(d.n);
 	const nSize = num.length > 2 ? 300 : 360;
+	// Rang rechts oben wie in der Stempel-Collage
 	const rank = d.rank ? `${d.rank.icon} ${d.rank.name}` : '';
-	const rw = tw(rank, 40) + 72;
+	const rw = tw(rank, 34) + 56;
+	// Karte so breit wie möglich direkt unter der Zahl, Werte und Fächer folgen darunter
+	// (Karte ist durch die Breite begrenzt: übrige Höhe gleichmäßig über, unter der Karte und unter dem Fächer verteilen)
+	const wm = worldMap(visited, 992, G, 'rgba(244,235,211,.14)'),
+		mh = wm.h;
+	const free = Math.max(0, 1770 - (566 + mh + 36 + 288 + 254)) / 3;
+	const my = Math.round(566 + free);
+	const sy = Math.round(my + mh + 36 + free);
 	// Fächer: seltenster Stempel vorne in der Mitte; alles unterhalb der Werte (nichts verdeckt Zahlen)
+	const fy = sy + 288;
 	const fan: [number, number, number, number][] = [
-		[300, 1468, 310, -3],
-		[575, 1488, 285, 6],
-		[66, 1504, 265, -8],
-		[800, 1522, 225, 10]
+		[300, fy, 310, -3],
+		[575, fy + 20, 285, 6],
+		[66, fy + 36, 265, -8],
+		[800, fy + 54, 225, 10]
 	];
 	const order = top.map((s, i) => ({ s, f: fan[top.length === 1 ? 0 : i] })).reverse();
 	return `<svg class="sc" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">
@@ -132,19 +149,19 @@ function cover(d: ShareData, visited: Set<string>) {
 <rect x="38" y="38" width="${W - 76}" height="${H - 76}" rx="34" fill="none" stroke="${G}" stroke-opacity=".5" stroke-width="3"/>
 <g fill="none" stroke="${G}" stroke-width="5"><circle cx="122" cy="130" r="26"/><ellipse cx="122" cy="130" rx="11" ry="26"/><path d="M96 130h52"/></g>
 <text x="170" y="141" font-family="${FIG}" font-weight="700" font-size="30" letter-spacing="9" fill="${G}">REISEPASS</text>
-${rank ? `<rect x="88" y="206" width="${r1(rw)}" height="68" rx="34" fill="url(#scPill)"/><text x="${r1(88 + rw / 2)}" y="253" text-anchor="middle" font-family="${FIG}" font-weight="800" font-size="40" fill="#2A1C04">${esc(rank)}</text>` : ''}
-<text x="80" y="${rank ? 590 : 540}" font-family="${UNB}" font-weight="800" font-size="${nSize}" letter-spacing="-14" fill="url(#scGd)">${num}</text>
-<text x="92" y="${rank ? 668 : 618}" font-family="${FIG}" font-weight="700" font-size="46" fill="#F4EBD3">${d.n === 1 ? 'Land' : 'Länder'}<tspan font-weight="500" fill-opacity=".75"> auf ${d.conts.length} ${d.conts.length === 1 ? 'Kontinent' : 'Kontinenten'}</tspan></text>
-${worldMap(visited, 40, 720, 1000, G, 'rgba(244,235,211,.14)')}
+${rank ? `<rect x="${r1(1016 - rw)}" y="96" width="${r1(rw)}" height="60" rx="30" fill="url(#scPill)"/><text x="${r1(1016 - rw / 2)}" y="137" text-anchor="middle" font-family="${FIG}" font-weight="800" font-size="34" fill="#2A1C04">${esc(rank)}</text>` : ''}
+<text x="80" y="450" font-family="${UNB}" font-weight="800" font-size="${nSize}" letter-spacing="-14" fill="url(#scGd)">${num}</text>
+<text x="92" y="526" font-family="${FIG}" font-weight="700" font-size="46" fill="#F4EBD3">${d.n === 1 ? 'Land' : 'Länder'}<tspan font-weight="500" fill-opacity=".75"> auf ${d.conts.length} ${d.conts.length === 1 ? 'Kontinent' : 'Kontinenten'}</tspan></text>
+${wm.at(44, my)}
 ${stats
 	.map(
 		([v, l], i) =>
-			`<g transform="translate(${96 + i * 304} 1180)"><rect width="280" height="150" rx="26" fill="#fff" fill-opacity=".06" stroke="${G}" stroke-opacity=".3" stroke-width="2"/><text x="140" y="80" text-anchor="middle" font-family="${UNB}" font-weight="800" font-size="${v.length > 4 ? 54 : 62}" fill="#F3DC96">${esc(v)}</text><text x="140" y="122" text-anchor="middle" font-family="${FIG}" font-weight="500" font-size="30" fill="#F4EBD3" fill-opacity=".8">${l}</text></g>`
+			`<g transform="translate(${96 + i * 304} ${sy})"><rect width="280" height="150" rx="26" fill="#fff" fill-opacity=".06" stroke="${G}" stroke-opacity=".3" stroke-width="2"/><text x="140" y="80" text-anchor="middle" font-family="${UNB}" font-weight="800" font-size="${v.length > 4 ? 54 : 62}" fill="#F3DC96">${esc(v)}</text><text x="140" y="122" text-anchor="middle" font-family="${FIG}" font-weight="500" font-size="30" fill="#F4EBD3" fill-opacity=".8">${l}</text></g>`
 	)
 	.join('')}
-${top.length ? `<text x="540" y="1420" text-anchor="middle" font-family="${FIG}" font-weight="700" font-size="28" letter-spacing="7" fill="${G}">${top.some((s) => s.sp) ? 'SELTENSTE STEMPEL' : 'MEINE STEMPEL'}</text>` : ''}
+${top.length ? `<text x="540" y="${sy + 240}" text-anchor="middle" font-family="${FIG}" font-weight="700" font-size="28" letter-spacing="7" fill="${G}">${top.some((s) => s.sp) ? 'SELTENSTE STEMPEL' : 'MEINE STEMPEL'}</text>` : ''}
 ${order.map(({ s, f: [x, y, w, r] }) => place(s.s, x, y, w, w * 0.82, r, true)).join('')}
-<text x="96" y="1838" font-family="${FIG}" font-weight="500" font-size="30" fill="#F4EBD3" fill-opacity=".75">${d.since ? `unterwegs seit ${d.since}` : `${d.n} Stempel im Pass`}</text>
+<text x="96" y="1862" font-family="${FIG}" font-weight="500" font-size="30" fill="#F4EBD3" fill-opacity=".75">${d.since ? `unterwegs seit ${d.since}` : `${d.n} Stempel im Pass`}</text>
 <text x="984" y="1822" text-anchor="end" font-family="${UNB}" font-weight="800" font-size="40" fill="${G}">Freiheit</text>
 <text x="984" y="1862" text-anchor="end" font-family="${FIG}" font-weight="500" font-size="26" fill="#F4EBD3" fill-opacity=".75">by Maier Reisen</text>
 </svg>`;
@@ -211,9 +228,13 @@ function collage(d: ShareData) {
 		const i = shown.length,
 			cx = gx + (i % cols) * cw + cw / 2,
 			cy = gy + Math.floor(i / cols) * ch + ch / 2,
-			rr = Math.min(cw, ch) * 0.36;
+			rr = Math.min(cw, ch) * 0.45;
+		// Zahl passt auch dreistellig („+235“) in den Kreis, „weitere“ darunter ebenfalls innen
+		const label = `+${more}`,
+			fs = Math.min(rr * 0.56, (rr * 1.5) / (label.length * 0.82)),
+			ws = rr * 0.3;
 		cells.push(
-			`<circle cx="${r1(cx)}" cy="${r1(cy)}" r="${r1(rr)}" fill="none" stroke="${LINE}" stroke-width="5" stroke-dasharray="14 10"/><text x="${r1(cx)}" y="${r1(cy + 8)}" text-anchor="middle" font-family="${UNB}" font-weight="800" font-size="${more > 99 ? 44 : 52}" fill="${PRIMARY}">+${more}</text><text x="${r1(cx)}" y="${r1(cy + 50)}" text-anchor="middle" font-family="${FIG}" font-weight="600" font-size="27" fill="${MUTED}">weitere</text>`
+			`<circle cx="${r1(cx)}" cy="${r1(cy)}" r="${r1(rr)}" fill="#fff" fill-opacity=".6" stroke="${LINE}" stroke-width="5" stroke-dasharray="14 10"/><text x="${r1(cx)}" y="${r1(cy + fs * 0.22)}" text-anchor="middle" font-family="${UNB}" font-weight="800" font-size="${r1(fs)}" fill="${PRIMARY}">${label}</text><text x="${r1(cx)}" y="${r1(cy + rr * 0.5)}" text-anchor="middle" font-family="${FIG}" font-weight="600" font-size="${r1(ws)}" fill="${MUTED}">weitere</text>`
 		);
 	}
 	// Seite: links Bund (kleiner Radius + Schatten nach innen), rechts groß gerundet
