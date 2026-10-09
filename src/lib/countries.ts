@@ -28,14 +28,19 @@ export const nameOf = (c: string): string => {
 	}
 };
 
-/** Sortierschlüssel für Namen: ohne Akzente und Satzzeichen, ä/ö/ü/å wie a/o/u (DIN 5007), ß = ss – auf jedem Gerät gleich */
+/** Sortierschlüssel für Namen, auf jedem Gerät gleich: Umlaute (ä ö ü å) sind eigene Buchstaben direkt nach a/o/u und
+    werden nicht mit ihnen vermischt (Sudan, dann Südafrika), übrige Akzente und Satzzeichen zählen nicht, ß = ss */
 const sortKey = (s: string) =>
 	s
+		.toLowerCase()
+		.replace(/[äå]/g, 'a~')
+		.replace(/ö/g, 'o~')
+		.replace(/ü/g, 'u~')
 		.normalize('NFD')
 		.replace(/[\u0300-\u036f]/g, '')
 		.replace(/ß/g, 'ss')
-		.replace(/[^\p{L}\p{N} ]/gu, '')
-		.toLowerCase();
+		.replace(/-/g, ' ')
+		.replace(/[^\p{L}\p{N} ~]/gu, '');
 /** Alphabetisch vergleichen (für sort), unabhängig von den Sprachdaten des Geräts */
 export const compareNames = (a: string, b: string): number => {
 	const x = sortKey(a),

@@ -309,16 +309,33 @@ button.cont{border:0;font:inherit;font-size:14px;color:inherit}
 /* Dreistellige Länderzahl etwas kleiner, damit der „+ Land“-Button daneben bleibt */
 .count.d3{font-size:clamp(72px,24vw,140px)}
 
-/* Blöcke unter dem Globus (Pass, Deine Länder, später weitere) */
+/* Startseite unter dem Globus: Pass-Block, darunter der Bereich „Deine Welt“ mit einer Zeile je Kategorie */
 .blocks{display:flex;flex-direction:column;margin-top:18px}
-.blk-ico{flex:none;display:grid;place-items:center;width:56px;height:56px;border-radius:16px;background:color-mix(in srgb,var(--primary) 14%,var(--chip));color:var(--primary)}
-.blk-ico svg{width:30px;height:30px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-.blk-name{font:800 26px/1.1 var(--display);letter-spacing:-.02em}
-.blk-flags{display:flex;gap:6px;margin-top:8px;font-size:20px;line-height:1}
+.blocks-h{display:flex;align-items:center;gap:12px;margin:14px 2px 10px;font:700 12.5px var(--text);letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+.blocks-h::after{content:"";flex:1;height:1px;background:var(--line)}
+.cats{border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface);overflow:hidden}
+.cat-row{width:100%;display:flex;align-items:center;gap:14px;padding:14px 16px;border:0;background:none;color:var(--ink);text-align:left;-webkit-tap-highlight-color:transparent;transition:background .15s}
+.cat-row + .cat-row{border-top:1px solid var(--line)}
+.cat-row:active{background:var(--chip)}
+.cat-ico{flex:none;display:grid;place-items:center;width:52px;height:52px;border-radius:15px;background:linear-gradient(150deg,#35C2B1,#0B5A66);box-shadow:inset 0 1px 0 rgba(255,255,255,.28),0 6px 14px -8px rgba(11,90,102,.7)}
+.cat-ico svg{width:52px;height:52px}
+.flagico .hill{fill:rgba(255,255,255,.2)}
+.flagico .pole{fill:none;stroke:#fff;stroke-width:2.4;stroke-linecap:round}
+.flagico .flagc{fill:#FFD27A}
+.flagico .spark{fill:rgba(255,255,255,.75)}
+.cat-txt{flex:1;min-width:0;display:flex;flex-direction:column;align-items:flex-start}
+.cat-name{font:800 18px/1.15 var(--display);letter-spacing:-.01em;white-space:nowrap}
+.cat-sub{font-size:13px;color:var(--muted);margin-top:2px}
+.cat-bar{align-self:stretch;height:5px;margin-top:8px;border-radius:99px;background:var(--chip);overflow:hidden}
+.cat-bar i{display:block;height:100%;background:var(--primary);border-radius:99px;transition:width .8s cubic-bezier(.2,.8,.2,1)}
+.cat-flags{flex:none;display:flex;font-size:17px;line-height:1}
+.cat-flags span + span{margin-left:-6px}
 
 /* Seite „Deine Länder“ */
 .lv-head .set-title{font-size:22px;white-space:nowrap}
 .set-title .ov-of{display:block}
+.set-view.lv-head,#placesView{touch-action:pan-y}
+#placesView.swiping{will-change:transform;box-shadow:-14px 0 34px -12px rgba(0,0,0,.45)}
 .lv-sel{flex:none;border:0;border-radius:999px;padding:11px 14px;background:var(--chip);color:var(--ink);font-weight:700;font-size:15px}
 .lv-hint{margin:10px 0 0}
 .lv-body.withbar{padding-bottom:calc(110px + env(safe-area-inset-bottom,0px))}

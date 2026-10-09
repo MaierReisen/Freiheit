@@ -94,7 +94,10 @@
 		<WorldMap />
 		<div class="blocks">
 			<PassTile />
-			<PlacesTile />
+			<h2 class="blocks-h">Deine Welt</h2>
+			<div class="cats">
+				<PlacesTile />
+			</div>
 		</div>
 	</main>
 </div>

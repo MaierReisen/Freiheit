@@ -82,6 +82,14 @@
 		stopSelecting();
 	}
 
+	// beim Öffnen: Wisch-Zustand vom letzten Schließen sicher löschen
+	$effect(() => {
+		if (ui.placesOpen && view) {
+			view.style.transform = '';
+			view.style.transition = '';
+			view.classList.remove('swiping');
+		}
+	});
 	// nach dem Schließen alles zurücksetzen (Sortierung bleibt)
 	$effect(() => {
 		if (!ui.placesOpen) {
@@ -96,49 +104,75 @@
 	});
 
 	/* Nach rechts wischen = zurück (iOS-Vorbild; in der installierten App gibt es sonst keine Zurück-Geste).
-	   Gilt überall auf der Seite, außer beim Umsortieren, bei aufgewischter Zeile und im Suchfeld. */
+	   Die Seite folgt dem Finger ohne Ruck (Position pro Bild gesetzt, Start ohne Sprung), beim Loslassen entscheiden
+	   Weg und Tempo, das Ausgleiten dauert nach Restweg. Aus beim Umsortieren, im Auswählen-Modus, im Suchfeld und bei aufgewischter Zeile. */
 	let view: HTMLElement;
-	let back: { x: number; y: number; dir: 'h' | 'v' | null; dx: number } | null = null;
+	let back: { x: number; y: number; dir: 'h' | 'v' | null; dx: number; lx: number; lt: number; v: number; raf: number } | null = null;
+	const dragging = () => !!view.querySelector('.list.dragging');
 	function backStart(e: TouchEvent) {
+		cancelAnimationFrame(back?.raf ?? 0);
 		back = null;
 		const t = e.target as Element;
-		if (e.touches.length !== 1 || selecting || t.closest('input') || view.querySelector('.swipe-del') || view.querySelector('.list.dragging')) return;
-		back = { x: e.touches[0].clientX, y: e.touches[0].clientY, dir: null, dx: 0 };
+		if (e.touches.length !== 1 || selecting || t.closest('input') || view.querySelector('.swipe-del') || dragging()) return;
+		const p = e.touches[0];
+		back = { x: p.clientX, y: p.clientY, dir: null, dx: 0, lx: p.clientX, lt: e.timeStamp, v: 0, raf: 0 };
+	}
+	function paint() {
+		if (!back) return;
+		back.raf = 0;
+		view.style.transform = `translate3d(${back.dx}px,0,0)`;
 	}
 	function backMove(e: TouchEvent) {
 		if (!back) return;
-		if (view.querySelector('.list.dragging')) {
+		if (dragging()) {
+			cancelAnimationFrame(back.raf);
 			back = null;
 			view.style.transform = '';
 			return;
 		}
-		const dx = e.touches[0].clientX - back.x,
-			dy = e.touches[0].clientY - back.y;
+		const p = e.touches[0],
+			dx = p.clientX - back.x,
+			dy = p.clientY - back.y;
 		if (!back.dir) {
-			if (Math.abs(dx) < 10 && Math.abs(dy) < 10) return;
+			if (Math.abs(dx) < 6 && Math.abs(dy) < 6) return;
 			// nur klar waagerecht nach rechts; nach links gehört der Zeile (Löschen)
-			back.dir = dx > 0 && dx > Math.abs(dy) * 1.6 ? 'h' : 'v';
+			back.dir = dx > 0 && dx > Math.abs(dy) * 1.3 ? 'h' : 'v';
+			if (back.dir === 'h') {
+				back.x += 6; // ohne Sprung loslegen
+				view.classList.add('swiping');
+				view.style.transition = 'none';
+			}
+			return;
 		}
 		if (back.dir !== 'h') return;
-		back.dx = Math.max(0, dx);
-		view.style.transition = 'none';
-		view.style.transform = `translateX(${back.dx}px)`;
+		const dt = e.timeStamp - back.lt;
+		if (dt > 0) back.v = 0.6 * ((p.clientX - back.lx) / dt) + 0.4 * back.v; // px pro ms
+		back.lx = p.clientX;
+		back.lt = e.timeStamp;
+		back.dx = Math.max(0, p.clientX - back.x);
+		if (!back.raf) back.raf = requestAnimationFrame(paint);
 	}
 	function backEnd() {
 		const b = back;
 		back = null;
-		if (!b || b.dir !== 'h') return;
-		const go = b.dx > 90;
-		view.style.transition = reduceMotion() ? 'none' : 'transform .22s cubic-bezier(.2,.8,.2,1)';
-		view.style.transform = go ? 'translateX(100%)' : '';
-		if (go) setTimeout(() => closePlaces(false), reduceMotion() ? 0 : 200);
-		// danach Ausgangszustand für das nächste Öffnen
+		if (!b) return;
+		cancelAnimationFrame(b.raf);
+		if (b.dir !== 'h') return;
+		const W = window.innerWidth;
+		const go = b.dx > W * 0.3 || (b.v > 0.5 && b.dx > 24);
+		const rest = go ? W - b.dx : b.dx;
+		const ms = reduceMotion() ? 0 : Math.round(Math.max(130, Math.min(260, (rest / Math.max(b.v, 0.9)) * (go ? 1 : 0.7))));
+		view.style.transition = ms ? `transform ${ms}ms cubic-bezier(.22,.8,.3,1)` : 'none';
+		view.style.transform = go ? 'translate3d(100%,0,0)' : '';
 		setTimeout(() => {
-			if (go) {
-				view.style.transition = 'none';
-				view.style.transform = '';
-			}
-		}, 450);
+			if (go) closePlaces(false);
+			view.classList.remove('swiping');
+			// nach dem Schließen Ausgangszustand für das nächste Öffnen
+			setTimeout(() => {
+				view.style.transition = '';
+				if (go) view.style.transform = '';
+			}, 30);
+		}, ms);
 	}
 
 	onMount(() => {
