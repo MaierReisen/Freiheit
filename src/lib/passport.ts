@@ -2192,7 +2192,7 @@ const DEFS: Record<string, StampDef> = {
 	AU: { f: 'notch', c: 'teal' },
 	ES: { f: 'scallop', c: 'red' },
 	PT: { f: 'notch', c: 'blue' },
-	GB: { f: 'oval', c: 'navy', short: 'GROSS-BRITANNIEN' },
+	GB: { f: 'oval', c: 'navy', short: 'GROẞBRITANNIEN' },
 	US: { f: 'tag', c: 'blue', short: 'USA' },
 	TH: { f: 'tri', c: 'gold' },
 	TR: { f: 'circle', c: 'coral' },
@@ -2476,7 +2476,7 @@ export function stamp(code: string, nr: number, entered?: string, special: 0 | 1
 	if (hit) return hit;
 	const h = hash(code),
 		def = DEFS[code];
-	const name = (def?.short ?? SHORT[code] ?? nameOf(code)).toLocaleUpperCase('de').replace(/ẞ/g, 'SS');
+	const name = (def?.short ?? SHORT[code] ?? nameOf(code)).toLocaleUpperCase('de');
 	const frame: Frame = def?.f ?? (name.length > 13 ? TWO_LINE[h % TWO_LINE.length] : GENERIC[h % GENERIC.length]);
 	const motif = (MOTIFS[code] && def ? MOTIFS[code] : (CONT_MOTIFS[CONT[code]] ?? CONT_MOTIFS.AN))();
 	const txt = { name, date: stampDate(entered), nr: `Nr. ${nr}` };
