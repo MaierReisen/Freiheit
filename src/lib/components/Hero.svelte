@@ -77,19 +77,7 @@
 			const card = (c: Partial<typeof ui.unlock>) => (ui.unlock = { key: ui.unlock.key + 1, cont: '', n: now, rank: '', badge: '', badgeId: '', icon: '', sub: '', added: '', ...c });
 			let slot = 0;
 			const base = plan ? plan.end : 0;
-						if (m < 2 && cont > contBefore && contBefore >= 0) {
-				// mehrere Länder auf einmal: alle neuen Kontinente in einer Karte
-				const had = new Set(counted.filter((c) => !addedAll.includes(c.code)).map((c) => CONT[c.code]));
-				const names = [...new Set(addedAll.map((c) => CONT[c]).filter((k) => k && !had.has(k)))].map((k) => CONT_NAMES[k]);
-				const label = names.join(' · ') || (CONT[atlas.lastAddedCode] ? CONT_NAMES[CONT[atlas.lastAddedCode]] : '');
-				at(base + slot++ * CARD, () => card({ cont: label, n: cont }));
-			}
-			// neuer Rang im Reisepass: eigene Feier-Karte
-			const ri = rankIndex(now, total);
-			if (m < 2 && ri > rankIndex(before, total)) {
-				const r = ranks(total)[ri];
-				at(base + slot++ * CARD, () => card({ rank: r.name, icon: r.icon }));
-			}
+			// Feier-Karten gibt es nur für Abzeichen (kein Kontinent, kein Rang, nicht bei mehreren Ländern auf einmal)
 			// neues Abzeichen bzw. neue Stufe: vorher/nachher vergleichen (Länderfakten werden dafür nachgeladen), jedes eine Karte
 			const list = counted,
 				slot0 = slot;

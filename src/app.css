@@ -262,6 +262,8 @@ button.cont{border:0;font:inherit;font-size:14px;color:inherit}
 .menu-btn svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
 .set-view{z-index:42}
 .set-view:not([hidden]){animation:tabInR .3s cubic-bezier(.2,.8,.2,1)}
+#placesView:not([hidden]){animation:viewUp .38s cubic-bezier(.2,.8,.2,1)}
+@keyframes viewUp{from{transform:translateY(100%)}to{transform:none}}
 .set-title{flex:1;margin:0;font-family:var(--display);font-weight:800;font-size:24px;letter-spacing:-.01em;line-height:1.2}
 .set-view .ov-body{max-width:760px;width:100%;margin:0 auto}
 .wrap.solo{padding-bottom:calc(40px + env(safe-area-inset-bottom,0px))}
@@ -320,10 +322,10 @@ button.cont{border:0;font:inherit;font-size:14px;color:inherit}
 .cat-row:active{background:var(--chip)}
 .cat-ico{flex:none;display:grid;place-items:center;width:52px;height:52px;border-radius:15px;background:linear-gradient(150deg,#35C2B1,#0B5A66);box-shadow:inset 0 1px 0 rgba(255,255,255,.28),0 6px 14px -8px rgba(11,90,102,.7)}
 .cat-ico svg{width:52px;height:52px}
-.flagico .hill{fill:rgba(255,255,255,.2)}
-.flagico .pole{fill:none;stroke:#fff;stroke-width:2.4;stroke-linecap:round}
-.flagico .flagc{fill:#FFD27A}
-.flagico .spark{fill:rgba(255,255,255,.75)}
+.flagico .gl{fill:rgba(255,255,255,.2);stroke:#fff;stroke-width:2.2}
+.flagico .gl-l{fill:none;stroke:rgba(255,255,255,.75);stroke-width:1.5;stroke-linecap:round}
+.flagico .pin{fill:#FFD27A;stroke:#0B5A66;stroke-width:1.6}
+.flagico .pin-o{fill:#0B5A66}
 .cat-txt{flex:1;min-width:0;display:flex;flex-direction:column;align-items:flex-start}
 .cat-name{font:800 18px/1.15 var(--display);letter-spacing:-.01em;white-space:nowrap}
 .cat-sub{font-size:13px;color:var(--muted);margin-top:2px}
@@ -622,9 +624,9 @@ button.pp-tile:active{transform:scale(.98)}
 .pp-bar-t{font-size:12.5px;color:var(--muted);margin-top:6px}
 
 .pp-view{z-index:41}
-.pp-view:not([hidden]){animation:tabInR .3s cubic-bezier(.2,.8,.2,1)}
+.pp-view:not([hidden]){animation:viewUp .38s cubic-bezier(.2,.8,.2,1)}
 .pp-view .ov-body{max-width:520px;width:100%;margin:0 auto}
-[data-motion="reduce"] .pp-view:not([hidden]){animation:none}
+[data-motion="reduce"] .pp-view:not([hidden]),[data-motion="reduce"] #placesView:not([hidden]){animation:none}
 .pp-defs{position:absolute;width:0;height:0;overflow:hidden}
 
 .pp-page{position:relative;display:none;grid-area:1/1;transform-origin:0 50%;backface-visibility:hidden;contain:layout style;box-sizing:border-box;padding:18px 12px 32px;background:var(--paper);background-image:repeating-radial-gradient(circle at 50% 120%,transparent 0 9px,color-mix(in srgb,var(--line) 45%,transparent) 9px 10px),radial-gradient(var(--line) 1px,transparent 1.2px);background-size:auto,16px 16px;border:1px solid var(--line);border-radius:var(--r-sm) var(--r-lg) var(--r-lg) var(--r-sm);box-shadow:inset 10px 0 12px -8px rgba(13,43,58,.22),0 6px 18px -10px rgba(13,43,58,.35)}

@@ -18,11 +18,10 @@
 
 <button type="button" class="cat-row" aria-label="Deine Länder öffnen: {n} von {total}" onclick={() => openPlaces()}>
 	<span class="cat-ico flagico" aria-hidden="true">
-		<svg viewBox="0 0 48 48">
-			<path class="hill" d="M4 38c8-7 16-8 22-5 6 3 12 2 18-3v18H4z" />
-			<path class="pole" d="M20 36V9" />
-			<path class="flagc" d="M20.8 9.5c4.5-2 8 1.6 12.5-.2 1.2-.5 2.4-.4 3.2.2v11.5c-.8-.6-2-.7-3.2-.2-4.5 1.8-8-1.8-12.5.2z" />
-			<circle class="spark" cx="38" cy="30" r="1.6" /><circle class="spark" cx="10" cy="22" r="1.2" />
+<svg viewBox="0 0 48 48">
+			<circle class="gl" cx="22" cy="26" r="14" />
+			<ellipse class="gl-l" cx="22" cy="26" rx="6" ry="14" /><path class="gl-l" d="M8 26h28M10.5 18.5q11.5 4 23 0M10.5 33.5q11.5-4 23 0" />
+			<path class="pin" d="M35 5.5a7 7 0 0 1 7 7c0 5.2-7 12-7 12s-7-6.800-7-12a7 7 0 0 1 7-7z" /><circle class="pin-o" cx="35" cy="12.5" r="2.600" />
 		</svg>
 	</span>
 	<span class="cat-txt">
@@ -31,5 +30,4 @@
 		<span class="cat-bar"><i style="width:{pct}%"></i></span>
 	</span>
 	{#if last.length}<span class="cat-flags" aria-hidden="true">{#each last as c (c.code)}<span>{flag(c.code)}</span>{/each}</span>{/if}
-	<span class="pp-chev" aria-hidden="true">›</span>
 </button>
