@@ -724,7 +724,7 @@ button.pp-tile:active{transform:scale(.98)}
 .pp-tiers i.on.t1{background:var(--bzl);color:#fff;text-shadow:0 1px 1px rgba(0,0,0,.35)}.pp-tiers i.on.t2{background:var(--svl);color:#0D2B3A}.pp-tiers i.on.t3{background:var(--gdl);color:#3A2A05}
 
 /* Reisepass: Legende der Seltenheitsstufen (Knopf über den Seiten + Blatt von unten) */
-.pp-tools{display:flex;justify-content:flex-end;align-items:center;gap:8px;margin:0 2px 10px;font-size:13px;font-weight:600;color:var(--muted)}
+.pp-tools{display:flex;justify-content:center;align-items:center;gap:8px;margin:12px 2px 4px;font-size:13px;font-weight:600;color:var(--muted)}
 /* Pass: kompakte Rang-Kachel (antippen = Ränge), Reiter Stempel/Weltwunder/Abzeichen, Teilen */
 .pp-top{margin-top:16px}
 .pp-tile.in-pass{gap:14px;margin:0 0 14px;padding:12px 14px;cursor:pointer}

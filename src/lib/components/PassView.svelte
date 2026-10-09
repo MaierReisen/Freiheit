@@ -853,11 +853,6 @@
 				<p class="empty">Noch keine Stempel. Für jedes bereiste Land kommt hier ein Stempel in deinen Pass.</p>
 			{/if}
 			{#if pages.length}
-				<div class="pp-tools">
-					<button type="button" class="pp-info" onclick={() => { choose(null); sOff = 0; leaf = 'legend'; }}
-						><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 11v6M12 7.5v.5" /></svg>Seltenheit</button
-					>
-				</div>
 				<!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->
 				<div
 					class="pp-book"
@@ -934,6 +929,11 @@
 					</div>
 					<p class="pp-pnum">Seite {shown + 1} von {pages.length}</p>
 				{/if}
+				<div class="pp-tools">
+					<button type="button" class="pp-info" onclick={() => { choose(null); sOff = 0; leaf = 'legend'; }}
+						><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 11v6M12 7.5v.5" /></svg>Seltenheit</button
+					>
+				</div>
 			{/if}
 				{#if stamps.length}
 					<p class="note">Stempel antippen öffnet das Land. Dort kannst du auch das Datum der ersten Einreise eintragen – es erscheint dann auf dem Stempel.</p>

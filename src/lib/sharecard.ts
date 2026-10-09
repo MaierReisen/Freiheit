@@ -146,15 +146,16 @@ ${stats
 ${top.length ? `<text x="540" y="1420" text-anchor="middle" font-family="${FIG}" font-weight="700" font-size="28" letter-spacing="7" fill="${G}">${top.some((s) => s.sp) ? 'SELTENSTE STEMPEL' : 'MEINE STEMPEL'}</text>` : ''}
 ${order.map(({ s, f: [x, y, w, r] }) => place(s.s, x, y, w, w * 0.82, r, true)).join('')}
 <text x="96" y="1838" font-family="${FIG}" font-weight="500" font-size="30" fill="#F4EBD3" fill-opacity=".75">${d.since ? `unterwegs seit ${d.since}` : `${d.n} Stempel im Pass`}</text>
-<text x="984" y="1840" text-anchor="end" font-family="${UNB}" font-weight="800" font-size="40" fill="${G}">Freiheit</text>
+<text x="984" y="1822" text-anchor="end" font-family="${UNB}" font-weight="800" font-size="40" fill="${G}">Freiheit</text>
+<text x="984" y="1862" text-anchor="end" font-family="${FIG}" font-weight="500" font-size="26" fill="#F4EBD3" fill-opacity=".75">by Maier Reisen</text>
 </svg>`;
 }
 
 /* ---------- Variante „Stempel-Collage“: im Stil der App (Startseite + Passseite) ---------- */
 const INK = '#0D2B3A',
-	MUTED = '#587080',
-	LINE = '#D5DFE4',
-	CHIP = '#E1ECEE',
+	MUTED = '#7B6A58',
+	LINE = '#E7D9C0',
+	CHIP = '#F6E2B4',
 	SUN = '#F4B400',
 	PRIMARY = '#0E6E74';
 function collage(d: ShareData) {
@@ -183,6 +184,12 @@ function collage(d: ShareData) {
 		chips.push(`<rect x="${r1(x)}" y="${y}" width="${r1(w)}" height="52" rx="26" fill="${CHIP}"/><text x="${r1(x + 22)}" y="${y + 36}" font-family="${FIG}" font-size="30" fill="${INK}"><tspan font-weight="800">${k}</tspan><tspan font-weight="500" dx="10">${esc(label)}</tspan></text>`);
 		x += w + 12;
 	}
+	// freier Platz rechts der Zahl: zwei Werte-Kacheln
+	const tx = Math.round(56 + num.length * nSize * 0.8 + 24),
+		tw2 = 1016 - tx;
+	const tile = (ty: number, v: string, l: string) =>
+		`<rect x="${tx}" y="${ty}" width="${tw2}" height="104" rx="28" fill="#fff" fill-opacity=".7" stroke="${LINE}" stroke-width="2"/><text x="${tx + 26}" y="${ty + 66}" font-family="${UNB}" font-weight="800" font-size="40" fill="${PRIMARY}">${esc(v)}<tspan font-family="${FIG}" font-weight="600" font-size="24" fill="${MUTED}" dx="14">${esc(l)}</tspan></text>`;
+	const tiles = tw2 >= 240 ? tile(290, `${d.wonders}/${d.wondersAll}`, 'Weltwunder') + tile(412, String(d.badges), 'Abzeichen') : '';
 	// Passseite mit den Stempeln
 	const px = 48,
 		py = y + 96,
@@ -224,21 +231,22 @@ function collage(d: ShareData) {
 <filter id="scSh" x="-20%" y="-20%" width="140%" height="150%"><feDropShadow dx="0" dy="5" stdDeviation="5" flood-color="${INK}" flood-opacity=".28"/></filter>
 <filter id="scPgSh" x="-5%" y="-5%" width="110%" height="110%"><feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="${INK}" flood-opacity=".18"/></filter>
 <style>${STYLE}</style></defs>
-<rect width="${W}" height="${H}" fill="#EDF2F4"/>
+<rect width="${W}" height="${H}" fill="#FAF1E1"/>
 <text x="64" y="138" font-family="${UNB}" font-weight="800" font-size="54" fill="${INK}">Freiheit</text>
 <text x="66" y="184" font-family="${FIG}" font-weight="500" font-size="28" fill="${MUTED}">by Maier Reisen</text>
 ${rank ? `<rect x="${r1(1016 - rw)}" y="96" width="${r1(rw)}" height="60" rx="30" fill="${SUN}"/><text x="${r1(1016 - rw / 2)}" y="137" text-anchor="middle" font-family="${FIG}" font-weight="700" font-size="34" fill="${INK}">${esc(rank)}</text>` : ''}
 <text x="56" y="500" font-family="${UNB}" font-weight="800" font-size="${nSize}" letter-spacing="${-nSize * 0.05}" fill="${INK}">${num}</text>
 <text x="64" y="570" font-family="${FIG}" font-weight="600" font-size="42" fill="${INK}">Stempel im Pass</text>
 ${d.since ? `<text x="1016" y="570" text-anchor="end" font-family="${FIG}" font-weight="500" font-size="32" fill="${MUTED}">unterwegs seit ${d.since}</text>` : ''}
-<path d="M64 600H1016" stroke="${INK}" stroke-width="4"/>
+<path d="M64 600H1016" stroke="${SUN}" stroke-width="6" stroke-linecap="round"/>
+${tiles}
 ${chips.join('')}
-<path d="${page}" fill="#FFFDF8" stroke="${LINE}" stroke-width="2" filter="url(#scPgSh)"/>
+<path d="${page}" fill="#FFFBF3" stroke="${LINE}" stroke-width="2" filter="url(#scPgSh)"/>
 <g clip-path="url(#scPg)"><rect x="${px}" y="${py}" width="${pw}" height="${ph}" fill="url(#scDot)" opacity=".7"/><rect x="${px}" y="${py}" width="34" height="${ph}" fill="url(#scBund)"/></g>
 <text x="${px + 48}" y="${py + 58}" font-family="${FIG}" font-weight="700" font-size="24" letter-spacing="4" fill="${MUTED}">STEMPEL</text>
 <text x="${px + pw - 40}" y="${py + 58}" text-anchor="end" font-family="${FIG}" font-weight="700" font-size="24" letter-spacing="4" fill="${MUTED}">${more ? 'SELTENSTE ZUERST' : all.some((s) => s.sp) ? 'SELTENSTE ZUERST' : ''}</text>
 ${cells.join('')}
-<text x="540" y="1860" text-anchor="middle" font-family="${FIG}" font-weight="600" font-size="30" fill="${MUTED}">${d.wonders}/${d.wondersAll} Weltwunder · ${d.badges} Abzeichen</text>
+<text x="540" y="1860" text-anchor="middle" font-family="${FIG}" font-weight="600" font-size="30" fill="${MUTED}">${tiles ? 'by Maier Reisen' : `${d.wonders}/${d.wondersAll} Weltwunder · ${d.badges} Abzeichen`}</text>
 </svg>`;
 }
 
