@@ -1,4 +1,4 @@
-import { geoNaturalEarth1, geoPath } from 'd3-geo';
+import { geoMercator, geoPath } from 'd3-geo';
 import { CONT, CONT_NAMES, type ContinentCode } from './countries';
 import { getLod, INFO } from './map/geo';
 import { INK_FILTERS, type Stamp } from './passport';
@@ -69,7 +69,7 @@ const rarest = (st: ShareStamp[]) => [...st].sort((a, b) => b.sp - a.sp || a.nr 
 /** grobe Textbreite (für Pillen und Umbrüche) */
 const tw = (s: string, size: number, k = 0.56) => [...s].reduce((w, ch) => w + (/\p{Extended_Pictographic}/u.test(ch) ? 1.15 : /[A-ZÄÖÜ]/.test(ch) ? k * 1.18 : k), 0) * size;
 
-/* ---------- Weltkarte (Natural Earth, ohne Antarktis), bereiste Länder in Gold ---------- */
+/* ---------- Weltkarte (Mercator, ohne Antarktis, oben bei 80° N gekappt), bereiste Länder in Gold ---------- */
 const mapCache = new Map<string, { h: number; y0: number; inner: string }>();
 /** Karte in der Breite w; liefert die Höhe und das SVG an Position (x, y) */
 function worldMap(visited: Set<string>, w: number, on: string, off: string) {
@@ -85,11 +85,14 @@ function worldMap(visited: Set<string>, w: number, on: string, off: string) {
 }
 function buildMap(visited: Set<string>, w: number, on: string, off: string) {
 	const lod = getLod('v1')!;
-	// eng an die Landmassen (ohne Antarktis) anpassen statt an die ganze Kugel: Karte wird größer
+	// Mercator eng an die Landmassen: höher als eine Weltkarte mit gebogenen Rändern, Karte wird größer
 	const land = lod.feats.filter((f) => f.id !== 'AQ');
-	const proj = geoNaturalEarth1().fitWidth(w, { type: 'FeatureCollection', features: land } as never);
+	const proj = geoMercator().fitWidth(w, { type: 'FeatureCollection', features: land } as never);
+	const [[, b0], [, y1]] = geoPath(proj).bounds({ type: 'FeatureCollection', features: land } as never);
+	// hohe Arktis (Nordgrönland, Inseln) kostet viel Höhe: bei 80° N abschneiden
+	const y0 = Math.max(b0, proj([0, 80])![1]);
+	proj.clipExtent([[-1, y0], [w + 1, y1 + 1]]);
 	const path = geoPath(proj).digits(1);
-	const [[, y0], [, y1]] = path.bounds({ type: 'FeatureCollection', features: land } as never);
 	let v = '',
 		o = '',
 		dots = '';
@@ -117,7 +120,7 @@ function cover(d: ShareData, visited: Set<string>) {
 		[String(d.badges), 'Abzeichen']
 	];
 	const num = String(d.n);
-	const nSize = num.length > 2 ? 300 : 360;
+	const nSize = num.length > 2 ? 280 : 330;
 	// Rang rechts oben wie in der Stempel-Collage
 	const rank = d.rank ? `${d.rank.icon} ${d.rank.name}` : '';
 	const rw = tw(rank, 34) + 56;
@@ -125,11 +128,11 @@ function cover(d: ShareData, visited: Set<string>) {
 	// (Karte ist durch die Breite begrenzt: übrige Höhe gleichmäßig über, unter der Karte und unter dem Fächer verteilen)
 	const wm = worldMap(visited, 992, G, 'rgba(244,235,211,.14)'),
 		mh = wm.h;
-	const free = Math.max(0, 1770 - (566 + mh + 36 + 288 + 254)) / 3;
-	const my = Math.round(566 + free);
-	const sy = Math.round(my + mh + 36 + free);
+	const free = Math.max(0, 1760 - (550 + mh + 44 + 240 + 254)) / 3;
+	const my = Math.round(550 + free);
+	const sy = Math.round(my + mh + 44 + free);
 	// Fächer: seltenster Stempel vorne in der Mitte; alles unterhalb der Werte (nichts verdeckt Zahlen)
-	const fy = sy + 288;
+	const fy = sy + 240;
 	const fan: [number, number, number, number][] = [
 		[300, fy, 310, -3],
 		[575, fy + 20, 285, 6],
@@ -150,16 +153,16 @@ function cover(d: ShareData, visited: Set<string>) {
 <g fill="none" stroke="${G}" stroke-width="5"><circle cx="122" cy="130" r="26"/><ellipse cx="122" cy="130" rx="11" ry="26"/><path d="M96 130h52"/></g>
 <text x="170" y="141" font-family="${FIG}" font-weight="700" font-size="30" letter-spacing="9" fill="${G}">REISEPASS</text>
 ${rank ? `<rect x="${r1(1016 - rw)}" y="96" width="${r1(rw)}" height="60" rx="30" fill="url(#scPill)"/><text x="${r1(1016 - rw / 2)}" y="137" text-anchor="middle" font-family="${FIG}" font-weight="800" font-size="34" fill="#2A1C04">${esc(rank)}</text>` : ''}
-<text x="80" y="450" font-family="${UNB}" font-weight="800" font-size="${nSize}" letter-spacing="-14" fill="url(#scGd)">${num}</text>
-<text x="92" y="526" font-family="${FIG}" font-weight="700" font-size="46" fill="#F4EBD3">${d.n === 1 ? 'Land' : 'Länder'}<tspan font-weight="500" fill-opacity=".75"> auf ${d.conts.length} ${d.conts.length === 1 ? 'Kontinent' : 'Kontinenten'}</tspan></text>
+<text x="80" y="432" font-family="${UNB}" font-weight="800" font-size="${nSize}" letter-spacing="-14" fill="url(#scGd)">${num}</text>
+<text x="92" y="506" font-family="${FIG}" font-weight="700" font-size="46" fill="#F4EBD3">${d.n === 1 ? 'Land' : 'Länder'}<tspan font-weight="500" fill-opacity=".75"> auf ${d.conts.length} ${d.conts.length === 1 ? 'Kontinent' : 'Kontinenten'}</tspan></text>
 ${wm.at(44, my)}
 ${stats
 	.map(
 		([v, l], i) =>
-			`<g transform="translate(${96 + i * 304} ${sy})"><rect width="280" height="150" rx="26" fill="#fff" fill-opacity=".06" stroke="${G}" stroke-opacity=".3" stroke-width="2"/><text x="140" y="80" text-anchor="middle" font-family="${UNB}" font-weight="800" font-size="${v.length > 4 ? 54 : 62}" fill="#F3DC96">${esc(v)}</text><text x="140" y="122" text-anchor="middle" font-family="${FIG}" font-weight="500" font-size="30" fill="#F4EBD3" fill-opacity=".8">${l}</text></g>`
+			`<g transform="translate(${96 + i * 304} ${sy})"><rect width="280" height="136" rx="26" fill="#fff" fill-opacity=".06" stroke="${G}" stroke-opacity=".3" stroke-width="2"/><text x="140" y="72" text-anchor="middle" font-family="${UNB}" font-weight="800" font-size="${v.length > 4 ? 54 : 62}" fill="#F3DC96">${esc(v)}</text><text x="140" y="112" text-anchor="middle" font-family="${FIG}" font-weight="500" font-size="30" fill="#F4EBD3" fill-opacity=".8">${l}</text></g>`
 	)
 	.join('')}
-${top.length ? `<text x="540" y="${sy + 240}" text-anchor="middle" font-family="${FIG}" font-weight="700" font-size="28" letter-spacing="7" fill="${G}">${top.some((s) => s.sp) ? 'SELTENSTE STEMPEL' : 'MEINE STEMPEL'}</text>` : ''}
+${top.length ? `<text x="540" y="${sy + 200}" text-anchor="middle" font-family="${FIG}" font-weight="700" font-size="28" letter-spacing="7" fill="${G}">${top.some((s) => s.sp) ? 'SELTENSTE STEMPEL' : 'MEINE STEMPEL'}</text>` : ''}
 ${order.map(({ s, f: [x, y, w, r] }) => place(s.s, x, y, w, w * 0.82, r, true)).join('')}
 <text x="96" y="1862" font-family="${FIG}" font-weight="500" font-size="30" fill="#F4EBD3" fill-opacity=".75">${d.since ? `unterwegs seit ${d.since}` : `${d.n} Stempel im Pass`}</text>
 <text x="984" y="1822" text-anchor="end" font-family="${UNB}" font-weight="800" font-size="40" fill="${G}">Freiheit</text>
