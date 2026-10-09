@@ -724,7 +724,6 @@ button.pp-tile:active{transform:scale(.98)}
 .pp-tiers i.on.t1{background:var(--bzl);color:#fff;text-shadow:0 1px 1px rgba(0,0,0,.35)}.pp-tiers i.on.t2{background:var(--svl);color:#0D2B3A}.pp-tiers i.on.t3{background:var(--gdl);color:#3A2A05}
 
 /* Reisepass: Legende der Seltenheitsstufen (Knopf über den Seiten + Blatt von unten) */
-.pp-tools{display:flex;justify-content:center;align-items:center;gap:8px;margin:12px 2px 4px;font-size:13px;font-weight:600;color:var(--muted)}
 /* Pass: kompakte Rang-Kachel (antippen = Ränge), Reiter Stempel/Weltwunder/Abzeichen, Teilen */
 .pp-top{margin-top:16px}
 .pp-tile.in-pass{gap:14px;margin:0 0 14px;padding:12px 14px;cursor:pointer}
@@ -780,9 +779,14 @@ button.pp-tile:active{transform:scale(.98)}
 .pp-sharebtn:disabled{opacity:.5}
 .pp-sharebtn svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
 .pp-sharemsg{text-align:center;margin:8px 0 0!important}
-.pp-info{display:inline-flex;align-items:center;gap:6px;padding:6px 12px 6px 9px;border:1px solid var(--line);border-radius:999px;background:var(--surface);color:var(--muted);font:600 12.5px var(--text);-webkit-tap-highlight-color:transparent}
-.pp-info:active{transform:scale(.96)}
-.pp-info svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
+.pp-rar{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;margin:0 0 10px;padding:0;border:0;background:none;color:var(--muted);font:600 12.5px var(--text);-webkit-tap-highlight-color:transparent}
+.pp-rar:active{opacity:.7}
+.pp-rar span{display:inline-flex;align-items:center;gap:5px;padding:4px 10px 4px 5px;border-radius:99px;background:var(--chip)}
+.pp-rar span b{display:grid;place-items:center;min-width:20px;height:20px;padding:0 5px;border-radius:99px;font:800 11.5px var(--text)}
+.pp-rar .r1 b{background:color-mix(in srgb,var(--primary) 18%,transparent);color:var(--primary)}
+.pp-rar .r2 b{background:var(--svl);color:#0D2B3A}
+.pp-rar .r3 b{background:var(--gdl);color:#3A2A05}
+.pp-rar svg{flex:none;width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
 .pp-leg{max-height:calc(100% - 48px - env(safe-area-inset-top,0px));padding-bottom:0;gap:0}
 .pp-leg-list{flex:1;min-height:0;margin:0 -20px;padding:0 20px calc(18px + env(safe-area-inset-bottom,0px));overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y}
 .pp-leg h2{margin:2px 0 4px;font:800 20px var(--display);letter-spacing:-.01em}

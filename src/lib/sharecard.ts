@@ -132,7 +132,6 @@ function cover(d: ShareData, visited: Set<string>) {
 <rect x="38" y="38" width="${W - 76}" height="${H - 76}" rx="34" fill="none" stroke="${G}" stroke-opacity=".5" stroke-width="3"/>
 <g fill="none" stroke="${G}" stroke-width="5"><circle cx="122" cy="130" r="26"/><ellipse cx="122" cy="130" rx="11" ry="26"/><path d="M96 130h52"/></g>
 <text x="170" y="141" font-family="${FIG}" font-weight="700" font-size="30" letter-spacing="9" fill="${G}">REISEPASS</text>
-<text x="984" y="141" text-anchor="end" font-family="${FIG}" font-weight="700" font-size="30" letter-spacing="9" fill="${G}">FREIHEIT</text>
 ${rank ? `<rect x="88" y="206" width="${r1(rw)}" height="68" rx="34" fill="url(#scPill)"/><text x="${r1(88 + rw / 2)}" y="253" text-anchor="middle" font-family="${FIG}" font-weight="800" font-size="40" fill="#2A1C04">${esc(rank)}</text>` : ''}
 <text x="80" y="${rank ? 590 : 540}" font-family="${UNB}" font-weight="800" font-size="${nSize}" letter-spacing="-14" fill="url(#scGd)">${num}</text>
 <text x="92" y="${rank ? 668 : 618}" font-family="${FIG}" font-weight="700" font-size="46" fill="#F4EBD3">${d.n === 1 ? 'Land' : 'Länder'}<tspan font-weight="500" fill-opacity=".75"> auf ${d.conts.length} ${d.conts.length === 1 ? 'Kontinent' : 'Kontinenten'}</tspan></text>
@@ -172,7 +171,7 @@ function collage(d: ShareData) {
 	for (const c of d.conts) per.set(c, d.stamps.filter((s) => CONT[s.code] === c).length);
 	const chips: string[] = [];
 	let x = 64,
-		y = 640;
+		y = 722;
 	for (const [c, k] of [...per].sort((p, q) => q[1] - p[1])) {
 		const label = CONT_NAMES[c],
 			kw = tw(String(k), 30, 0.6),
@@ -184,17 +183,15 @@ function collage(d: ShareData) {
 		chips.push(`<rect x="${r1(x)}" y="${y}" width="${r1(w)}" height="52" rx="26" fill="${CHIP}"/><text x="${r1(x + 22)}" y="${y + 36}" font-family="${FIG}" font-size="30" fill="${INK}"><tspan font-weight="800">${k}</tspan><tspan font-weight="500" dx="10">${esc(label)}</tspan></text>`);
 		x += w + 12;
 	}
-	// freier Platz rechts der Zahl: zwei Werte-Kacheln
-	const tx = Math.round(56 + num.length * nSize * 0.8 + 24),
-		tw2 = 1016 - tx;
-	const tile = (ty: number, v: string, l: string) =>
-		`<rect x="${tx}" y="${ty}" width="${tw2}" height="104" rx="28" fill="#fff" fill-opacity=".7" stroke="${LINE}" stroke-width="2"/><text x="${tx + 26}" y="${ty + 66}" font-family="${UNB}" font-weight="800" font-size="40" fill="${PRIMARY}">${esc(v)}<tspan font-family="${FIG}" font-weight="600" font-size="24" fill="${MUTED}" dx="14">${esc(l)}</tspan></text>`;
-	const tiles = tw2 >= 240 ? tile(290, `${d.wonders}/${d.wondersAll}`, 'Weltwunder') + tile(412, String(d.badges), 'Abzeichen') : '';
-	// Passseite mit den Stempeln
+	// unter dem Horizont: zwei Werte-Kacheln nebeneinander (Platz für jede Länderzahl)
+	const tile = (tx: number, v: string, l: string) =>
+		`<g transform="translate(${tx} 570)"><rect width="468" height="112" rx="30" fill="#fff" fill-opacity=".72" stroke="${LINE}" stroke-width="2"/><rect x="18" y="18" width="10" height="76" rx="5" fill="${SUN}"/><text x="50" y="74" font-family="${UNB}" font-weight="800" font-size="46" fill="${PRIMARY}">${esc(v)}<tspan font-family="${FIG}" font-weight="600" font-size="30" fill="${MUTED}" dx="16">${esc(l)}</tspan></text></g>`;
+	const tiles = tile(64, `${d.wonders}/${d.wondersAll}`, 'Weltwunder') + tile(548, String(d.badges), 'Abzeichen');
+	// Passseite mit den Stempeln bis fast an den unteren Rand
 	const px = 48,
-		py = y + 96,
+		py = y + 84,
 		pw = W - 2 * px,
-		ph = 1790 - py;
+		ph = H - 44 - py;
 	const [cols, rows] = n <= 4 ? [2, 2] : n <= 9 ? [3, 3] : n <= 12 ? [3, 4] : n <= 16 ? [4, 4] : [4, 5];
 	const cap = cols * rows;
 	const shown = n > cap ? all.slice(0, cap - 1) : all;
@@ -233,12 +230,11 @@ function collage(d: ShareData) {
 <style>${STYLE}</style></defs>
 <rect width="${W}" height="${H}" fill="#FAF1E1"/>
 <text x="64" y="138" font-family="${UNB}" font-weight="800" font-size="54" fill="${INK}">Freiheit</text>
-<text x="66" y="184" font-family="${FIG}" font-weight="500" font-size="28" fill="${MUTED}">by Maier Reisen</text>
 ${rank ? `<rect x="${r1(1016 - rw)}" y="96" width="${r1(rw)}" height="60" rx="30" fill="${SUN}"/><text x="${r1(1016 - rw / 2)}" y="137" text-anchor="middle" font-family="${FIG}" font-weight="700" font-size="34" fill="${INK}">${esc(rank)}</text>` : ''}
-<text x="56" y="500" font-family="${UNB}" font-weight="800" font-size="${nSize}" letter-spacing="${-nSize * 0.05}" fill="${INK}">${num}</text>
-<text x="64" y="570" font-family="${FIG}" font-weight="600" font-size="42" fill="${INK}">Stempel im Pass</text>
-${d.since ? `<text x="1016" y="570" text-anchor="end" font-family="${FIG}" font-weight="500" font-size="32" fill="${MUTED}">unterwegs seit ${d.since}</text>` : ''}
-<path d="M64 600H1016" stroke="${SUN}" stroke-width="6" stroke-linecap="round"/>
+<text x="56" y="444" font-family="${UNB}" font-weight="800" font-size="${nSize}" letter-spacing="${-nSize * 0.05}" fill="${INK}">${num}</text>
+<text x="64" y="508" font-family="${FIG}" font-weight="600" font-size="42" fill="${INK}">Stempel im Pass</text>
+${d.since ? `<text x="1016" y="508" text-anchor="end" font-family="${FIG}" font-weight="500" font-size="32" fill="${MUTED}">unterwegs seit ${d.since}</text>` : ''}
+<path d="M64 536H1016" stroke="${SUN}" stroke-width="6" stroke-linecap="round"/>
 ${tiles}
 ${chips.join('')}
 <path d="${page}" fill="#FFFBF3" stroke="${LINE}" stroke-width="2" filter="url(#scPgSh)"/>
@@ -246,7 +242,6 @@ ${chips.join('')}
 <text x="${px + 48}" y="${py + 58}" font-family="${FIG}" font-weight="700" font-size="24" letter-spacing="4" fill="${MUTED}">STEMPEL</text>
 <text x="${px + pw - 40}" y="${py + 58}" text-anchor="end" font-family="${FIG}" font-weight="700" font-size="24" letter-spacing="4" fill="${MUTED}">${more ? 'SELTENSTE ZUERST' : all.some((s) => s.sp) ? 'SELTENSTE ZUERST' : ''}</text>
 ${cells.join('')}
-<text x="540" y="1860" text-anchor="middle" font-family="${FIG}" font-weight="600" font-size="30" fill="${MUTED}">${tiles ? 'by Maier Reisen' : `${d.wonders}/${d.wondersAll} Weltwunder · ${d.badges} Abzeichen`}</text>
 </svg>`;
 }
 

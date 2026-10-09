@@ -101,6 +101,11 @@
 		void scenesOk; // nach dem Nachladen der Bilder neu berechnen
 		return countedCountries().map((c, i) => ({ code: c.code, name: c.name, nr: i + 1, entered: c.entered, ...withLevel(c.code, i + 1, c.entered) }));
 	});
+	const tierCount = $derived.by(() => {
+		const n = [0, 0, 0, 0];
+		for (const st of stamps) n[st.sp]++;
+		return n;
+	});
 	const wishes = $derived(atlas.data.wishlist.slice(0, 4));
 	const pages = $derived.by(() => {
 		const slots: ({ kind: 'stamp'; st: (typeof stamps)[number] } | { kind: 'wish'; code: string; name: string })[] = [
@@ -853,6 +858,10 @@
 				<p class="empty">Noch keine Stempel. Für jedes bereiste Land kommt hier ein Stempel in deinen Pass.</p>
 			{/if}
 			{#if pages.length}
+				<button type="button" class="pp-rar" aria-label="Seltenheit der Stempel: {tierCount[1]} Rare, {tierCount[2]} Epic, {tierCount[3]} Legendary. Legende öffnen" onclick={() => { choose(null); sOff = 0; leaf = 'legend'; }}>
+					{#each [1, 2, 3] as t (t)}<span class="r{t}"><b>{tierCount[t]}</b>{TIER_NAME[t]}</span>{/each}
+					<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 11v6M12 7.5v.5" /></svg>
+				</button>
 				<!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->
 				<div
 					class="pp-book"
@@ -929,11 +938,6 @@
 					</div>
 					<p class="pp-pnum">Seite {shown + 1} von {pages.length}</p>
 				{/if}
-				<div class="pp-tools">
-					<button type="button" class="pp-info" onclick={() => { choose(null); sOff = 0; leaf = 'legend'; }}
-						><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 11v6M12 7.5v.5" /></svg>Seltenheit</button
-					>
-				</div>
 			{/if}
 				{#if stamps.length}
 					<p class="note">Stempel antippen öffnet das Land. Dort kannst du auch das Datum der ersten Einreise eintragen – es erscheint dann auf dem Stempel.</p>
