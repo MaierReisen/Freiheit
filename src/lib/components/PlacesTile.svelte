@@ -11,7 +11,8 @@
 	const list = $derived(countedCountries());
 	const n = $derived(list.length);
 	const total = $derived(scopeTotal(atlas.settings.countryScope));
-	const pct = $derived(total ? Math.round((n / total) * 100) : 0);
+	const pct = $derived(total ? (n / total) * 100 : 0);
+	const pctT = $derived(pct.toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 }));
 	const last = $derived(list.slice(-3).reverse());
 </script>
 
@@ -26,7 +27,7 @@
 	</span>
 	<span class="cat-txt">
 		<span class="cat-name">Deine Länder</span>
-		<span class="cat-sub">{pct} % der Welt entdeckt</span>
+		<span class="cat-sub">{pctT} % der Welt entdeckt</span>
 		<span class="cat-bar"><i style="width:{pct}%"></i></span>
 	</span>
 	{#if last.length}<span class="cat-flags" aria-hidden="true">{#each last as c (c.code)}<span>{flag(c.code)}</span>{/each}</span>{/if}

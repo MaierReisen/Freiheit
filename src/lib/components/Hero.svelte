@@ -2,7 +2,7 @@
 	import { untrack } from 'svelte';
 	import { atlas, countedCountries } from '$lib/atlas.svelte';
 	import { scopeTotal } from '$lib/scope';
-	import { CONT, CONT_NAMES, contOf, flag } from '$lib/countries';
+	import { CONT, CONT_NAMES, contOf } from '$lib/countries';
 	import { tourPlan } from '$lib/addTour';
 	import { reduceMotion, dom, easeOutCubic, hooks, introProgress, openPicker, openPlaces, ui } from '$lib/app.svelte';
 	import { rankIndex, ranks } from '$lib/passport';
@@ -74,11 +74,10 @@
 				calm = reduceMotion(),
 				plan = m > 1 && !calm ? tourPlan(m) : null,
 				at = (ms: number, fn: () => void) => timers.push(setTimeout(fn, Math.max(0, ms - (Date.now() - t0))));
-			const card = (c: Partial<typeof ui.unlock>) => (ui.unlock = { key: ui.unlock.key + 1, cont: '', n: now, rank: '', badge: '', icon: '', sub: '', added: '', ...c });
+			const card = (c: Partial<typeof ui.unlock>) => (ui.unlock = { key: ui.unlock.key + 1, cont: '', n: now, rank: '', badge: '', badgeId: '', icon: '', sub: '', added: '', ...c });
 			let slot = 0;
 			const base = plan ? plan.end : 0;
-			if (m > 1) at(base + slot++ * CARD, () => card({ sub: String(m), added: addedAll.map(flag).join('') }));
-			if (cont > contBefore && contBefore >= 0) {
+						if (m < 2 && cont > contBefore && contBefore >= 0) {
 				// mehrere Länder auf einmal: alle neuen Kontinente in einer Karte
 				const had = new Set(counted.filter((c) => !addedAll.includes(c.code)).map((c) => CONT[c.code]));
 				const names = [...new Set(addedAll.map((c) => CONT[c]).filter((k) => k && !had.has(k)))].map((k) => CONT_NAMES[k]);
@@ -87,20 +86,20 @@
 			}
 			// neuer Rang im Reisepass: eigene Feier-Karte
 			const ri = rankIndex(now, total);
-			if (ri > rankIndex(before, total)) {
+			if (m < 2 && ri > rankIndex(before, total)) {
 				const r = ranks(total)[ri];
 				at(base + slot++ * CARD, () => card({ rank: r.name, icon: r.icon }));
 			}
 			// neues Abzeichen bzw. neue Stufe: vorher/nachher vergleichen (Länderfakten werden dafür nachgeladen), jedes eine Karte
 			const list = counted,
 				slot0 = slot;
-			loadFacts().then((facts) => {
+			if (m < 2) loadFacts().then((facts) => {
 				const scope = atlas.settings.countryScope,
 					entered = Object.fromEntries(list.map((c) => [c.code, c.entered]));
 				const codes = list.map((c) => c.code);
 				const was = badges({ codes: codes.filter((c) => !addedAll.includes(c)), facts, entered }, scope);
 				const up = badges({ codes, facts, entered }, scope).filter((b, i) => b.level > was[i].level);
-				up.slice(0, 3).forEach((b, k) => at(base + (slot0 + k) * CARD, () => card({ badge: b.name, icon: b.icon, sub: `${tierName(b, b.level)} · ${b.fmt(b.v)} ${b.what}` })));
+				up.slice(0, 3).forEach((b, k) => at(base + (slot0 + k) * CARD, () => card({ badge: b.name, badgeId: b.id, icon: b.icon, sub: `${tierName(b, b.level)} · ${b.fmt(b.v)} ${b.what}` })));
 			});
 			if (calm) return;
 			clearTimeout(bumpT);

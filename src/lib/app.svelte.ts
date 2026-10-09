@@ -89,7 +89,9 @@ export const ui = $state({
 	/** gemeinsame Start-Animation (Globus, Zähler, Flugkurve): Zeitpunkte in performance.now() */
 	intro: { key: 0, start: 0, end: 0, resume: false },
 	/** mehrere Länder auf einmal (added = Flaggen), neuer Kontinent, neuer Rang (rank gesetzt) bzw. neues Abzeichen (badge gesetzt) im Reisepass: Feier-Karte (key zählt hoch) */
-	unlock: { key: 0, cont: '', n: 0, rank: '', badge: '', icon: '', sub: '', added: '' },
+	unlock: { key: 0, cont: '', n: 0, rank: '', badge: '', badgeId: '', icon: '', sub: '', added: '' },
+	/** Abzeichen, das der Pass nach dem Öffnen (per Tipp auf die Meldung) zeigen soll */
+	passBadge: '',
 	toastMsg: '',
 	toastShow: false
 });

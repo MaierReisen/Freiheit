@@ -87,7 +87,7 @@
 		if (ui.placesOpen && view) {
 			view.style.transform = '';
 			view.style.transition = '';
-			view.classList.remove('swiping');
+			view.classList.remove('swiping', 'down');
 		}
 	});
 	// nach dem Schließen alles zurücksetzen (Sortierung bleibt)
@@ -107,7 +107,7 @@
 	   Die Seite folgt dem Finger ohne Ruck (Position pro Bild gesetzt, Start ohne Sprung), beim Loslassen entscheiden
 	   Weg und Tempo, das Ausgleiten dauert nach Restweg. Aus beim Umsortieren, im Auswählen-Modus, im Suchfeld und bei aufgewischter Zeile. */
 	let view: HTMLElement;
-	let back: { x: number; y: number; dir: 'h' | 'v' | null; dx: number; lx: number; lt: number; v: number; raf: number } | null = null;
+	let back: { x: number; y: number; dir: 'h' | 'd' | 'v' | null; dx: number; dy: number; lx: number; lt: number; v: number; raf: number } | null = null;
 	const dragging = () => !!view.querySelector('.list.dragging');
 	function backStart(e: TouchEvent) {
 		cancelAnimationFrame(back?.raf ?? 0);
@@ -115,12 +115,12 @@
 		const t = e.target as Element;
 		if (e.touches.length !== 1 || selecting || t.closest('input') || view.querySelector('.swipe-del') || dragging()) return;
 		const p = e.touches[0];
-		back = { x: p.clientX, y: p.clientY, dir: null, dx: 0, lx: p.clientX, lt: e.timeStamp, v: 0, raf: 0 };
+		back = { x: p.clientX, y: p.clientY, dir: null, dx: 0, dy: 0, lx: p.clientX, lt: e.timeStamp, v: 0, raf: 0 };
 	}
 	function paint() {
 		if (!back) return;
 		back.raf = 0;
-		view.style.transform = `translate3d(${back.dx}px,0,0)`;
+		view.style.transform = back.dir === 'd' ? `translate3d(0,${back.dy}px,0)` : `translate3d(${back.dx}px,0,0)`;
 	}
 	function backMove(e: TouchEvent) {
 		if (!back) return;
@@ -136,12 +136,27 @@
 		if (!back.dir) {
 			if (Math.abs(dx) < 6 && Math.abs(dy) < 6) return;
 			// nur klar waagerecht nach rechts; nach links gehört der Zeile (Löschen)
-			back.dir = dx > 0 && dx > Math.abs(dy) * 1.3 ? 'h' : 'v';
+			const atTop = (view.querySelector('.ov-body')?.scrollTop ?? 0) <= 0;
+			back.dir = dx > 0 && dx > Math.abs(dy) * 1.3 ? 'h' : dy > 0 && dy > Math.abs(dx) && atTop ? 'd' : 'v';
 			if (back.dir === 'h') {
 				back.x += 6; // ohne Sprung loslegen
 				view.classList.add('swiping');
 				view.style.transition = 'none';
+			} else if (back.dir === 'd') {
+				back.y += 6;
+				view.classList.add('swiping', 'down');
+				view.style.transition = 'none';
 			}
+			return;
+		}
+		if (back.dir === 'd') {
+			e.preventDefault();
+			const dt = e.timeStamp - back.lt;
+			if (dt > 0) back.v = 0.6 * ((p.clientY - back.lx) / dt) + 0.4 * back.v;
+			back.lx = p.clientY;
+			back.lt = e.timeStamp;
+			back.dy = Math.max(0, p.clientY - back.y);
+			if (!back.raf) back.raf = requestAnimationFrame(paint);
 			return;
 		}
 		if (back.dir !== 'h') return;
@@ -157,16 +172,18 @@
 		back = null;
 		if (!b) return;
 		cancelAnimationFrame(b.raf);
-		if (b.dir !== 'h') return;
-		const W = window.innerWidth;
-		const go = b.dx > W * 0.3 || (b.v > 0.5 && b.dx > 24);
-		const rest = go ? W - b.dx : b.dx;
+		if (b.dir !== 'h' && b.dir !== 'd') return;
+		const down = b.dir === 'd';
+		const W = down ? window.innerHeight : window.innerWidth;
+		const dist = down ? b.dy : b.dx;
+		const go = down ? dist > 140 || (b.v > 0.6 && dist > 40) : dist > W * 0.3 || (b.v > 0.5 && dist > 24);
+		const rest = go ? W - dist : dist;
 		const ms = reduceMotion() ? 0 : Math.round(Math.max(130, Math.min(260, (rest / Math.max(b.v, 0.9)) * (go ? 1 : 0.7))));
 		view.style.transition = ms ? `transform ${ms}ms cubic-bezier(.22,.8,.3,1)` : 'none';
-		view.style.transform = go ? 'translate3d(100%,0,0)' : '';
+		view.style.transform = go ? (down ? 'translate3d(0,100%,0)' : 'translate3d(100%,0,0)') : '';
 		setTimeout(() => {
 			if (go) closePlaces(false);
-			view.classList.remove('swiping');
+			view.classList.remove('swiping', 'down');
 			// nach dem Schließen Ausgangszustand für das nächste Öffnen
 			setTimeout(() => {
 				view.style.transition = '';
@@ -176,6 +193,8 @@
 	}
 
 	onMount(() => {
+		// touchmove nicht passiv, damit Runterwischen die Liste nicht mitscrollt
+		view.addEventListener('touchmove', backMove, { passive: false });
 		try {
 			const s = localStorage.getItem(SORT_KEY);
 			if (SORTS.some((x) => x.id === s)) sort = s as Sort;
@@ -202,7 +221,7 @@
 {/snippet}
 
 <!-- svelte-ignore a11y_no_noninteractive_element_to_interactive_role -->
-<section class="ov set-view" id="placesView" role="dialog" aria-modal="true" aria-labelledby="placesTitle" hidden={!ui.placesOpen} bind:this={view} ontouchstart={backStart} ontouchmove={backMove} ontouchend={backEnd} ontouchcancel={backEnd}>
+<section class="ov set-view" id="placesView" role="dialog" aria-modal="true" aria-labelledby="placesTitle" hidden={!ui.placesOpen} bind:this={view} ontouchstart={backStart} ontouchend={backEnd} ontouchcancel={backEnd}>
 	<div class="ov-head lv-head">
 		<button type="button" class="ov-close" id="placesClose" aria-label="Deine Länder schließen" onclick={() => closePlaces(false)}
 			><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg></button

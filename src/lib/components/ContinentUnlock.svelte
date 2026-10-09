@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { CONT_NAMES } from '$lib/countries';
-	import { reduceMotion, ui } from '$lib/app.svelte';
+	import { openPass, reduceMotion, ui } from '$lib/app.svelte';
 
 	/* Neuer Kontinent freigeschaltet bzw. neuer Rang im Reisepass: Karte gleitet von oben herein, Sonnen-Medaille mit Strahlenkranz
 	   und kurzem Konfetti. Verschwindet von selbst oder per Tipp. */
@@ -34,6 +34,14 @@
 		}, 420);
 	});
 
+	function onTap() {
+		const id = shown?.badgeId;
+		dismiss();
+		if (id) {
+			ui.passBadge = id;
+			openPass();
+		}
+	}
 	function dismiss() {
 		clearTimeout(tHide);
 		leaving = true;
@@ -44,7 +52,7 @@
 {#if shown}
 	{#key shown.key}
 		<div class="unlock" class:leaving role="status" aria-live="polite">
-			<button type="button" class="unlock-card" onclick={dismiss} aria-label="{shown.added ? `${shown.sub} neue Länder` : shown.badge ? `Neues Abzeichen: ${shown.badge}` : shown.rank ? `Neuer Rang: ${shown.rank}` : `Neuer Kontinent: ${shown.cont}`}. Schließen">
+			<button type="button" class="unlock-card" onclick={onTap} aria-label="{shown.added ? `${shown.sub} neue Länder` : shown.badge ? `Neues Abzeichen: ${shown.badge}` : shown.rank ? `Neuer Rang: ${shown.rank}` : `Neuer Kontinent: ${shown.cont}`}. {shown.badgeId ? 'Im Reisepass öffnen' : 'Schließen'}">
 				<span class="unlock-medal" aria-hidden="true">
 					<span class="unlock-rays"></span>
 					<span class="unlock-disc" class:emo={!!shown.badge}>{shown.badge ? shown.icon : shown.n}</span>

@@ -594,7 +594,7 @@
 			if (slot && el) await tearOff(slot, el, 4, 'WELTWUNDER');
 		}
 		if (all)
-			ui.unlock = { key: ui.unlock.key + 1, cont: '', n: WONDERS.length, rank: '', badge: 'Alle 7 Weltwunder', icon: '🏛️', sub: 'Die neuen 7 Weltwunder komplett gesehen', added: '' };
+			ui.unlock = { key: ui.unlock.key + 1, cont: '', n: WONDERS.length, rank: '', badge: 'Alle 7 Weltwunder', badgeId: '', icon: '🏛️', sub: 'Die neuen 7 Weltwunder komplett gesehen', added: '' };
 	}
 	function drop(w: Wonder) {
 		if (confirm(`„${w.name}“ wieder aus dem Pass nehmen?`)) setWonder(w.id, false);
@@ -694,6 +694,16 @@
 
 	/* ---------- Reiter: Stempel / Weltwunder / Abzeichen ---------- */
 	let tab = $state<'st' | 'ww' | 'ab'>('st');
+	// Tipp auf die Abzeichen-Meldung auf der Startseite: Pass öffnet direkt beim Abzeichen
+	$effect(() => {
+		const id = ui.passBadge;
+		if (!id || !ui.passOpen) return;
+		untrack(() => {
+			ui.passBadge = '';
+			if (tab !== 'ab') pickTab('ab');
+			tick().then(() => choose(id).then(() => body?.querySelector<HTMLElement>(`[data-badge="${id}"]`)?.scrollIntoView({ block: 'center', behavior: 'auto' })));
+		});
+	});
 	function pickTab(t: typeof tab) {
 		if (t === tab) return;
 		choose(null);

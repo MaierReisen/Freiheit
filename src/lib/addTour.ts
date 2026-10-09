@@ -19,12 +19,12 @@ export interface TourPlan {
 
 export function tourPlan(m: number): TourPlan {
 	if (m >= OVERVIEW) {
-		const fly = 1500;
+		const fly = 1650;
 		// Zähler läuft gleichmäßig über die Flugzeit
 		return { overview: true, step: 0, fly, glow: 2000, arrive: Array.from({ length: m }, (_, i) => Math.round(((i + 1) / m) * fly)), end: fly + 1100 };
 	}
 	// je mehr Länder, desto schneller
-	const step = Math.round(Math.max(950, 2000 - (m - 2) * 170)),
+	const step = Math.round(Math.max(1050, 2200 - (m - 2) * 185)),
 		fly = Math.round(step * 0.72),
 		glow = Math.round(step * 1.3);
 	const arrive = Array.from({ length: m }, (_, i) => i * step + fly);
