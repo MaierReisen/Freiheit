@@ -95,6 +95,9 @@
 			window.scrollTo({ top: 0, behavior: reduceMotion() ? 'auto' : 'smooth' });
 			await sleep(reduceMotion() ? 0 : 480);
 		}
+		// Globus war per Halten aktiviert: nach dem Hinzufügen wieder loslassen, damit die Seite wieder scrollt
+		ui.mapActive = false;
+		ui.selected = null;
 		addCountry(code);
 	}
 	function remove() {

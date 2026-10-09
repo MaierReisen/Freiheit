@@ -131,6 +131,7 @@ h2{font-family:var(--display);font-size:19px;font-weight:700;margin:40px 0 14px;
 .sheet .actions{display:flex;gap:10px;flex-wrap:wrap}
 .pick-list{list-style:none;margin:10px 0 0;padding:0;overflow-y:auto;flex:1;min-height:200px}
 .pick-list button{width:100%;display:flex;gap:12px;align-items:center;padding:11px 2px;border:0;border-bottom:1px solid var(--line);background:none;text-align:left;font-size:17px}
+.pick-list .pick-sub{font-family:var(--display);font-size:15px;font-weight:700;padding:18px 2px 4px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--surface)}
 .pick-list .ct{margin-left:auto;color:var(--muted);font-size:13px}
 
 .toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translate(-50%,20px);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:999px;font-size:14px;opacity:0;transition:.2s;pointer-events:none;z-index:20;white-space:nowrap}

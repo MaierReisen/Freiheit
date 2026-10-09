@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { addCountries, isCounted, visitedSet } from '$lib/atlas.svelte';
-	import { contOf, flag, nameOf } from '$lib/countries';
+	import { CONT, CONT_NAMES, compareNames, contOf, flag, nameOf } from '$lib/countries';
 	import { ALL } from '$lib/map/geo';
 	import { closeSheet, hooks, openCountry, toast, type PickerMode } from '$lib/app.svelte';
 
@@ -16,9 +16,40 @@
 	let q = $state('');
 	const visited = visitedSet();
 
+	// Sortierung wie in der Länderliste (Nr./Neueste gibt es hier nicht, die Länder sind ja noch nicht bereist); gemerkt für nächstes Mal
+	type Sort = 'az' | 'cont';
+	const SORTS: { id: Sort; label: string }[] = [
+		{ id: 'az', label: 'A–Z' },
+		{ id: 'cont', label: 'Kontinent' }
+	];
+	const SORT_KEY = 'freiheit-pick-sort';
+	let sort = $state<Sort>('az');
+	try {
+		if (localStorage.getItem(SORT_KEY) === 'cont') sort = 'cont';
+	} catch {}
+	function setSort(s: Sort) {
+		sort = s;
+		try {
+			localStorage.setItem(SORT_KEY, s);
+		} catch {}
+	}
+
 	const items = $derived.by(() => {
 		const s = q.trim().toLowerCase();
-		return ALL.filter((c) => (flyMode || (!visited.has(c) && isCounted(c))) && (!s || nameOf(c).toLowerCase().includes(s)));
+		const list = ALL.filter((c) => (flyMode || (!visited.has(c) && isCounted(c))) && (!s || nameOf(c).toLowerCase().includes(s)));
+		return list.sort((a, b) => compareNames(nameOf(a), nameOf(b)));
+	});
+	// Nach Kontinent: Gruppen nach Anzahl, innerhalb alphabetisch (wie in der Länderliste)
+	const groups = $derived.by(() => {
+		const m = new Map<string, string[]>();
+		for (const c of items) {
+			const k = CONT[c] || '';
+			if (!m.has(k)) m.set(k, []);
+			m.get(k)!.push(c);
+		}
+		return [...m.entries()]
+			.map(([k, list]) => ({ name: CONT_NAMES[k as keyof typeof CONT_NAMES] || 'Sonstige', list }))
+			.sort((a, b) => b.list.length - a.list.length || compareNames(a.name, b.name));
 	});
 
 	let picked = $state<string[]>([]);
@@ -47,17 +78,31 @@
 
 <h3 id="sheetTitle">{flyMode ? 'Land auf der Karte suchen' : 'Land hinzufügen'}</h3>
 <input class="search" id="pickSearch" type="search" placeholder="Land suchen" autocomplete="off" style="margin-top:12px" bind:value={q} />
-<ul class="pick-list" id="pickList">
-	{#each items as c (c)}
-			<li class:sel-li={!flyMode} class:on={picked.includes(c)}>
-			<button data-code={c} aria-pressed={flyMode ? undefined : picked.includes(c)} onclick={() => choose(c)}
-				>{#if !flyMode}<span class="chk" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg></span>{/if}<span>{flag(c)}</span>{flyMode && visited.has(c) ? '✓ ' : ''}{nameOf(c)}<span class="ct">{contOf(c)}{flyMode && !isCounted(c) ? ' · zählt nicht' : ''}</span></button
-			>
-			</li>
-	{:else}
-		<li class="empty">Kein Land gefunden.</li>
+<div class="seg sort-seg" role="group" aria-label="Sortierung">
+	{#each SORTS as o (o.id)}
+		<button type="button" aria-pressed={sort === o.id} onclick={() => setSort(o.id)}>{o.label}</button>
 	{/each}
+</div>
+<ul class="pick-list" id="pickList">
+	{#if sort === 'cont'}
+		{#each groups as g (g.name)}
+			<li class="pick-sub" role="presentation">{g.name} <span class="h-count">{g.list.length}</span></li>
+			{#each g.list as c (c)}{@render row(c)}{/each}
+		{/each}
+	{:else}
+		{#each items as c (c)}{@render row(c)}{/each}
+	{/if}
+	{#if !items.length}
+		<li class="empty">Kein Land gefunden.</li>
+	{/if}
 </ul>
+{#snippet row(c: string)}
+	<li class:sel-li={!flyMode} class:on={picked.includes(c)}>
+		<button data-code={c} aria-pressed={flyMode ? undefined : picked.includes(c)} onclick={() => choose(c)}
+			>{#if !flyMode}<span class="chk" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg></span>{/if}<span>{flag(c)}</span>{flyMode && visited.has(c) ? '✓ ' : ''}{nameOf(c)}<span class="ct">{contOf(c)}{flyMode && !isCounted(c) ? ' · zählt nicht' : ''}</span></button
+		>
+	</li>
+{/snippet}
 {#if !flyMode}
 	<div class="pick-bar">
 		<span class="lv-bar-n">{picked.length ? `${picked.length} ausgewählt` : 'Länder antippen'}</span>
