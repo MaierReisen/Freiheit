@@ -324,8 +324,23 @@ button.cont{border:0;font:inherit;font-size:14px;color:inherit}
 .cat-ico svg{width:52px;height:52px}
 .flagico .gl{fill:rgba(255,255,255,.2);stroke:#fff;stroke-width:2.2}
 .flagico .gl-l{fill:none;stroke:rgba(255,255,255,.75);stroke-width:1.5;stroke-linecap:round}
-.flagico .pin{fill:#FFD27A;stroke:#0B5A66;stroke-width:1.6}
-.flagico .pin-o{fill:#0B5A66}
+.flagico .pole{stroke:#fff;stroke-width:2.2;stroke-linecap:round}
+.flagico .flg{fill:#FFD27A;stroke:#0B5A66;stroke-width:1.4;stroke-linejoin:round}
+.flagico .hrt{fill:#E8604A}
+/* Kontinente: Globus mit Landmassen, Flugzeug auf gestrichelter Route */
+.contico{background:linear-gradient(150deg,#6DB8F2,#1F4E8C);box-shadow:inset 0 1px 0 rgba(255,255,255,.28),0 6px 14px -8px rgba(31,78,140,.75)}
+.contico .gl{fill:rgba(255,255,255,.18);stroke:#fff;stroke-width:2.2}
+.contico .land{fill:#A8E39B}
+.contico .route{fill:none;stroke:rgba(255,255,255,.85);stroke-width:1.6;stroke-linecap:round;stroke-dasharray:2.2 3}
+.contico .plane{fill:#FFD27A;stroke:#1F4E8C;stroke-width:1.2;stroke-linejoin:round}
+/* Hauptstädte: Kuppelbau mit goldenem Hauptstadt-Stern */
+.capico{background:linear-gradient(150deg,#F6A46E,#B0443A);box-shadow:inset 0 1px 0 rgba(255,255,255,.28),0 6px 14px -8px rgba(176,68,58,.75)}
+.capico .bg{fill:rgba(255,255,255,.28)}
+.capico .bd{fill:rgba(255,255,255,.22);stroke:#fff;stroke-width:1.8;stroke-linejoin:round}
+.capico .col{stroke:#fff;stroke-width:1.6;stroke-linecap:round}
+.capico .door{fill:#fff}
+.capico .star{fill:#FFD27A;stroke:#8A3328;stroke-width:1.1;stroke-linejoin:round}
+.capico .tw{fill:#fff}
 .cat-txt{flex:1;min-width:0;display:flex;flex-direction:column;align-items:flex-start}
 .cat-name{font:800 18px/1.15 var(--display);letter-spacing:-.01em;white-space:nowrap}
 .cat-sub{font-size:13px;color:var(--muted);margin-top:2px}
@@ -333,6 +348,8 @@ button.cont{border:0;font:inherit;font-size:14px;color:inherit}
 .cat-bar i{display:block;height:100%;background:var(--primary);border-radius:99px;transition:width .8s cubic-bezier(.2,.8,.2,1)}
 .cat-flags{flex:none;display:flex;font-size:17px;line-height:1}
 .cat-flags span + span{margin-left:-6px}
+/* noch leere Zeilen (Kontinente, Hauptstädte): nur „Kommt bald“, nicht antippbar */
+.cat-row.soon .cat-bar{opacity:.6}
 
 /* Seite „Deine Länder“ */
 .lv-head .set-title{font-size:22px;white-space:nowrap}

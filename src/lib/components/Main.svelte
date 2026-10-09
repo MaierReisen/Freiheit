@@ -10,6 +10,8 @@
 	import TabBar from './TabBar.svelte';
 	import PassTile from './PassTile.svelte';
 	import PlacesTile from './PlacesTile.svelte';
+	import ContinentsTile from './ContinentsTile.svelte';
+	import CapitalsTile from './CapitalsTile.svelte';
 	import PlacesView from './PlacesView.svelte';
 	import WorldMap from './WorldMap.svelte';
 
@@ -97,6 +99,8 @@
 			<h2 class="blocks-h">Deine Welt</h2>
 			<div class="cats">
 				<PlacesTile />
+				<ContinentsTile />
+				<CapitalsTile />
 			</div>
 		</div>
 	</main>
