@@ -26,7 +26,8 @@
 	let root: HTMLElement;
 	let pg: { y0: number; x0: number; lt: number; ly: number; vy: number; dy: number; on: boolean | null } | null = null;
 	function tStart(e: TouchEvent) {
-		if (e.touches.length !== 1 || !ui.passOpen) return (pg = null);
+		// Seitenregler: kein Runterwischen-Schließen
+		if (e.touches.length !== 1 || !ui.passOpen || (e.target as Element | null)?.closest?.('.pp-strip')) return (pg = null);
 		const t = e.touches[0];
 		pg = { y0: t.clientY, x0: t.clientX, lt: e.timeStamp, ly: t.clientY, vy: 0, dy: 0, on: null };
 	}
