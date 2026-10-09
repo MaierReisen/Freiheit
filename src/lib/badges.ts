@@ -197,7 +197,7 @@ function yearDetail(x: BadgeCtx): BadgeDetail {
 	};
 }
 
-const CONT_BADGES: Record<Exclude<ContinentCode, 'AN'>, [string, string]> = {
+export const CONT_BADGES: Record<Exclude<ContinentCode, 'AN'>, [string, string]> = {
 	EU: ['Alter Kontinent', '🏰'],
 	AS: ['Seidenstraße', '🐉'],
 	AF: ['Safari-Seele', '🦁'],

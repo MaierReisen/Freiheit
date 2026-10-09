@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { TABS, closePass, closePlaces, closeSettings, closeSheet, goTab, initFromHash, onHashChange, setFull, startIntro, ui } from '$lib/app.svelte';
+	import { TABS, closeContinents, closePass, closePlaces, closeSettings, closeSheet, goTab, initFromHash, onHashChange, setFull, startIntro, ui } from '$lib/app.svelte';
 	import ContinentChips from './ContinentChips.svelte';
 	import Hero from './Hero.svelte';
 	import SettingsView from './SettingsView.svelte';
@@ -13,6 +13,7 @@
 	import ContinentsTile from './ContinentsTile.svelte';
 	import CapitalsTile from './CapitalsTile.svelte';
 	import PlacesView from './PlacesView.svelte';
+	import ContinentsView from './ContinentsView.svelte';
 	import WorldMap from './WorldMap.svelte';
 
 	function onKeydown(e: KeyboardEvent) {
@@ -24,6 +25,10 @@
 		}
 		if (ui.placesOpen && !ui.sheetOpen && !ui.settingsOpen && !ui.passOpen) {
 			closePlaces(false);
+			return;
+		}
+		if (ui.continentsOpen && !ui.sheetOpen && !ui.settingsOpen && !ui.passOpen) {
+			closeContinents(false);
 			return;
 		}
 		if (ui.passOpen && !ui.sheetOpen) {
@@ -38,7 +43,7 @@
 	let swipe: { x: number; y: number; t: number } | null = null;
 	function onTouchStart(e: TouchEvent) {
 		swipe = null;
-		if (TABS.length < 2 || e.touches.length !== 1 || ui.full || ui.placesOpen || ui.sheetOpen || ui.settingsOpen || ui.passOpen) return;
+		if (TABS.length < 2 || e.touches.length !== 1 || ui.full || ui.placesOpen || ui.continentsOpen || ui.sheetOpen || ui.settingsOpen || ui.passOpen) return;
 		const target = e.target as Element | null;
 		if (target?.closest?.('#mapBox,input,textarea,select,.continents,.chips,.tabbar,.sheet,.count-btn,.hero-add')) return;
 		const t = e.touches[0];
@@ -76,6 +81,7 @@
 			ui.focusContinent = null;
 			if (ui.full) setFull(false, true);
 			if (ui.placesOpen) closePlaces(true);
+			if (ui.continentsOpen) closeContinents(true);
 			document.body.classList.remove('noscroll');
 		};
 	});
@@ -110,5 +116,6 @@
 <SettingsView />
 <PassView />
 <PlacesView />
+<ContinentsView />
 <Sheet />
 <ContinentUnlock />

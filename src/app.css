@@ -262,7 +262,7 @@ button.cont{border:0;font:inherit;font-size:14px;color:inherit}
 .menu-btn svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
 .set-view{z-index:42}
 .set-view:not([hidden]){animation:tabInR .3s cubic-bezier(.2,.8,.2,1)}
-#placesView:not([hidden]){animation:viewUp .38s cubic-bezier(.2,.8,.2,1)}
+#placesView:not([hidden]),#continentsView:not([hidden]){animation:viewUp .38s cubic-bezier(.2,.8,.2,1)}
 @keyframes viewUp{from{transform:translateY(100%)}to{transform:none}}
 .set-title{flex:1;margin:0;font-family:var(--display);font-weight:800;font-size:24px;letter-spacing:-.01em;line-height:1.2}
 .set-view .ov-body{max-width:760px;width:100%;margin:0 auto}
@@ -335,11 +335,58 @@ button.cont{border:0;font:inherit;font-size:14px;color:inherit}
 /* noch leere Zeilen (Kontinente, Hauptstädte): nur „Kommt bald“, nicht antippbar */
 .cat-row.soon .cat-bar{opacity:.6}
 
+/* Kontinent-Farben (Punkte im Block, Ringe auf der Seite „Deine Kontinente“): Stempeltinten, passen sich hell/dunkel an */
+:root{--ct-EU:var(--st-blue);--ct-AS:var(--st-coral);--ct-AF:var(--st-gold);--ct-NA:var(--st-plum);--ct-SA:var(--st-green);--ct-OC:var(--st-teal);--ct-AN:var(--st-navy)}
+.cat-dots{display:inline-flex;gap:4px;margin-left:8px;vertical-align:1px}
+.cat-dots i{width:8px;height:8px;border-radius:50%;background:var(--cc)}
+
+/* Seite „Deine Kontinente“ */
+.cv-list{list-style:none;margin:14px 0 0;padding:0;display:flex;flex-direction:column;gap:10px}
+.cv-card{border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface);overflow:hidden;scroll-margin:12px}
+.cv-head{width:100%;display:flex;align-items:center;gap:14px;padding:12px 14px;border:0;background:none;color:var(--ink);text-align:left;-webkit-tap-highlight-color:transparent}
+.cv-head:active{background:var(--chip)}
+.cv-ring{position:relative;flex:none;width:52px;height:52px;display:grid;place-items:center}
+.cv-ring svg{position:absolute;inset:0;width:100%;height:100%;transform:rotate(-90deg)}
+.cv-ring circle{fill:none;stroke-width:4.5}
+.cv-ring .bg{stroke:var(--chip)}
+.cv-ring .fg{stroke:var(--cc);stroke-linecap:round;transition:stroke-dasharray .8s cubic-bezier(.2,.8,.2,1)}
+.cv-card.none .cv-ring .fg{stroke:none}
+.cv-ring b{position:relative;font:800 13px/1 var(--display);font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.cv-ring small{font-size:9px;font-weight:700;margin-left:1px}
+.cv-txt{flex:1;min-width:0;display:flex;flex-direction:column}
+.cv-name{font:800 17px/1.2 var(--display);letter-spacing:-.01em}
+.cv-sub{font-size:13px;color:var(--muted);margin-top:3px}
+.cv-medal{flex:none;padding:4px 9px;border-radius:999px;font-size:11.5px;font-weight:800;color:#3A2608;letter-spacing:.02em}
+.cv-medal.t1{background:linear-gradient(135deg,#7A4520,#E8A874 35%,#9C5A2B 60%,#F0B98A 85%,#8A4E25);color:#2E1606}
+.cv-medal.t2{background:linear-gradient(135deg,#7E8892,#F4F7FA 35%,#9AA5AF 60%,#FFFFFF 85%,#8994A0);color:#2E3A44}
+.cv-medal.t3{background:linear-gradient(135deg,#9C7418,#F2D98A 35%,#B88A1E 60%,#F7E3A1 85%,#A57B16)}
+.cv-chev{flex:none;width:20px;height:20px;fill:none;stroke:var(--muted);stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;transition:transform .2s}
+.cv-card.open .cv-chev{transform:rotate(180deg)}
+.cv-more{padding:2px 14px 6px;border-top:1px solid var(--line)}
+.cv-first,.cv-badge{width:100%;display:flex;align-items:center;gap:12px;padding:12px 0;border:0;border-bottom:1px solid var(--line);background:none;color:var(--ink);text-align:left}
+.cv-first{flex-direction:column;align-items:flex-start;gap:2px}
+.cv-lab{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.cv-fv{font-size:16px;font-weight:600;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.cv-fv .flag{font-size:20px}
+.cv-date{font-weight:500;color:var(--muted)}
+.cv-bi{flex:none;width:36px;height:36px;display:grid;place-items:center;border-radius:50%;background:var(--chip);font-size:19px}
+.cv-bt{display:flex;flex-direction:column;font-size:13px;color:var(--muted)}
+.cv-bt b{font-size:15px;color:var(--ink)}
+.cv-globe{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;margin:12px 0 4px;color:var(--ink)}
+.cv-globe svg{width:19px;height:19px;fill:none;stroke:var(--cc);stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.cv-countries{margin-top:4px}
+.cv-countries li:last-child button{border-bottom:0}
+.cv-countries li.miss .flag{filter:grayscale(1);opacity:.4}
+.cv-countries li.miss .nm{color:var(--muted);font-weight:400}
+.cv-ok{flex:none;width:22px;height:22px;display:grid;place-items:center;border-radius:50%;background:var(--cc)}
+.cv-ok svg{width:14px;height:14px;fill:none;stroke:#fff;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.cv-note{margin:16px 0 0}
+
 /* Seite „Deine Länder“ */
 .lv-head .set-title{font-size:22px;white-space:nowrap}
 .set-title .ov-of{display:block}
-.set-view.lv-head,#placesView{touch-action:pan-y}
-#placesView.swiping{will-change:transform;box-shadow:-14px 0 34px -12px rgba(0,0,0,.45)}
+.set-view.lv-head,#placesView,#continentsView{touch-action:pan-y}
+#placesView.swiping,#continentsView.swiping{will-change:transform;box-shadow:-14px 0 34px -12px rgba(0,0,0,.45)}
 .lv-sel{flex:none;border:0;border-radius:999px;padding:11px 14px;background:var(--chip);color:var(--ink);font-weight:700;font-size:15px}
 .lv-hint{margin:10px 0 0}
 .lv-body.withbar{padding-bottom:calc(110px + env(safe-area-inset-bottom,0px))}
@@ -627,7 +674,7 @@ button.pp-tile:active{transform:scale(.98)}
 .pp-view{z-index:41}
 .pp-view:not([hidden]){animation:viewUp .38s cubic-bezier(.2,.8,.2,1)}
 .pp-view .ov-body{max-width:520px;width:100%;margin:0 auto}
-[data-motion="reduce"] .pp-view:not([hidden]),[data-motion="reduce"] #placesView:not([hidden]){animation:none}
+[data-motion="reduce"] .pp-view:not([hidden]),[data-motion="reduce"] #placesView:not([hidden]),[data-motion="reduce"] #continentsView:not([hidden]){animation:none}
 .pp-defs{position:absolute;width:0;height:0;overflow:hidden}
 
 .pp-page{position:relative;display:none;grid-area:1/1;transform-origin:0 50%;backface-visibility:hidden;contain:layout style;box-sizing:border-box;padding:18px 12px 32px;background:var(--paper);background-image:repeating-radial-gradient(circle at 50% 120%,transparent 0 9px,color-mix(in srgb,var(--line) 45%,transparent) 9px 10px),radial-gradient(var(--line) 1px,transparent 1.2px);background-size:auto,16px 16px;border:1px solid var(--line);border-radius:var(--r-sm) var(--r-lg) var(--r-lg) var(--r-sm);box-shadow:inset 10px 0 12px -8px rgba(13,43,58,.22),0 6px 18px -10px rgba(13,43,58,.35)}

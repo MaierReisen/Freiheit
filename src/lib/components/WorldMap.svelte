@@ -146,6 +146,7 @@
 			resize: m.resize,
 			flyToCountry: m.flyToCountry,
 			flyToContinent: m.flyToContinent,
+			highlight: m.highlight,
 			scrollIntoView: () => box.scrollIntoView?.({ behavior: reduceMotion() ? 'auto' : 'smooth', block: 'center' })
 		};
 		return () => {

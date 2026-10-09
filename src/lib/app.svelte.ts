@@ -78,6 +78,8 @@ export const ui = $state({
 	sheetPeek: 260,
 	/** Seite „Deine Länder“ (Vollbild, über den Block auf der Startseite) */
 	placesOpen: false,
+	/** Seite „Deine Kontinente“ (Vollbild, über den Block auf der Startseite) */
+	continentsOpen: false,
 	full: false,
 	settingsOpen: false,
 	/** Reisepass (Vollbild, über die Kachel in der Länderliste) */
@@ -102,6 +104,8 @@ export interface MapHooks {
 	resize(): void;
 	flyToCountry(code: string, opts?: { keepK?: boolean; ms?: number }): void;
 	flyToContinent(code: string): void;
+	/** Länder kurz aufleuchten lassen (delay/dur in ms) */
+	highlight(codes: string | string[], delay?: number, dur?: number): void;
 	scrollIntoView(): void;
 }
 export const hooks: { map: MapHooks | null } = { map: null };
@@ -190,6 +194,7 @@ export function openSettings(fromHash = false) {
 	if (ui.sheetOpen) closeSheet();
 	if (ui.full) setFull(false, true);
 	if (ui.placesOpen) closePlaces(true);
+	if (ui.continentsOpen) closeContinents(true);
 	if (ui.passOpen) closePass(true);
 	settingsReturnFocus = document.activeElement;
 	ui.settingsOpen = true;
@@ -223,6 +228,7 @@ export function openPlaces(fromHash = false) {
 	if (ui.full) setFull(false, true);
 	if (ui.settingsOpen) closeSettings(true);
 	if (ui.passOpen) closePass(true);
+	if (ui.continentsOpen) closeContinents(true);
 	placesReturnFocus = document.activeElement;
 	ui.placesOpen = true;
 	document.body.classList.add('noscroll');
@@ -246,6 +252,40 @@ export function closePlaces(fromHash = false) {
 	if (placesReturnFocus instanceof HTMLElement) placesReturnFocus.focus({ preventScroll: true });
 }
 
+/* ---------- Deine Kontinente (Vollbild, wie „Deine Länder“) ---------- */
+let pushedConts = false;
+let contsReturnFocus: Element | null = null;
+export function openContinents(fromHash = false) {
+	if (ui.continentsOpen) return;
+	if (ui.sheetOpen) closeSheet();
+	if (ui.full) setFull(false, true);
+	if (ui.settingsOpen) closeSettings(true);
+	if (ui.passOpen) closePass(true);
+	if (ui.placesOpen) closePlaces(true);
+	contsReturnFocus = document.activeElement;
+	ui.continentsOpen = true;
+	document.body.classList.add('noscroll');
+	if (!fromHash) {
+		pushedConts = true;
+		location.hash = 'kontinente';
+	}
+	tick().then(() => document.getElementById('contsClose')?.focus({ preventScroll: true }));
+}
+/** refocus: false, wenn danach etwas anderes den Blick bekommt (z. B. der Globus) */
+export function closeContinents(fromHash = false, refocus = true) {
+	if (!ui.continentsOpen) return;
+	ui.continentsOpen = false;
+	if (ui.sheetOpen) closeSheet();
+	if (!ui.settingsOpen && !ui.passOpen && !ui.placesOpen) document.body.classList.remove('noscroll');
+	if (!fromHash) {
+		if (pushedConts && location.hash === '#kontinente') {
+			pushedConts = false;
+			history.back();
+		} else if (location.hash === '#kontinente') location.hash = 'home';
+	} else pushedConts = false;
+	if (refocus && contsReturnFocus instanceof HTMLElement) contsReturnFocus.focus({ preventScroll: true });
+}
+
 /* ---------- Reisepass (Vollbild, wie die Einstellungen) ---------- */
 let pushedPass = false;
 let passReturnFocus: Element | null = null;
@@ -254,6 +294,7 @@ export function openPass(fromHash = false) {
 	if (ui.sheetOpen) closeSheet();
 	if (ui.full) setFull(false, true);
 	if (ui.placesOpen) closePlaces(true);
+	if (ui.continentsOpen) closeContinents(true);
 	passReturnFocus = document.activeElement;
 	ui.passOpen = true;
 	document.body.classList.add('noscroll');
@@ -296,6 +337,7 @@ export function goTab(tab: string, push = true, dir?: number) {
 	if (ui.sheetOpen) closeSheet();
 	if (ui.full) setFull(false, true);
 	if (ui.placesOpen) closePlaces(true);
+	if (ui.continentsOpen) closeContinents(true);
 	if (ui.settingsOpen) closeSettings(true);
 	if (ui.passOpen) closePass(true);
 	if (dir === undefined) dir = Math.sign(TABS.indexOf(t) - TABS.indexOf(ui.tab));
@@ -314,6 +356,9 @@ export function initFromHash() {
 	} else if (h === 'laender' || h === 'places') {
 		showTab('home', 0);
 		openPlaces(true);
+	} else if (h === 'kontinente') {
+		showTab('home', 0);
+		openContinents(true);
 	} else if (isSettingsHash(h)) {
 		showTab('home', 0);
 		openSettings(true);
@@ -328,6 +373,7 @@ export function onHashChange() {
 	const h = location.hash.slice(1);
 	if (h === 'map') {
 		if (ui.placesOpen) closePlaces(true);
+		if (ui.continentsOpen) closeContinents(true);
 		if (ui.settingsOpen) closeSettings(true);
 		if (ui.tab !== 'home') showTab('home', 0);
 		setFull(true, true);
@@ -343,9 +389,15 @@ export function onHashChange() {
 		if (ui.full) setFull(false, true);
 		if (ui.tab !== 'home') showTab('home', 0);
 		openPlaces(true);
+	} else if (h === 'kontinente') {
+		if (ui.settingsOpen) closeSettings(true);
+		if (ui.full) setFull(false, true);
+		if (ui.tab !== 'home') showTab('home', 0);
+		openContinents(true);
 	} else {
 		if (ui.full) setFull(false, true);
 		if (ui.placesOpen) closePlaces(true);
+		if (ui.continentsOpen) closeContinents(true);
 		if (ui.settingsOpen) closeSettings(true);
 		if (ui.passOpen) closePass(true);
 		if (h !== ui.tab && !(h === '' && ui.tab === 'home')) goTab(h, false);
