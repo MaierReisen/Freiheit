@@ -6,9 +6,9 @@
 	import { passSeen } from '$lib/passSeen.svelte';
 
 	/* Reisepass-Kachel: Zähler, Rang-Abzeichen und Fortschritt bis zum nächsten Rang.
-	   In der Länderliste ein Knopf (öffnet den Pass), im Pass selbst nur die Anzeige. */
+	   In der Länderliste ein Knopf (öffnet den Pass), im Pass selbst kompakt als Knopf zu den Rängen. */
 
-	let { inPass = false }: { inPass?: boolean } = $props();
+	let { inPass = false, onrank }: { inPass?: boolean; onrank?: () => void } = $props();
 
 	const codes = $derived(countedCountries().map((c) => c.code));
 	const n = $derived(codes.length);
@@ -42,7 +42,9 @@
 {/snippet}
 
 {#if inPass}
-	<div class="pp-tile">{@render body()}</div>
+	<button type="button" class="pp-tile in-pass" aria-label="{n} Stempel{info.rank ? `, Rang ${info.rank.name}` : ''} – alle Ränge zeigen" onclick={() => onrank?.()}
+		>{@render body()}<span class="pp-chev" aria-hidden="true">›</span></button
+	>
 {:else}
 	<button type="button" class="pp-tile" class:fresh={fresh > 0} aria-label="Reisepass öffnen: {n} Stempel{fresh ? `, ${fresh} neu` : ''}{info.rank ? `, Rang ${info.rank.name}` : ''}" onclick={() => openPass()}>{@render body()}</button>
 {/if}

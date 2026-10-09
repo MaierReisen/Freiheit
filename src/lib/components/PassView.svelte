@@ -3,7 +3,7 @@
 	import { fade } from 'svelte/transition';
 	import { atlas, countedCountries, setWonder, visitedSet } from '$lib/atlas.svelte';
 	import { closePass, openCountry, reduceMotion, ui } from '$lib/app.svelte';
-	import { flag } from '$lib/countries';
+	import { CONT, flag, nameOf } from '$lib/countries';
 	import { INK_FILTERS, loadScenes, rankIndex, ranks, scenesLoaded, stamp, TIER_LABEL, wonderStamp, yearOf } from '$lib/passport';
 	import { WONDERS, type Wonder } from '$lib/wonders';
 	import { badgeLevels, badges, tierName, type Badge, type DetailItem } from '$lib/badges';
@@ -537,11 +537,12 @@
 			opened = false;
 			picked = null;
 			open = false;
-			legend = false;
+			leaf = null;
 			return;
 		}
 		if (opened || !scenesOk) return;
 		opened = true;
+		tab = 'st';
 		untrack(() => {
 			const codes = stamps.map((s) => s.code);
 			rollSpecials(codes);
@@ -659,11 +660,11 @@
 	/* ---------- Legende: Seltenheitsstufen (Blatt von unten, Runterwischen oder Tippen daneben schließt) ---------- */
 	const TIER_NAME = ['Common', 'Rare', 'Epic', 'Legendary'];
 	const pct = (p: number) => Math.round(p * 100) + ' %';
-	let legend = $state(false);
+	let leaf = $state<null | 'legend' | 'ranks' | 'share'>(null);
 	let legSheet = $state<HTMLDivElement>();
 	let legList = $state<HTMLDivElement>();
 	const legRows = $derived(
-		legend && scenesOk
+		leaf === 'legend' && scenesOk
 			? [
 					{ t: 0, p: pct(1 - CHANCE.rare - CHANCE.epic - CHANCE.legend), d: 'Normaler Stempel – so sieht es bei den meisten Ländern aus.', s: stamp('JP', 12, undefined, 0) },
 					{ t: 1, p: pct(CHANCE.rare), d: 'Eingeklebte Briefmarke statt Stempel.', s: stamp('JP', 12, undefined, 1) },
@@ -709,7 +710,7 @@
 			if (mode !== 1) return;
 			if (dy > 70 || (vy > 0.5 && dy > 20)) {
 				sOff = dy;
-				legend = false;
+				leaf = null;
 			} else {
 				el.style.transition = 'transform .2s cubic-bezier(.2,.8,.2,1)';
 				el.style.transform = '';
@@ -725,6 +726,79 @@
 			el.removeEventListener('touchend', te);
 			el.removeEventListener('touchcancel', te);
 		};
+	});
+
+	/* ---------- Reiter: Stempel / Weltwunder / Abzeichen ---------- */
+	let tab = $state<'st' | 'ww' | 'ab'>('st');
+	function pickTab(t: typeof tab) {
+		if (t === tab) return;
+		choose(null);
+		tab = t;
+		body?.scrollTo(0, 0);
+	}
+	/** „A, B und C“ */
+	const list2 = (xs: string[], und: string) => (xs.length > 1 ? `${xs.slice(0, -1).join(', ')} ${und} ${xs[xs.length - 1]}` : (xs[0] ?? ''));
+	// Weltwunder, die auf „Hier war ich“ warten (Punkt am Reiter)
+	const wonderOpen = $derived(wonders.filter((w) => w.open && !w.have));
+	// Abzeichen: erreichte zuerst (höchste Stufe vorn), dann fast geschaffte (≥ 50 % zur ersten Stufe), Rest eingeklappt
+	let moreBadges = $state(false);
+	const bGot = $derived(bs.filter((b) => b.level > 0).sort((a, b) => b.level / b.tiers.length - a.level / a.tiers.length || b.p - a.p));
+	const bNear = $derived(bs.filter((b) => !b.level && b.p >= 0.5).sort((a, b) => b.p - a.p));
+	const bRest = $derived(bs.filter((b) => !b.level && b.p < 0.5).sort((a, b) => b.p - a.p));
+	const medals = $derived([3, 2, 1].map((t) => bs.filter((b) => tierClass(b) === 't' + t).length));
+
+	/* ---------- Teilen: Übersicht als Bild (zwei Varianten, ohne Namen) ---------- */
+	type Card = { url: string; png: Blob };
+	let share = $state<{ v: 'cover' | 'collage'; cards: Partial<Record<'cover' | 'collage', Card>>; busy: boolean; msg: string } | null>(null);
+	let scMod: typeof import('$lib/sharecard') | null = null;
+	async function makeCard(v: 'cover' | 'collage') {
+		if (!share || share.cards[v]) return;
+		const sc = (scMod ??= await import('$lib/sharecard'));
+		const area = bs.find((b) => b.id === 'area');
+		const years = stamps.map((s) => yearOf(s.entered)).filter(Boolean);
+		const svg = await sc.cardSvg(
+			{
+				n: stamps.length,
+				rank: ri >= 0 ? { icon: allRanks[ri].icon, name: allRanks[ri].name } : null,
+				conts: [...new Set(stamps.map((s) => CONT[s.code]).filter(Boolean))],
+				since: years.length ? Math.min(...years) : 0,
+				area: area ? area.v : null,
+				wonders: wonderCount,
+				wondersAll: WONDERS.length,
+				badges: badgeLevels(bs),
+				stamps: stamps.map((s) => ({ code: s.code, nr: s.nr, sp: s.sp, s: s.s }))
+			},
+			v
+		);
+		const png = await sc.toPng(svg);
+		if (!share) return;
+		share.cards[v] = { url: URL.createObjectURL(png), png };
+	}
+	function openShare() {
+		choose(null);
+		sOff = 0;
+		share = { v: 'cover', cards: {}, busy: false, msg: '' };
+		leaf = 'share';
+		makeCard('cover').then(() => makeCard('collage')).catch((e) => { console.error(e); if (share) share.msg = 'Das Bild konnte nicht erstellt werden.'; });
+	}
+	async function doShare() {
+		const c = share?.cards[share.v];
+		if (!share || !c || share.busy) return;
+		if (!scMod) return;
+		share.busy = true;
+		share.msg = '';
+		// sofort aufrufen (ohne vorheriges Warten), sonst öffnet Safari das Teilen-Menü nicht
+		const r = await scMod.shareImage(c.png);
+		if (share) {
+			share.busy = false;
+			share.msg = r === 'saved' ? 'Bild gespeichert.' : '';
+		}
+	}
+	// Bilder freigeben, sobald das Blatt zu ist
+	$effect(() => {
+		if (leaf === 'share' || !share) return;
+		for (const c of Object.values(share.cards)) URL.revokeObjectURL(c.url);
+		share = null;
 	});
 
 	/** Tintenspritzer, Konfetti und „+1 Stempel“ über dem Stempel */
@@ -783,23 +857,32 @@
 			><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg></button
 		>
 		<h1 class="set-title" id="passTitle">Reisepass</h1>
+		{#if stamps.length && scenesOk}
+			<button type="button" class="ov-close pp-share" aria-label="Pass als Bild teilen" onclick={openShare}
+				><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V3M7 8l5-5 5 5M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6" /></svg></button
+			>
+		{/if}
 	</div>
 	<div class="ov-body" bind:this={body} style:padding-bottom={pick ? sheetH + 16 + 'px' : null} onscroll={() => { if (ui.passOpen) lastScroll = body.scrollTop; }}>
 		{#if ui.passOpen && scenesOk}
-			<div style="margin-top:20px"><PassTile inPass /></div>
-			<ol class="pp-ranks" aria-label="Ränge">
-				{#each allRanks as r, i (r.n)}
-					<li class:on={i <= ri} class:cur={i === ri}><span aria-hidden="true">{r.icon}</span><b>{r.name}</b><small>{r.n}</small></li>
-				{/each}
-			</ol>
-			{#if ri >= 0}<p class="pp-say">„{allRanks[ri].say}“</p>{/if}
+			<div class="pp-top"><PassTile inPass onrank={() => { choose(null); sOff = 0; leaf = 'ranks'; }} /></div>
+			<div class="pp-tabs" role="tablist" aria-label="Bereiche des Passes">
+				<button type="button" role="tab" aria-selected={tab === 'st'} onclick={() => pickTab('st')}>Stempel<small>{stamps.length}</small></button>
+				<button type="button" role="tab" aria-selected={tab === 'ww'} onclick={() => pickTab('ww')}
+					>Weltwunder<small>{wonderCount} / {WONDERS.length}</small>{#if wonderOpen.length}<i class="pp-dot" aria-label="wartet auf dich"></i>{/if}</button
+				>
+				<button type="button" role="tab" aria-selected={tab === 'ab'} onclick={() => pickTab('ab')}
+					>Abzeichen<small>{badgeLevels(bs)} / {bs.reduce((s, b) => s + b.tiers.length, 0)}</small></button
+				>
+			</div>
 
+			<div role="tabpanel" aria-label="Stempel" hidden={tab !== 'st'}>
 			{#if !stamps.length}
 				<p class="empty">Noch keine Stempel. Für jedes bereiste Land kommt hier ein Stempel in deinen Pass.</p>
 			{/if}
 			{#if pages.length}
 				<div class="pp-tools">
-					<button type="button" class="pp-info" onclick={() => { choose(null); sOff = 0; legend = true; }}
+					<button type="button" class="pp-info" onclick={() => { choose(null); sOff = 0; leaf = 'legend'; }}
 						><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 11v6M12 7.5v.5" /></svg>Seltenheit</button
 					>
 				</div>
@@ -879,65 +962,105 @@
 					</div>
 				{/if}
 			{/if}
-			<div class="pp-visa pp-wonders">
-				<div class="pp-page-h"><span>Weltwunder</span><span>{wonderCount} / {WONDERS.length}</span></div>
-				<div class="pp-grid pp-wgrid">
-					{#each wonders as w (w.id)}
-						{#if w.have}
-							<button
-								type="button"
-								class="pp-slot sp"
-								data-wonder={w.id}
-								class:wait={wonderNew === w.id}
-								style="transform:rotate({w.s.rot}deg);--c:{w.s.color}"
-								aria-label="Weltwunder {w.name}, gesehen – antippen zum Entfernen"
-								onclick={() => drop(w)}>{@html w.s.svg}</button
-							>
-						{:else if w.open}
-							<button type="button" class="pp-slot" aria-label="Weltwunder {w.name}: Hier war ich" onclick={() => collect(w)}
-								><span class="pp-empty pp-wopen"><b>?</b>{w.name}<em>Hier war ich</em></span></button
-							>
-						{:else}
-							<button type="button" class="pp-slot" aria-label="Weltwunder {w.name}, {w.place} – Land noch nicht bereist" onclick={() => openCountry(w.code)}
-								><span class="pp-empty pp-wlock"><i>{flag(w.code)}</i>{w.name}<small>{w.place}</small></span></button
-							>
-						{/if}
-					{/each}
-				</div>
-				<p class="pp-wnote">Sobald du das Land bereist hast, erscheint ein „?“. Tippe darauf, wenn du das Weltwunder gesehen hast.</p>
+				{#if stamps.length}
+					<p class="note">Stempel antippen öffnet das Land. Dort kannst du auch das Datum der ersten Einreise eintragen – es erscheint dann auf dem Stempel.</p>
+				{/if}
 			</div>
-			{#if bs.length}
-				<div class="pp-visa">
-					<div class="pp-page-h"><span>Abzeichen</span><span>{badgeLevels(bs)} / {bs.reduce((s, b) => s + b.tiers.length, 0)}</span></div>
-					<div class="pp-badges">
-						{#each bs as b (b.id)}
-							{@const max = b.level >= b.tiers.length}
-							<button
-								type="button"
-								class="pp-badge {tierClass(b)}"
-								class:max
-								class:sel={picked === b.id}
-								data-badge={b.id}
-								aria-pressed={picked === b.id}
-								aria-label="{b.name}: {max ? tierName(b, b.level) + ' erreicht' : `${b.prog}, noch ${b.fmt(b.tiers[b.level] - b.v)} bis ${tierName(b, b.level + 1)}`}"
-								onclick={() => choose(picked === b.id ? null : b.id)}
-							>
-								<span class="pp-medal" aria-hidden="true"><span><i>{b.icon}</i></span></span>
-								<b>{b.name}</b>
-								<span class="pp-steps" aria-hidden="true">{#each b.seg as f, i (i)}<i class={tc(b, i + 1)} style="--f:{f}"></i>{/each}</span>
-								<small aria-hidden="true"
-									>{#if max}{tierName(b, b.level)} ✓{:else}noch {b.fmt(b.tiers[b.level] - b.v).replace(' ', '\u00a0')} bis <em class={tc(b, b.level + 1)}>{tierName(b, b.level + 1)}</em>{/if}</small
+
+			<div role="tabpanel" aria-label="Weltwunder" hidden={tab !== 'ww'}>
+				<div class="pp-wintro">
+					<span class="pp-wring" style="--p:{(wonderCount / WONDERS.length) * 100}" aria-hidden="true"><span>{wonderCount}/{WONDERS.length}</span></span>
+					<p>
+						{#if wonderCount === WONDERS.length}
+							<b>Alle {WONDERS.length} Weltwunder gesehen!</b> Die ganze Liste ist komplett.
+						{:else if wonderOpen.length}
+							{#if wonderCount}<b>{wonderCount} Weltwunder gesehen.</b>{/if}
+							In {list2([...new Set(wonderOpen.map((w) => nameOf(w.code)))], 'und')} warst du schon – tippe auf das „?“, wenn du {list2(wonderOpen.map((w) => w.name), 'oder')} gesehen hast.
+						{:else}
+							{#if wonderCount}<b>{wonderCount} Weltwunder gesehen.</b>{/if}
+							Sobald du das Land eines Weltwunders bereist hast, erscheint dort ein „?“.
+						{/if}
+					</p>
+				</div>
+				<div class="pp-visa pp-wonders">
+					<div class="pp-page-h"><span>Weltwunder</span><span>{wonderCount} / {WONDERS.length}</span></div>
+					<div class="pp-grid pp-wgrid">
+						{#each wonders as w (w.id)}
+							{#if w.have}
+								<button
+									type="button"
+									class="pp-slot sp"
+									data-wonder={w.id}
+									class:wait={wonderNew === w.id}
+									style="transform:rotate({w.s.rot}deg);--c:{w.s.color}"
+									aria-label="Weltwunder {w.name}, gesehen – antippen zum Entfernen"
+									onclick={() => drop(w)}>{@html w.s.svg}</button
 								>
-							</button>
+							{:else if w.open}
+								<button type="button" class="pp-slot" aria-label="Weltwunder {w.name}: Hier war ich" onclick={() => collect(w)}
+									><span class="pp-empty pp-wopen"><b>?</b>{w.name}<em>Hier war ich</em></span></button
+								>
+							{:else}
+								<button type="button" class="pp-slot" aria-label="Weltwunder {w.name}, {w.place} – Land noch nicht bereist" onclick={() => openCountry(w.code)}
+									><span class="pp-empty pp-wlock"><i>{flag(w.code)}</i>{w.name}<small>{w.place}</small></span></button
+								>
+							{/if}
 						{/each}
 					</div>
 				</div>
-			{/if}
-			{#if stamps.length}
-				<p class="note">Stempel antippen öffnet das Land. Dort kannst du auch das Datum der ersten Einreise eintragen – es erscheint dann auf dem Stempel.</p>
-			{/if}
+			</div>
+
+			<div role="tabpanel" aria-label="Abzeichen" hidden={tab !== 'ab'}>
+				{#if bs.length}
+					<div class="pp-mcount" aria-label="{medals[0]} Gold, {medals[1]} Silber, {medals[2]} Bronze">
+						<span><i class="t3"></i>{medals[0]} Gold</span><span><i class="t2"></i>{medals[1]} Silber</span><span><i class="t1"></i>{medals[2]} Bronze</span>
+					</div>
+					{#if bGot.length}
+						<div class="pp-visa">
+							<div class="pp-page-h"><span>Erreicht</span><span>{bGot.length}</span></div>
+							<div class="pp-badges">{#each bGot as b (b.id)}{@render badge(b)}{/each}</div>
+						</div>
+					{/if}
+					{#if bNear.length}
+						<div class="pp-visa">
+							<div class="pp-page-h"><span>Fast geschafft</span><span>{bNear.length}</span></div>
+							<div class="pp-badges">{#each bNear as b (b.id)}{@render badge(b)}{/each}</div>
+						</div>
+					{/if}
+					{#if bRest.length}
+						{#if moreBadges || (!bGot.length && !bNear.length)}
+							<div class="pp-visa">
+								<div class="pp-page-h"><span>Weitere</span><span>{bRest.length}</span></div>
+								<div class="pp-badges">{#each bRest as b (b.id)}{@render badge(b)}{/each}</div>
+							</div>
+						{:else}
+							<button type="button" class="pp-morebtn" onclick={() => (moreBadges = true)}>Weitere Abzeichen zeigen ({bRest.length})</button>
+						{/if}
+					{/if}
+				{/if}
+			</div>
 		{/if}
 	</div>
+	{#snippet badge(b: Badge)}
+		{@const max = b.level >= b.tiers.length}
+		<button
+			type="button"
+			class="pp-badge {tierClass(b)}"
+			class:max
+			class:sel={picked === b.id}
+			data-badge={b.id}
+			aria-pressed={picked === b.id}
+			aria-label="{b.name}: {max ? tierName(b, b.level) + ' erreicht' : `${b.prog}, noch ${b.fmt(b.tiers[b.level] - b.v)} bis ${tierName(b, b.level + 1)}`}"
+			onclick={() => choose(picked === b.id ? null : b.id)}
+		>
+			<span class="pp-medal" aria-hidden="true"><span><i>{b.icon}</i></span></span>
+			<b>{b.name}</b>
+			<span class="pp-steps" aria-hidden="true">{#each b.seg as f, i (i)}<i class={tc(b, i + 1)} style="--f:{f}"></i>{/each}</span>
+			<small aria-hidden="true"
+				>{#if max}{tierName(b, b.level)} ✓{:else}noch {b.fmt(b.tiers[b.level] - b.v).replace(' ', ' ')} bis <em class={tc(b, b.level + 1)}>{tierName(b, b.level + 1)}</em>{/if}</small
+			>
+		</button>
+	{/snippet}
 	{#snippet row(it: DetailItem)}
 		{#if it.code}
 			{@const code = it.code}
@@ -995,21 +1118,52 @@
 			{/if}
 		</div>
 	{/if}
-	{#if legend}
-		<button type="button" class="pp-scrim" aria-label="Legende schließen" onclick={() => (legend = false)} transition:fade={{ duration: reduceMotion() ? 0 : 200 }}></button>
-		<div class="pp-sheet pp-leg" bind:this={legSheet} transition:slideUp role="dialog" aria-labelledby="ppLegT">
-			<button type="button" class="pp-grab" aria-label="Legende schließen" onclick={() => (legend = false)}><i></i></button>
+	{#if leaf}
+		{@const closeT = leaf === 'legend' ? 'Legende schließen' : 'Schließen'}
+		<button type="button" class="pp-scrim" aria-label={closeT} onclick={() => (leaf = null)} transition:fade={{ duration: reduceMotion() ? 0 : 200 }}></button>
+		<div class="pp-sheet pp-leg" class:pp-shr={leaf === 'share'} bind:this={legSheet} transition:slideUp role="dialog" aria-labelledby="ppLegT">
+			<button type="button" class="pp-grab" aria-label={closeT} onclick={() => (leaf = null)}><i></i></button>
 			<div class="pp-leg-list" bind:this={legList}>
-				<h2 id="ppLegT">Seltenheit der Stempel</h2>
-				<p>Jedes Land wird beim ersten Öffnen des Passes einmal ausgelost. Das Ergebnis bleibt und gilt auf allen Geräten.</p>
-				<ul>
-					{#each legRows as x (x.t)}
-						<li>
-							<span class="pp-leg-st" style="color:{x.s.color}">{@html x.s.svg}</span>
-							<span><b>{TIER_NAME[x.t]} <em class="r{x.t}">{x.p}</em></b><small>{x.d}</small></span>
-						</li>
-					{/each}
-				</ul>
+				{#if leaf === 'legend'}
+					<h2 id="ppLegT">Seltenheit der Stempel</h2>
+					<p>Jedes Land wird beim ersten Öffnen des Passes einmal ausgelost. Das Ergebnis bleibt und gilt auf allen Geräten.</p>
+					<ul>
+						{#each legRows as x (x.t)}
+							<li>
+								<span class="pp-leg-st" style="color:{x.s.color}">{@html x.s.svg}</span>
+								<span><b>{TIER_NAME[x.t]} <em class="r{x.t}">{x.p}</em></b><small>{x.d}</small></span>
+							</li>
+						{/each}
+					</ul>
+				{:else if leaf === 'ranks'}
+					<h2 id="ppLegT">Ränge</h2>
+					{#if ri >= 0}<p class="pp-rsay">„{allRanks[ri].say}“</p>{:else}<p>Mit dem ersten Land bekommst du deinen ersten Rang.</p>{/if}
+					<ol class="pp-rlist">
+						{#each allRanks as r, i (r.n)}
+							<li class:on={i <= ri} class:cur={i === ri}>
+								<span aria-hidden="true">{r.icon}</span><b>{r.name}</b><small>{i === allRanks.length - 1 ? 'alle' : r.n} {r.n === 1 ? 'Land' : 'Länder'}</small>
+							</li>
+						{/each}
+					</ol>
+				{:else if share}
+					<h2 id="ppLegT">Pass teilen</h2>
+					<p>Als Bild – ohne deinen Namen. Passt für WhatsApp, Instagram & Co.</p>
+					<div class="pp-seg" role="group" aria-label="Aussehen">
+						<button type="button" aria-pressed={share.v === 'cover'} onclick={() => share && (share.v = 'cover')}>Pass-Umschlag</button>
+						<button type="button" aria-pressed={share.v === 'collage'} onclick={() => share && (share.v = 'collage')}>Stempel-Collage</button>
+					</div>
+					<div class="pp-card">
+						{#if share.cards[share.v]}
+							<img src={share.cards[share.v]!.url} alt="Vorschau des Bildes zum Teilen" width="1080" height="1920" />
+						{:else}
+							<span class="pp-card-wait" aria-label="Bild wird erstellt"></span>
+						{/if}
+					</div>
+					<button type="button" class="pp-sharebtn" disabled={!share.cards[share.v] || share.busy} onclick={doShare}
+						><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V3M7 8l5-5 5 5M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6" /></svg>Bild teilen</button
+					>
+					{#if share.msg}<p class="pp-sharemsg" role="status">{share.msg}</p>{/if}
+				{/if}
 			</div>
 		</div>
 	{/if}
