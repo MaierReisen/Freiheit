@@ -30,6 +30,8 @@ Live: https://maierreisen.github.io/Freiheit/ · Repo: MaierReisen/Freiheit · n
 - `src/lib/badges.ts`: Abzeichen der Visa-Seite im Pass (Bronze/Silber/Gold, aus facts.json + Einreisedaten; Kachel mit Stufenleiste + „noch N bis …“, Blatt per Hochwischen aufklappbar mit Liste „zählt schon / fehlt noch“ aus `detail()`); neue Stufe → Feier-Karte über `ui.unlock.badge` (in `Hero`).
 - `src/lib/countries.ts`: `nameOf()` – Ländernamen zuerst aus `data/names.json` (feste deutsche Namen).
 
+- `docs/STEMPEL.md`: Übersicht aller Stempel (alle Länder mit Motiv/Form/Farbe/Rare/Epic/Legendary, Seltenheit & Chancen, Ränge, Weltwunder, Abzeichen). Wird erzeugt: `node scripts/build-stempel-doc.mjs` – nach Änderungen an Stempeln, Bildern, Chancen, Rängen oder Abzeichen neu erzeugen und mit committen; nicht von Hand ändern.
+
 ## Daten (`src/lib/data/`, erzeugt durch `scripts/`)
 - `facts.json` ← `build-facts.py` (Wikidata/Natural Earth: Hauptstadt, Einwohner, Fläche, Nachbarn nur Landgrenzen + feste Verbindungen, Berg).
 - `entry.json` ← `build-entry.py` (Auswärtiges Amt OpenData) + Handeinordnung `scripts/entry-curated.json`. Ändert das AA Texte, erkennt die Signatur das und die App zeigt den AA-Satz; nach Prüfung mit `--accept` übernehmen.
