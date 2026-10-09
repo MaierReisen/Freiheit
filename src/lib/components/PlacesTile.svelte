@@ -17,15 +17,9 @@
 </script>
 
 <button type="button" class="cat-row" aria-label="Deine Länder öffnen: {n} von {total}" onclick={() => openPlaces()}>
-	<span class="cat-ico flagico" aria-hidden="true">
-		<!-- Fähnchen mit Herz, auf einen kleinen Globus gesteckt -->
-		<svg viewBox="0 0 48 48">
-			<circle class="gl" cx="24" cy="32.5" r="11.5" />
-			<ellipse class="gl-l" cx="24" cy="32.5" rx="5" ry="11.5" /><path class="gl-l" d="M12.5 32.5h23M14.5 26.5q9.5 3 19 0M14.5 38.5q9.5-3 19 0" />
-			<path class="pole" d="M24 21.5V5.5" />
-			<path class="flg" d="M24.5 6.5c3-1.7 5.6-1.7 8 0s5 1.7 7.5 0v9c-2.5 1.7-5 1.7-7.5 0s-5-1.7-8 0z" />
-			<path class="hrt" d="M32.2 14.4c-2.1-1.4-3.1-2.5-3.1-3.6a1.55 1.55 0 0 1 3.1-.4a1.55 1.55 0 0 1 3.1.4c0 1.1-1 2.2-3.1 3.6z" />
-		</svg>
+	<span class="cat-ico" aria-hidden="true">
+		<!-- Goldprägung wie auf dem Reisepass: Fähnchen -->
+		<svg viewBox="0 0 24 24"><path d="M6 21V3.5M6 4.5c3-1.6 5.5 1.6 8.5 0 1.8-.9 3.3-.9 4.5-.3v8c-1.2-.6-2.7-.6-4.5.3-3 1.6-5.5-1.6-8.5 0" /></svg>
 	</span>
 	<span class="cat-txt">
 		<span class="cat-name">Deine Länder</span>

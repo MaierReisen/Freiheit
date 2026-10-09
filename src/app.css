@@ -320,27 +320,11 @@ button.cont{border:0;font:inherit;font-size:14px;color:inherit}
 .cat-row{width:100%;display:flex;align-items:center;gap:14px;padding:14px 16px;border:0;background:none;color:var(--ink);text-align:left;-webkit-tap-highlight-color:transparent;transition:background .15s}
 .cat-row + .cat-row{border-top:1px solid var(--line)}
 .cat-row:active{background:var(--chip)}
-.cat-ico{flex:none;display:grid;place-items:center;width:52px;height:52px;border-radius:15px;background:linear-gradient(150deg,#35C2B1,#0B5A66);box-shadow:inset 0 1px 0 rgba(255,255,255,.28),0 6px 14px -8px rgba(11,90,102,.7)}
-.cat-ico svg{width:52px;height:52px}
-.flagico .gl{fill:rgba(255,255,255,.2);stroke:#fff;stroke-width:2.2}
-.flagico .gl-l{fill:none;stroke:rgba(255,255,255,.75);stroke-width:1.5;stroke-linecap:round}
-.flagico .pole{stroke:#fff;stroke-width:2.2;stroke-linecap:round}
-.flagico .flg{fill:#FFD27A;stroke:#0B5A66;stroke-width:1.4;stroke-linejoin:round}
-.flagico .hrt{fill:#E8604A}
-/* Kontinente: Globus mit Landmassen, Flugzeug auf gestrichelter Route */
-.contico{background:linear-gradient(150deg,#6DB8F2,#1F4E8C);box-shadow:inset 0 1px 0 rgba(255,255,255,.28),0 6px 14px -8px rgba(31,78,140,.75)}
-.contico .gl{fill:rgba(255,255,255,.18);stroke:#fff;stroke-width:2.2}
-.contico .land{fill:#A8E39B}
-.contico .route{fill:none;stroke:rgba(255,255,255,.85);stroke-width:1.6;stroke-linecap:round;stroke-dasharray:2.2 3}
-.contico .plane{fill:#FFD27A;stroke:#1F4E8C;stroke-width:1.2;stroke-linejoin:round}
-/* Hauptstädte: Kuppelbau mit goldenem Hauptstadt-Stern */
-.capico{background:linear-gradient(150deg,#F6A46E,#B0443A);box-shadow:inset 0 1px 0 rgba(255,255,255,.28),0 6px 14px -8px rgba(176,68,58,.75)}
-.capico .bg{fill:rgba(255,255,255,.28)}
-.capico .bd{fill:rgba(255,255,255,.22);stroke:#fff;stroke-width:1.8;stroke-linejoin:round}
-.capico .col{stroke:#fff;stroke-width:1.6;stroke-linecap:round}
-.capico .door{fill:#fff}
-.capico .star{fill:#FFD27A;stroke:#8A3328;stroke-width:1.1;stroke-linejoin:round}
-.capico .tw{fill:#fff}
+/* Icons im Stil des Reisepasses: dunkles Leder, Goldrahmen, Goldlinien */
+.cat-ico{position:relative;flex:none;display:grid;place-items:center;width:52px;height:52px;border-radius:14px;background:radial-gradient(90% 60% at 30% 15%,rgba(255,255,255,.10),transparent 60%),repeating-linear-gradient(45deg,rgba(255,255,255,.035) 0 1px,transparent 1px 3px),linear-gradient(155deg,#18424a,#0B242B 70%);box-shadow:inset 0 0 0 1px rgba(0,0,0,.35),0 6px 14px -8px rgba(5,20,28,.55);color:#C9A24D}
+.cat-ico::before{content:"";position:absolute;inset:5px;border:1px solid rgba(201,162,77,.55);border-radius:10px;pointer-events:none}
+.cat-ico svg{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 1px 0 rgba(0,0,0,.5))}
+.cat-ico svg .thin{stroke-width:1.3}
 .cat-txt{flex:1;min-width:0;display:flex;flex-direction:column;align-items:flex-start}
 .cat-name{font:800 18px/1.15 var(--display);letter-spacing:-.01em;white-space:nowrap}
 .cat-sub{font-size:13px;color:var(--muted);margin-top:2px}

@@ -1,6 +1,6 @@
 import { geoPath, geoProjection } from 'd3-geo';
 import { CONT, CONT_NAMES, type ContinentCode } from './countries';
-import { getLod, INFO } from './map/geo';
+import { getLod } from './map/geo';
 import { INK_FILTERS, type Stamp } from './passport';
 
 /* Teilen-Karte des Reisepasses: ein Bild im Hochformat (1080 × 1920, passend für Story/Status), ohne Namen.
@@ -100,21 +100,16 @@ function buildMap(visited: Set<string>, w: number, on: string, off: string) {
 	const y1 = proj([0, SOUTH])![1];
 	proj.clipExtent([[-1, y0 - 1], [w + 1, y1]]);
 	const path = geoPath(proj).digits(1);
+	// nur die tatsächliche Fläche einfärben – keine Ersatz-Punkte für Zwergstaaten und kleine Inseln
 	let v = '',
-		o = '',
-		dots = '';
+		o = '';
 	for (const f of land) {
 		const d = path(f) ?? '';
-		if (visited.has(f.id)) {
-			v += d;
-			// kleine Länder (Inseln, Zwergstaaten) sonst unsichtbar: Punkt dazu
-			const inf = INFO[f.id];
-			const p = inf && inf.area < 0.0004 ? proj(inf.c) : null;
-			if (p) dots += `<circle cx="${r1(p[0])}" cy="${r1(p[1])}" r="7"/>`;
-		} else o += d;
+		if (visited.has(f.id)) v += d;
+		else o += d;
 	}
 	const h = Math.ceil(y1 - y0);
-	return { h, y0: r1(y0), inner: `<path d="${o}" fill="${off}"/><path d="${v}" fill="${on}"/><g fill="${on}">${dots}</g>` };
+	return { h, y0: r1(y0), inner: `<path d="${o}" fill="${off}"/><path d="${v}" fill="${on}"/>` };
 }
 
 /* ---------- Variante „Pass-Umschlag“ ---------- */
