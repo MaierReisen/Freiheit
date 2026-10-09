@@ -313,8 +313,8 @@ button.cont{border:0;font:inherit;font-size:14px;color:inherit}
 .blocks{display:flex;flex-direction:column;margin-top:18px}
 .blk-ico{flex:none;display:grid;place-items:center;width:56px;height:56px;border-radius:16px;background:color-mix(in srgb,var(--primary) 14%,var(--chip));color:var(--primary)}
 .blk-ico svg{width:30px;height:30px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-.blk-title{font:700 13px var(--text);letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin-bottom:5px}
-.blk-flags{display:inline-flex;gap:2px;margin-right:8px;font-size:15px;vertical-align:-1px}
+.blk-name{font:800 26px/1.1 var(--display);letter-spacing:-.02em}
+.blk-flags{display:flex;gap:6px;margin-top:8px;font-size:20px;line-height:1}
 
 /* Seite „Deine Länder“ */
 .lv-head .set-title{font-size:22px;white-space:nowrap}

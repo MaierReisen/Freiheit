@@ -3,7 +3,7 @@
 	import { atlas, countedCountries, isCounted, removeCountries, removeCountry, reorderCountries, type CountryEntry } from '$lib/atlas.svelte';
 	import { CONT, CONT_NAMES, compareNames, contOf, flag } from '$lib/countries';
 	import { SCOPES, scopeTotal } from '$lib/scope';
-	import { closePlaces, openCountry, ui } from '$lib/app.svelte';
+	import { closePlaces, openCountry, reduceMotion, ui } from '$lib/app.svelte';
 	import { reorder } from '$lib/reorder';
 	import SwipeRow from './SwipeRow.svelte';
 
@@ -95,6 +95,52 @@
 		if (picked.some((c) => !have.has(c))) picked = picked.filter((c) => have.has(c));
 	});
 
+	/* Nach rechts wischen = zurück (iOS-Vorbild; in der installierten App gibt es sonst keine Zurück-Geste).
+	   Gilt überall auf der Seite, außer beim Umsortieren, bei aufgewischter Zeile und im Suchfeld. */
+	let view: HTMLElement;
+	let back: { x: number; y: number; dir: 'h' | 'v' | null; dx: number } | null = null;
+	function backStart(e: TouchEvent) {
+		back = null;
+		const t = e.target as Element;
+		if (e.touches.length !== 1 || selecting || t.closest('input') || view.querySelector('.swipe-del') || view.querySelector('.list.dragging')) return;
+		back = { x: e.touches[0].clientX, y: e.touches[0].clientY, dir: null, dx: 0 };
+	}
+	function backMove(e: TouchEvent) {
+		if (!back) return;
+		if (view.querySelector('.list.dragging')) {
+			back = null;
+			view.style.transform = '';
+			return;
+		}
+		const dx = e.touches[0].clientX - back.x,
+			dy = e.touches[0].clientY - back.y;
+		if (!back.dir) {
+			if (Math.abs(dx) < 10 && Math.abs(dy) < 10) return;
+			// nur klar waagerecht nach rechts; nach links gehört der Zeile (Löschen)
+			back.dir = dx > 0 && dx > Math.abs(dy) * 1.6 ? 'h' : 'v';
+		}
+		if (back.dir !== 'h') return;
+		back.dx = Math.max(0, dx);
+		view.style.transition = 'none';
+		view.style.transform = `translateX(${back.dx}px)`;
+	}
+	function backEnd() {
+		const b = back;
+		back = null;
+		if (!b || b.dir !== 'h') return;
+		const go = b.dx > 90;
+		view.style.transition = reduceMotion() ? 'none' : 'transform .22s cubic-bezier(.2,.8,.2,1)';
+		view.style.transform = go ? 'translateX(100%)' : '';
+		if (go) setTimeout(() => closePlaces(false), reduceMotion() ? 0 : 200);
+		// danach Ausgangszustand für das nächste Öffnen
+		setTimeout(() => {
+			if (go) {
+				view.style.transition = 'none';
+				view.style.transform = '';
+			}
+		}, 450);
+	}
+
 	onMount(() => {
 		try {
 			const s = localStorage.getItem(SORT_KEY);
@@ -122,7 +168,7 @@
 {/snippet}
 
 <!-- svelte-ignore a11y_no_noninteractive_element_to_interactive_role -->
-<section class="ov set-view" id="placesView" role="dialog" aria-modal="true" aria-labelledby="placesTitle" hidden={!ui.placesOpen}>
+<section class="ov set-view" id="placesView" role="dialog" aria-modal="true" aria-labelledby="placesTitle" hidden={!ui.placesOpen} bind:this={view} ontouchstart={backStart} ontouchmove={backMove} ontouchend={backEnd} ontouchcancel={backEnd}>
 	<div class="ov-head lv-head">
 		<button type="button" class="ov-close" id="placesClose" aria-label="Deine Länder schließen" onclick={() => closePlaces(false)}
 			><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg></button
