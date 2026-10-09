@@ -171,7 +171,7 @@ function collage(d: ShareData) {
 	for (const c of d.conts) per.set(c, d.stamps.filter((s) => CONT[s.code] === c).length);
 	const chips: string[] = [];
 	let x = 64,
-		y = 722;
+		y = 746;
 	for (const [c, k] of [...per].sort((p, q) => q[1] - p[1])) {
 		const label = CONT_NAMES[c],
 			kw = tw(String(k), 30, 0.6),
@@ -185,7 +185,7 @@ function collage(d: ShareData) {
 	}
 	// unter dem Horizont: zwei Werte-Kacheln nebeneinander (Platz für jede Länderzahl)
 	const tile = (tx: number, v: string, l: string) =>
-		`<g transform="translate(${tx} 570)"><rect width="468" height="112" rx="30" fill="#fff" fill-opacity=".72" stroke="${LINE}" stroke-width="2"/><rect x="18" y="18" width="10" height="76" rx="5" fill="${SUN}"/><text x="50" y="74" font-family="${UNB}" font-weight="800" font-size="46" fill="${PRIMARY}">${esc(v)}<tspan font-family="${FIG}" font-weight="600" font-size="30" fill="${MUTED}" dx="16">${esc(l)}</tspan></text></g>`;
+		`<g transform="translate(${tx} 594)"><rect width="468" height="112" rx="30" fill="#fff" fill-opacity=".72" stroke="${LINE}" stroke-width="2"/><rect x="18" y="18" width="10" height="76" rx="5" fill="${SUN}"/><text x="50" y="74" font-family="${UNB}" font-weight="800" font-size="46" fill="${INK}">${esc(v)}<tspan font-family="${FIG}" font-weight="600" font-size="30" fill="${MUTED}" dx="16">${esc(l)}</tspan></text></g>`;
 	const tiles = tile(64, `${d.wonders}/${d.wondersAll}`, 'Weltwunder') + tile(548, String(d.badges), 'Abzeichen');
 	// Passseite mit den Stempeln bis fast an den unteren Rand
 	const px = 48,
@@ -230,11 +230,12 @@ function collage(d: ShareData) {
 <style>${STYLE}</style></defs>
 <rect width="${W}" height="${H}" fill="#FAF1E1"/>
 <text x="64" y="138" font-family="${UNB}" font-weight="800" font-size="54" fill="${INK}">Freiheit</text>
+<text x="66" y="182" font-family="${FIG}" font-weight="500" font-size="28" fill="${MUTED}">by Maier Reisen</text>
 ${rank ? `<rect x="${r1(1016 - rw)}" y="96" width="${r1(rw)}" height="60" rx="30" fill="${SUN}"/><text x="${r1(1016 - rw / 2)}" y="137" text-anchor="middle" font-family="${FIG}" font-weight="700" font-size="34" fill="${INK}">${esc(rank)}</text>` : ''}
-<text x="56" y="444" font-family="${UNB}" font-weight="800" font-size="${nSize}" letter-spacing="${-nSize * 0.05}" fill="${INK}">${num}</text>
-<text x="64" y="508" font-family="${FIG}" font-weight="600" font-size="42" fill="${INK}">Stempel im Pass</text>
-${d.since ? `<text x="1016" y="508" text-anchor="end" font-family="${FIG}" font-weight="500" font-size="32" fill="${MUTED}">unterwegs seit ${d.since}</text>` : ''}
-<path d="M64 536H1016" stroke="${SUN}" stroke-width="6" stroke-linecap="round"/>
+<text x="56" y="468" font-family="${UNB}" font-weight="800" font-size="${nSize}" letter-spacing="${-nSize * 0.05}" fill="${INK}">${num}</text>
+<text x="64" y="532" font-family="${FIG}" font-weight="600" font-size="42" fill="${INK}">Stempel im Pass</text>
+${d.since ? `<text x="1016" y="532" text-anchor="end" font-family="${FIG}" font-weight="500" font-size="32" fill="${MUTED}">unterwegs seit ${d.since}</text>` : ''}
+<path d="M64 560H1016" stroke="${SUN}" stroke-width="6" stroke-linecap="round"/>
 ${tiles}
 ${chips.join('')}
 <path d="${page}" fill="#FFFBF3" stroke="${LINE}" stroke-width="2" filter="url(#scPgSh)"/>
