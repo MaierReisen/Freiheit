@@ -1,6 +1,6 @@
 /* Aufkleben der Briefmarken: jede Seltenheit etwas anders, nur einmal beim Aufkleben – danach ruht die Marke.
    Rare: von oben aufgelegt und angedrückt. Epic: schräg aus der Hand hingelegt, dann ein Silberglanz.
-   Legendary: schwebt langsam mit goldenem Schein herab, dann ein Goldschimmer und ein paar Funken. */
+   Legendary: schwebt langsam mit goldenem Schein herab, dann ein Goldschimmer und ein paar Funken. Weltwunder (4): ebenso, mit Regenbogen-Schein. */
 const NS = 'http://www.w3.org/2000/svg';
 let n = 0;
 
@@ -40,13 +40,16 @@ const BASE = 'drop-shadow(0 1px 1.5px rgba(13,43,58,.3))';
 /** Marke aufkleben; land wird beim Andrücken aufgerufen (Seite federt, Vibration, Hinweis) */
 export async function stickOn(el: SVGSVGElement, tier: number, land?: () => void) {
 	if (tier >= 3) {
+		// 4 = Weltwunder: Regenbogen-Schein statt Gold
+		const a = tier > 3 ? '150,140,255' : '230,180,70',
+			b = tier > 3 ? '170,160,255' : '240,190,70';
 		await el.animate(
 			[
-				{ transform: 'translateY(-60px) scale(1.22) rotate(4deg)', opacity: 0, filter: `drop-shadow(0 0 0 rgba(230,180,70,0)) ${BASE}` },
-				{ transform: 'translateY(-52px) scale(1.2) rotate(3deg)', opacity: 1, filter: `drop-shadow(0 0 18px rgba(240,190,70,1)) ${BASE}`, offset: 0.25 },
-				{ transform: 'translateY(-6px) scale(1.04) rotate(.5deg)', filter: `drop-shadow(0 0 10px rgba(230,180,70,.7)) ${BASE}`, offset: 0.72 },
-				{ transform: 'translateY(2px) scale(.96)', filter: `drop-shadow(0 0 6px rgba(230,180,70,.5)) ${BASE}`, offset: 0.86 },
-				{ transform: 'none', filter: `drop-shadow(0 0 4px rgba(230,180,70,.4)) ${BASE}` }
+				{ transform: 'translateY(-60px) scale(1.22) rotate(4deg)', opacity: 0, filter: `drop-shadow(0 0 0 rgba(${a},0)) ${BASE}` },
+				{ transform: 'translateY(-52px) scale(1.2) rotate(3deg)', opacity: 1, filter: `drop-shadow(0 0 18px rgba(${b},1)) ${BASE}`, offset: 0.25 },
+				{ transform: 'translateY(-6px) scale(1.04) rotate(.5deg)', filter: `drop-shadow(0 0 10px rgba(${a},.7)) ${BASE}`, offset: 0.72 },
+				{ transform: 'translateY(2px) scale(.96)', filter: `drop-shadow(0 0 6px rgba(${a},.5)) ${BASE}`, offset: 0.86 },
+				{ transform: 'none', filter: `drop-shadow(0 0 4px rgba(${a},.4)) ${BASE}` }
 			],
 			{ duration: 1500, easing: 'ease-in-out', fill: 'backwards' }
 		).finished;
@@ -54,13 +57,13 @@ export async function stickOn(el: SVGSVGElement, tier: number, land?: () => void
 		sparks(el);
 		el.animate(
 			[
-				{ filter: `drop-shadow(0 0 4px rgba(230,180,70,.4)) ${BASE}` },
-				{ filter: `drop-shadow(0 0 16px rgba(240,190,70,.95)) ${BASE}`, offset: 0.35 },
-				{ filter: `drop-shadow(0 0 0 rgba(230,180,70,0)) ${BASE}` }
+				{ filter: `drop-shadow(0 0 4px rgba(${a},.4)) ${BASE}` },
+				{ filter: `drop-shadow(0 0 16px rgba(${b},.95)) ${BASE}`, offset: 0.35 },
+				{ filter: `drop-shadow(0 0 0 rgba(${a},0)) ${BASE}` }
 			],
 			{ duration: 1500, easing: 'ease-out' }
 		);
-		await sheen(el, '#F0BE48', 0.6, 1100);
+		await sheen(el, tier > 3 ? '#FFFFFF' : '#F0BE48', tier > 3 ? 0.9 : 0.6, 1100);
 	} else if (tier === 2) {
 		await el.animate(
 			[

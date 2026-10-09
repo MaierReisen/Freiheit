@@ -37,6 +37,7 @@ create table if not exists public.user_settings (
   user_id        uuid primary key default auth.uid() references auth.users on delete cascade,
   home_continent text not null default 'EU' check (home_continent in ('EU','AS','AF','NA','SA','OC')),
   country_scope  text not null default 'sovereign' check (country_scope in ('un','un_observer','sovereign')),
+  wonders        text[] not null default '{}',
   updated_at     timestamptz not null default now()
 );
 

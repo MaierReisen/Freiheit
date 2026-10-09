@@ -22,9 +22,9 @@ const RANK_STEPS: Rank[] = [
 	{ n: 20, name: 'Vielflieger', icon: '✈️', say: 'Zwanzig Länder – du sammelst Bordkarten wie andere Briefmarken.' },
 	{ n: 30, name: 'Kartograf', icon: '🗺️', say: 'Deine Karte füllt sich: Du zeichnest deine eigene Welt.' },
 	{ n: 50, name: 'Globetrotter', icon: '🌍', say: 'Fünfzig Länder – ein Viertel der Welt trägt deinen Fußabdruck.' },
-	{ n: 75, name: 'Weltumsegler', icon: '⛵', say: 'Du kennst mehr Länder als die meisten Menschen je sehen.' },
+	{ n: 75, name: 'Nomade', icon: '🐪', say: 'Zuhause ist für dich, wo der nächste Stempel wartet.' },
 	{ n: 100, name: 'Club der 100', icon: '💯', say: 'Hundert Länder – willkommen in einem sehr kleinen Club.' },
-	{ n: 125, name: 'Nomade', icon: '🐪', say: 'Zuhause ist für dich, wo der nächste Stempel wartet.' },
+	{ n: 125, name: 'Weltumsegler', icon: '⛵', say: 'Du kennst mehr Länder als die meisten Menschen je sehen.' },
 	{ n: 150, name: 'Himmelsstürmer', icon: '🦅', say: 'Drei Viertel der Welt – der Rest wird knapp.' },
 	{ n: 175, name: 'Legende', icon: '🏆', say: 'Nur noch eine Handvoll Länder trennt dich vom Ziel.' }
 ];
@@ -2142,6 +2142,38 @@ function wideFrame(t: Txt, scene: string, nr: number): [string, string] {
 <text class="v" x="27" y="46" font-size="24">${nr}</text></g>
 ${split(t.name).length > 1 ? nameBlock(t.name, 140, 168, 230, 17) : nameBlock(t.name, 140, 164, 230, 22)}${small(140, 183, label, 10.5)}${star(140 - sx, 179, 5)}${star(140 + sx, 179, 5)}`
 	];
+}
+
+/* ---------- Weltwunder: Briefmarke mit Hologramm-Rand (Regenbogen), Nr. als römische Zahl ---------- */
+const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
+const HOLO = ['#FF9ACB', '#FFD98A', '#A8F0C6', '#8FD3FF', '#C6A8FF', '#FF9ACB'];
+const WONDER_COLORS = ['green', 'teal', 'brown', 'coral', 'red', 'navy', 'plum'];
+const wonderCache = new Map<string, Stamp>();
+/** Briefmarke eines Weltwunders (i = Platz in der Liste); braucht die nachgeladenen Bilder (loadScenes) */
+export function wonderStamp(id: string, name: string, i: number): Stamp {
+	const hit = wonderCache.get(id);
+	if (hit && SC) return hit;
+	const k = 'wd' + ++markId,
+		up = name.toLocaleUpperCase('de'),
+		two = split(up).length > 1,
+		scene = SC?.WONDER[id]?.() ?? '',
+		label = 'WELTWUNDER',
+		sx = 46;
+	const inner = `<linearGradient id="${k}h" x1="0" y1="0" x2="1" y2="1">${HOLO.map((c, j) => `<stop offset="${j / (HOLO.length - 1)}" stop-color="${c}"/>`).join('')}</linearGradient>
+<path d="${perfPath(4, 4, 192, 232, 4.5, 15)}" fill="url(#${k}h)" stroke="none"/><rect x="12" y="12" width="176" height="216" class="pp"/><rect x="14.5" y="14.5" width="171" height="211" stroke="url(#${k}h)" stroke-width="2"/>
+<clipPath id="${k}"><rect x="18" y="18" width="164" height="150"/></clipPath><g class="pic"><rect x="18" y="18" width="164" height="150" class="bg"/><g clip-path="url(#${k})"><g transform="translate(18,18) scale(.911)">${scene}</g></g><rect x="18" y="18" width="164" height="150" stroke-width="2"/>
+<text class="v" x="27" y="44" font-size="20">${ROMAN[i] ?? i + 1}</text></g>
+${nameBlock(up, 100, two ? 211 : 200, 164, two ? 18 : 21)}${small(100, 226, label, 10.5)}${star(100 - sx, 222, 5)}${star(100 + sx, 222, 5)}`;
+	const h = hash(id);
+	const s: Stamp = {
+		svg: `<svg class="pp-stamp sp wn" viewBox="0 0 200 240" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-linejoin="round" stroke-linecap="round">${inner}</g></svg>`,
+		color: `var(--st-${WONDER_COLORS[i % WONDER_COLORS.length]})`,
+		rot: ((h >>> 6) % 5) - 2,
+		dy: 0,
+		w: 96
+	};
+	if (SC) wonderCache.set(id, s);
+	return s;
 }
 
 /* ---------- Stempel je Land ---------- */

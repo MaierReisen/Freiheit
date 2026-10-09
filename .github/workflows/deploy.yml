@@ -32,8 +32,10 @@ jobs:
 
       - run: npm ci
 
-      # Einreise-Daten frisch vom Auswärtigen Amt; schlägt der Abruf fehl, bleibt der gespeicherte Stand
+      # Einreise-Daten frisch vom Auswärtigen Amt (nur nachts bzw. von Hand – bei Pushes dauert es sonst Minuten);
+      # schlägt der Abruf fehl, bleibt der gespeicherte Stand
       - name: Einreise-Daten aktualisieren
+        if: github.event_name != 'push'
         run: python3 scripts/build-entry.py
         continue-on-error: true
 

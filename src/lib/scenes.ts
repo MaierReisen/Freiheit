@@ -3698,3 +3698,28 @@ ${Array.from({ length: 26 }, (_, i) => at(8 + (i * 41) % 256, 84 + ((i * 17) % 2
 	UM: () => `${sun(236, 22, 9)}${birds(140, 20)}<path d="M0,0 H270 V132 H0 Z" ${L1} stroke="none"/>${[[60, 70, 70, 20], [150, 84, 60, 18], [220, 66, 50, 16]].map(([x, y, w, h]) => `<ellipse cx="${x}" cy="${y}" rx="${w / 2 + 10}" ry="${h / 2 + 6}" ${SNOW} stroke-width="1" stroke-dasharray="3 2"/><ellipse cx="${x}" cy="${y}" rx="${w / 2}" ry="${h / 2}" ${L3} stroke-width="1.2"/>${palm(x - 8, y, h * 1.8, 4)}${palm(x + 8, y, h * 1.4, -4)}`).join('')}${at(110, 116, 1, ALBATROSS)}`,
 	IO: () => `${sun(236, 22, 9)}${birds(140, 20)}<path d="M0,0 H270 V132 H0 Z" ${L1} stroke="none"/><path d="M20,70 Q20,28 135,24 Q250,28 250,70 Q250,112 135,116 Q20,112 20,70 Z" ${L2} stroke-width="1.4"/><path d="M30,70 Q30,40 135,36 Q160,36 200,44 Q240,52 240,70" ${SNOW} stroke-width="6"/>${[40, 80, 120, 160, 200].map((x, i) => palm(x, 46 - Math.round(4 * Math.sin(i)), 18, 3)).join('')}${at(140, 90, 0.9, YACHT)}`
 };
+
+/* ---------- Weltwunder (eigene Pass-Seite, Hologramm-Briefmarke): je Wunder ein Bild in 180 × 170 ---------- */
+/** Wachturm der Chinesischen Mauer, Fuß (x, y) */
+const wtower = (x: number, y: number) =>
+	`<path d="M${x - 9},${y + 8} V${y - 14} H${x + 9} V${y + 8} Z" ${SNOW} stroke-width="1.5"/><path d="M${x - 9},${y - 14} v-3 h3 v3 h3 v-3 h3 v3 h3 v-3 h3 v3 h3 v-3" stroke-width="1.2"/><path d="M${x - 2},${y - 8} h4 v6 h-4 Z" ${SOLID}/>`;
+export const WONDER: Record<string, () => string> = {
+	chichen: () =>
+		`${sun(150, 30, 10)}${birds(96, 34)}<path d="M0,130 Q90,122 180,130 V170 H0 Z" ${L1} stroke-width="1.6"/>${palm(10, 140, 40, 6)}${palm(170, 140, 36, -6)}${at(90, 140, 1.3, CHICHEN)}<path d="M0,140 H180 V170 H0 Z" ${L2} stroke="none"/><path d="M0,140 H180" stroke-width="2"/>${at(150, 162, 0.7, PERSON)}${at(160, 162, 0.6, PERSON)}${grass(24, 160)}${grass(70, 164)}`,
+	cristo: () =>
+		`${sun(150, 34, 10)}${rays(150, 34, 10)}${birds(112, 50, 0.8)}${SUGARLOAF(152, 124, 1.1)}${sea(124)}<path d="M18,170 L38,112 Q60,72 84,66 L96,66 Q118,76 134,120 L152,170 Z" ${L3} stroke-width="2"/><path d="M60,100 Q70,120 64,150 M110,96 Q104,118 116,146" stroke-width="1.2"/>${at(90, 66, 1.5, CRISTO)}${cloud(4, 104)}`,
+	machu: () =>
+		`${sun(156, 24, 9)}${at(70, 44, 0.9, CONDOR)}<path d="M0,96 L24,70 L44,82 L70,58 L92,76 L180,64 V132 H0 Z" ${L1} stroke-width="1.6"/><path d="M70,58 L64,68 L71,65 L76,70 Z" ${SNOW} stroke-width="1.2"/>${picchu(true)}${cloud(120, 122)}<path d="M0,132 H180 V170 H0 Z" ${L1} stroke="none"/><path d="M0,132 H180" stroke-width="2"/>${at(150, 166, 1, LLAMA, true)}${grass(30, 158)}${grass(90, 164)}`,
+	kolosseum: () =>
+		`${sun(150, 30, 10)}${birds(70, 42)}<path d="M0,134 Q90,126 180,134 V170 H0 Z" ${L1} stroke-width="2"/>${at(90, 138, 1.2, COLOS)}${cypress(10, 142, 42)}${cypress(172, 142, 36)}<path d="M0,150 H180 V170 H0 Z" ${L2} stroke="none"/><path d="M0,150 H180" stroke-width="1.6"/>${[20, 50, 80, 110, 140, 170].map((x, i) => `<path d="M${x - 8},${158 + (i % 2) * 6} H${x + 8}" stroke-width="1.2"/>`).join('')}`,
+	petra: () =>
+		`${birds(104, 26, 0.8)}<path d="M0,0 H30 Q50,70 40,170 H0 Z M180,0 H146 Q128,70 140,170 H180 Z" ${L3} stroke-width="1.8"/><path d="M6,40 Q20,46 34,42 M4,80 Q22,88 40,84 M144,50 Q160,56 176,52 M140,96 Q158,102 178,98" stroke-width="1.2"/>${at(90, 150, 1.2, PETRA())}<path d="M0,150 H180 V170 H0 Z" ${L1} stroke="none"/><path d="M36,150 H144" stroke-width="2"/>${at(118, 166, 0.9, CAMEL)}${at(56, 164, 0.6, PERSON)}`,
+	mauer: () =>
+		`${sun(150, 28, 10)}${birds(96, 36)}<path d="M0,110 L30,84 L56,96 L90,62 L120,84 L150,70 L180,86 V170 H0 Z" ${L1} stroke-width="1.6"/><path d="M30,84 L56,96 L90,62 L120,84" stroke-width="3" stroke-dasharray="2 2"/>${wtower(90, 60).replace(/1\.5/, '1')}
+<path d="M0,170 V128 Q30,120 50,104 Q70,90 92,100 Q120,114 140,96 Q160,82 180,90 V170 Z" ${L2} stroke-width="1.8"/>
+<path d="M0,128 Q30,120 50,104 Q70,90 92,100 Q120,114 140,96 Q160,82 180,90 V78 Q160,70 140,84 Q120,102 92,88 Q70,78 50,92 Q30,108 0,116 Z" ${SNOW} stroke-width="1.6"/>
+<g transform="translate(0,-2)"><path d="M0,116 Q30,108 50,92 Q70,78 92,88 Q120,102 140,84 Q160,70 180,78" stroke-width="4" stroke-dasharray="3 3"/></g>
+<path d="M0,122 Q30,114 50,98 Q70,84 92,94 Q120,108 140,90 Q160,76 180,84" stroke-width="1" stroke-dasharray="4 3"/>${wtower(50, 98)}${wtower(140, 90)}${pine(18, 168, 24)}${pine(164, 168, 28)}${pine(100, 168, 18)}`,
+	taj: () =>
+		`${sun(150, 34, 10)}${birds(70, 42)}<path d="M0,116 H180 V170 H0 Z" ${L1} stroke="none"/>${at(90, 116, 1.25, TAJ)}<path d="M0,116 H180" stroke-width="2"/><path d="M80,116 L66,170 H114 L100,116 Z" ${L3} stroke="none"/><path d="M80,116 L66,170 M100,116 L114,170" stroke-width="1.4"/><g opacity=".45"><path d="M86,124 Q90,118 94,124 V140 H86 Z" ${SNOW} stroke-width="1"/></g>${[[44, 128, 22], [28, 146, 28], [10, 166, 34], [136, 128, 22], [152, 146, 28], [170, 166, 34]].map(([x, y, h]) => cypress(x, y, h)).join('')}`
+};

@@ -1,10 +1,11 @@
 <script lang="ts">
 	import { tick, untrack } from 'svelte';
 	import { fade } from 'svelte/transition';
-	import { atlas, countedCountries } from '$lib/atlas.svelte';
+	import { atlas, countedCountries, setWonder, visitedSet } from '$lib/atlas.svelte';
 	import { closePass, openCountry, reduceMotion, ui } from '$lib/app.svelte';
 	import { flag } from '$lib/countries';
-	import { INK_FILTERS, loadScenes, rankIndex, ranks, scenesLoaded, stamp, TIER_LABEL, yearOf } from '$lib/passport';
+	import { INK_FILTERS, loadScenes, rankIndex, ranks, scenesLoaded, stamp, TIER_LABEL, wonderStamp, yearOf } from '$lib/passport';
+	import { WONDERS, type Wonder } from '$lib/wonders';
 	import { badgeLevels, badges, tierName, type Badge, type DetailItem } from '$lib/badges';
 	import { loadFacts, type Facts } from '$lib/facts';
 	import { scopeTotal } from '$lib/scope';
@@ -14,7 +15,8 @@
 	import PassTile from './PassTile.svelte';
 
 	/* Reisepass (Vollbild): Seiten zum Blättern mit je 6 Stempeln in der Reihenfolge „Land Nr. X“, danach „?“-Plätze für
-	   Wunschziele. Neue Länder seit dem letzten Öffnen werden beim Öffnen sichtbar gestempelt. */
+	   Wunschziele. Neue Länder seit dem letzten Öffnen werden beim Öffnen sichtbar gestempelt (alle; bei vielen schneller,
+	   Antippen überspringt). Darunter die Weltwunder-Seite. */
 
 	const PER_PAGE = 6;
 	let body: HTMLDivElement;
@@ -544,7 +546,7 @@
 			const codes = stamps.map((s) => s.code);
 			rollSpecials(codes);
 			const seen = passSeen.codes;
-			const fresh = seen ? codes.filter((c) => !seen.includes(c)).slice(-3) : [];
+			const fresh = seen ? codes.filter((c) => !seen.includes(c)) : [];
 			markSeen(codes);
 			body?.scrollTo(0, 0);
 			stopTurn();
@@ -558,16 +560,27 @@
 	const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 	const css = (v: string) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 
+	// Antippen während der Animation: restliche Stempel sofort zeigen
+	let skip = false;
+	const skipPlay = () => {
+		if (pending.length) skip = true;
+	};
 	async function play(codes: string[]) {
+		skip = false;
+		// viele neue Stempel: schneller hintereinander
+		const k = codes.length > 3 ? 0.45 : 1;
 		await tick();
 		await wait(350); // Ansicht gleitet erst herein
+		let first = true;
 		for (const code of codes) {
 			const slot = body?.querySelector<HTMLElement>(`[data-stamp="${code}"]`);
-			if (!slot || !ui.passOpen) break;
+			if (!slot || !ui.passOpen || skip) break;
 			const pi = Math.floor(stamps.findIndex((s) => s.code === code) / PER_PAGE);
 			if (pi !== cur) { goPage(pi); await wait(350); }
-			slot.scrollIntoView({ behavior: 'smooth', block: 'center' });
-			await wait(500);
+			if (first || pi !== cur) slot.scrollIntoView({ behavior: 'smooth', block: 'center' });
+			first = false;
+			await wait(500 * k);
+			if (skip) break;
 			const sp = specialLevel(code);
 			pending = pending.filter((c) => c !== code);
 			await tick();
@@ -575,7 +588,7 @@
 			if (!el) continue;
 			if (sp) {
 				await tearOff(slot, el, sp);
-				await wait(900);
+				await wait(900 * k);
 				continue;
 			}
 			// Stempel fällt mit Schwung herunter, quetscht und federt nach
@@ -591,13 +604,43 @@
 			slot.closest('.pp-page')?.animate([{ transform: 'translateY(0)' }, { transform: 'translateY(4px)' }, { transform: 'translateY(-1px)' }, { transform: 'translateY(0)' }], { duration: 260 });
 			navigator.vibrate?.(20);
 			burst(slot);
-			await wait(700);
+			await wait(700 * k);
 		}
 		pending = [];
 	}
 
+	/* ---------- Weltwunder ---------- */
+	const wonders = $derived.by(() => {
+		void scenesOk;
+		const vis = visitedSet(),
+			have = atlas.settings.wonders;
+		return WONDERS.map((w, i) => ({ ...w, have: have.includes(w.id), open: vis.has(w.code), s: wonderStamp(w.id, w.name, i) }));
+	});
+	const wonderCount = $derived(wonders.filter((w) => w.have).length);
+	let wonderNew = $state<string | null>(null); // wartet auf das Aufkleben (unsichtbar)
+	async function collect(w: Wonder) {
+		if (wonderNew) return;
+		const anim = !reduceMotion();
+		if (anim) wonderNew = w.id;
+		setWonder(w.id, true);
+		const all = atlas.settings.wonders.length === WONDERS.length;
+		if (anim) {
+			await tick();
+			const slot = body?.querySelector<HTMLElement>(`[data-wonder="${w.id}"]`),
+				el = slot?.querySelector<SVGSVGElement>('.pp-stamp');
+			wonderNew = null;
+			await tick();
+			if (slot && el) await tearOff(slot, el, 4, 'WELTWUNDER');
+		}
+		if (all)
+			ui.unlock = { key: ui.unlock.key + 1, cont: '', n: WONDERS.length, rank: '', badge: 'Alle 7 Weltwunder', icon: '🏛️', sub: 'Die neuen 7 Weltwunder komplett gesehen' };
+	}
+	function drop(w: Wonder) {
+		if (confirm(`„${w.name}“ wieder aus dem Pass nehmen?`)) setWonder(w.id, false);
+	}
+
 	/** Briefmarke (Rare und höher): je Stufe etwas anders aufgeklebt (markfx.ts) */
-	async function tearOff(slot: HTMLElement, el: SVGSVGElement, tier: Tier) {
+	async function tearOff(slot: HTMLElement, el: SVGSVGElement, tier: Tier | 4, label = TIER_LABEL[tier]) {
 		const r = el.getBoundingClientRect(),
 			col = getComputedStyle(slot).getPropertyValue('--c') || css('--primary');
 		navigator.vibrate?.(15);
@@ -606,7 +649,7 @@
 			navigator.vibrate?.(30);
 			const p = document.createElement('div');
 			p.className = 'pp-fx pp-plus';
-			p.textContent = TIER_LABEL[tier];
+			p.textContent = label;
 			Object.assign(p.style, { left: r.left + r.width / 2 + 'px', top: r.top + 6 + 'px', color: col });
 			document.body.appendChild(p);
 			p.animate([{ transform: 'translate(-50%,0)', opacity: 0 }, { transform: 'translate(-50%,-18px)', opacity: 1, offset: 0.3 }, { transform: 'translate(-50%,-34px)', opacity: 0 }], { duration: 1600, easing: 'ease-out' }).finished.then(() => p.remove());
@@ -733,7 +776,7 @@
 </script>
 
 <!-- svelte-ignore a11y_no_noninteractive_element_to_interactive_role -->
-<section class="ov pp-view" id="passView" bind:this={root} role="dialog" aria-modal="true" aria-labelledby="passTitle" hidden={!ui.passOpen}>
+<section class="ov pp-view" id="passView" bind:this={root} role="dialog" aria-modal="true" aria-labelledby="passTitle" hidden={!ui.passOpen} onpointerdowncapture={skipPlay}>
 	<svg class="pp-defs" aria-hidden="true" focusable="false"><defs>{@html INK_FILTERS}</defs></svg>
 	<div class="ov-head">
 		<button type="button" class="ov-close" id="passClose" aria-label="Reisepass schließen" onclick={() => closePass(false)}
@@ -836,6 +879,33 @@
 					</div>
 				{/if}
 			{/if}
+			<div class="pp-visa pp-wonders">
+				<div class="pp-page-h"><span>Weltwunder</span><span>{wonderCount} / {WONDERS.length}</span></div>
+				<div class="pp-grid pp-wgrid">
+					{#each wonders as w (w.id)}
+						{#if w.have}
+							<button
+								type="button"
+								class="pp-slot sp"
+								data-wonder={w.id}
+								class:wait={wonderNew === w.id}
+								style="transform:rotate({w.s.rot}deg);--c:{w.s.color}"
+								aria-label="Weltwunder {w.name}, gesehen – antippen zum Entfernen"
+								onclick={() => drop(w)}>{@html w.s.svg}</button
+							>
+						{:else if w.open}
+							<button type="button" class="pp-slot" aria-label="Weltwunder {w.name}: Hier war ich" onclick={() => collect(w)}
+								><span class="pp-empty pp-wopen"><b>?</b>{w.name}<em>Hier war ich</em></span></button
+							>
+						{:else}
+							<button type="button" class="pp-slot" aria-label="Weltwunder {w.name}, {w.place} – Land noch nicht bereist" onclick={() => openCountry(w.code)}
+								><span class="pp-empty pp-wlock"><i>{flag(w.code)}</i>{w.name}<small>{w.place}</small></span></button
+							>
+						{/if}
+					{/each}
+				</div>
+				<p class="pp-wnote">Sobald du das Land bereist hast, erscheint ein „?“. Tippe darauf, wenn du das Weltwunder gesehen hast.</p>
+			</div>
 			{#if bs.length}
 				<div class="pp-visa">
 					<div class="pp-page-h"><span>Abzeichen</span><span>{badgeLevels(bs)} / {bs.reduce((s, b) => s + b.tiers.length, 0)}</span></div>

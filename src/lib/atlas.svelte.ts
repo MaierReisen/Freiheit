@@ -2,6 +2,7 @@ import { CONT_VIEW, nameOf, type ContinentCode } from './countries';
 import { toast } from './app.svelte';
 import { DEFAULT_SCOPE, inScope, isScope, type CountryScope } from './scope';
 import { supabase } from './supabase';
+import { isWonder } from './wonders';
 
 /* Daten der App: lokal zwischengespeichert (offline nutzbar) und mit Supabase synchronisiert.
    Jede Änderung wirkt sofort lokal und landet als Auftrag in einer Warteschlange, die an Supabase gesendet wird. */
@@ -50,8 +51,11 @@ export interface Settings {
 	homeContinent: ContinentCode;
 	/** Was zählt als Land? (193 / 195 / 197) – andere Gebiete sind markierbar, zählen aber nicht */
 	countryScope: CountryScope;
+	/** gesammelte Weltwunder (ids aus wonders.ts), Spalte „wonders“ (Migration 007) */
+	wonders: string[];
 }
-export const defaultSettings = (): Settings => ({ homeContinent: 'EU', countryScope: DEFAULT_SCOPE });
+export const defaultSettings = (): Settings => ({ homeContinent: 'EU', countryScope: DEFAULT_SCOPE, wonders: [] });
+const wonderList = (v: unknown): string[] | null => (Array.isArray(v) ? [...new Set(v.filter(isWonder))] : null);
 const isContinent = (c: unknown): c is ContinentCode => typeof c === 'string' && c in CONT_VIEW;
 
 type Op =
@@ -191,9 +195,10 @@ async function runOp(op: Op, user: string) {
 			ok(await supabase.from('wishlist').delete().eq('user_id', user).eq('code', op.code));
 			return;
 		case 'settings': {
-			const r = await supabase
-				.from('user_settings')
-				.upsert({ user_id: user, home_continent: op.s.homeContinent, country_scope: op.s.countryScope, updated_at: new Date().toISOString() });
+			const row = { user_id: user, home_continent: op.s.homeContinent, country_scope: op.s.countryScope, updated_at: new Date().toISOString() };
+			let r = await supabase.from('user_settings').upsert({ ...row, wonders: op.s.wonders ?? [] });
+			// Spalte „wonders“ fehlt (Migration 007): übrige Einstellungen trotzdem speichern, Weltwunder bleiben auf dem Gerät
+			if (r.error && noColumn(r.error)) r = await supabase.from('user_settings').upsert(row);
 			// Tabelle noch nicht angelegt (Migration fehlt): Einstellung bleibt lokal, Warteschlange nicht blockieren
 			// bzw. Spalte fehlt (PGRST204): Einstellung bleibt lokal, Warteschlange nicht blockieren
 			if (r.error && r.error.code !== 'PGRST205' && r.error.code !== 'PGRST204') throw r.error;
@@ -260,11 +265,15 @@ async function pull() {
 		supabase.from('user_settings').select('*').maybeSingle()
 	]);
 	if (!st.error && st.data && uid === user && !queue.some((o) => o.t === 'settings')) {
+		const remote = wonderList(st.data.wonders);
 		const next = {
 			...atlas.settings,
 			homeContinent: isContinent(st.data.home_continent) ? st.data.home_continent : 'EU',
-			countryScope: isScope(st.data.country_scope) ? st.data.country_scope : atlas.settings.countryScope
+			countryScope: isScope(st.data.country_scope) ? st.data.country_scope : atlas.settings.countryScope,
+			// ohne Spalte bzw. im Konto noch leer: auf dem Gerät gesammelte Weltwunder behalten (und hochladen)
+			wonders: remote?.length ? remote : atlas.settings.wonders
 		};
+		if (remote && !remote.length && next.wonders.length) enqueue({ t: 'settings', s: { ...next } });
 		// nur bei echten Änderungen setzen (sonst wird alles neu aufgebaut und gezeichnet → Ruckler)
 		if (JSON.stringify(next) !== JSON.stringify(atlas.settings)) atlas.settings = next;
 		writeJson(settingsKey(user), atlas.settings);
@@ -336,7 +345,8 @@ export function loadCache(userId: string) {
 	atlas.settings = {
 		...defaultSettings(),
 		...(st && isContinent(st.homeContinent) ? { homeContinent: st.homeContinent } : {}),
-		...(st && isScope(st.countryScope) ? { countryScope: st.countryScope } : {})
+		...(st && isScope(st.countryScope) ? { countryScope: st.countryScope } : {}),
+		wonders: wonderList(st?.wonders) ?? []
 	};
 	const q = readJson(queueKey(userId));
 	queue = Array.isArray(q) ? (q as Op[]) : [];
@@ -449,6 +459,15 @@ export function setHomeContinent(c: ContinentCode) {
 export function setCountryScope(scope: CountryScope) {
 	if (!isScope(scope) || atlas.settings.countryScope === scope) return;
 	atlas.settings = { ...atlas.settings, countryScope: scope };
+	if (uid) writeJson(settingsKey(uid), atlas.settings);
+	enqueue({ t: 'settings', s: { ...atlas.settings } });
+}
+
+/** Weltwunder als gesehen eintragen bzw. wieder entfernen */
+export function setWonder(id: string, on: boolean) {
+	const has = atlas.settings.wonders.includes(id);
+	if (!isWonder(id) || has === on) return;
+	atlas.settings = { ...atlas.settings, wonders: on ? [...atlas.settings.wonders, id] : atlas.settings.wonders.filter((w) => w !== id) };
 	if (uid) writeJson(settingsKey(uid), atlas.settings);
 	enqueue({ t: 'settings', s: { ...atlas.settings } });
 }
