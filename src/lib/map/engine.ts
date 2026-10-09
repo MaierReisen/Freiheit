@@ -144,7 +144,7 @@ export function createWorldMap(o: MapOptions) {
 		emaMove = 8,
 		calmFrames = 0;
 	// Neu hinzugefügtes Land kurz hervorheben (Sonnen-Leuchten, Sonar-Ringe, Name)
-	let hl: { code: string; t0: number; polys: GeoJSON.Polygon[] } | null = null;
+	let hl: { codes: string[]; t0: number; dur: number; polys: GeoJSON.Polygon[] } | null = null;
 	const HL_MS = 2800;
 	// weicher Übergang von der groben (Bewegung) zur feinen Darstellung statt sichtbarem Umspringen
 	let fadeCv: HTMLCanvasElement | null = null,
@@ -545,14 +545,14 @@ export function createWorldMap(o: MapOptions) {
 			baseDirty = false;
 			topDirty = true;
 		}
-		const animTop = (fadeT0 && ts - fadeT0 < fadeMs) || (hl && ts - hl.t0 < HL_MS);
+		const animTop = (fadeT0 && ts - fadeT0 < fadeMs) || (hl && ts - hl.t0 < hl.dur);
 		if (topDirty || animTop) {
 			drawTop(ts);
 			topDirty = false;
 		}
 		if (!animTop) {
 			fadeT0 = 0;
-			if (hl && ts - hl.t0 >= HL_MS) hl = null;
+			if (hl && ts - hl.t0 >= hl.dur) hl = null;
 		}
 		if (moving || animTop) requestDraw();
 	}
@@ -758,7 +758,6 @@ export function createWorldMap(o: MapOptions) {
 
 	function drawHighlight(c: CanvasRenderingContext2D, P: GeoProjection, t: number) {
 		if (!hl || t >= 1) return;
-		const i = INFO[hl.code];
 		// Leuchten: schnell an, dann weich aus (zweimal kurz nachpulsend)
 		const env = t < 0.12 ? t / 0.12 : Math.pow(1 - (t - 0.12) / 0.88, 1.6);
 		const pulse = 0.82 + 0.18 * Math.cos(t * Math.PI * 6);
@@ -778,9 +777,12 @@ export function createWorldMap(o: MapOptions) {
 		c.lineJoin = 'round';
 		c.stroke();
 		c.restore();
-		if (!i || !onFront(i.c)) return;
+		const one = hl.codes.length === 1;
+		for (const code of hl.codes) {
+		const i = INFO[code];
+		if (!i || !onFront(i.c)) continue;
 		const p = P(i.c);
-		if (!p) return;
+		if (!p) continue;
 		// zwei Sonar-Ringe vom Mittelpunkt aus
 		if (!reduce()) {
 			const R0 = Math.max(10, Math.min(60, i.size * pxPerDeg() * 0.5));
@@ -795,16 +797,20 @@ export function createWorldMap(o: MapOptions) {
 			}
 		}
 		// Name des neuen Landes
-		c.globalAlpha = Math.min(1, env * 1.4);
-		pill(c, nameOf(hl.code), p[0], p[1] - (i.size * pxPerDeg() < 7 ? 14 : 10), PAL.wish);
-		c.globalAlpha = 1;
+		if (one) {
+			c.globalAlpha = Math.min(1, env * 1.4);
+			pill(c, nameOf(code), p[0], p[1] - (i.size * pxPerDeg() < 7 ? 14 : 10), PAL.wish);
+			c.globalAlpha = 1;
+		}
+		}
 	}
 
 	/** Neu hinzugefügtes Land hervorheben, beginnend nach `delay` ms (z. B. wenn der Flug ankommt) */
-	function highlight(code: string, delay = 0) {
+	function highlight(code: string | string[], delay = 0, dur = HL_MS) {
 		const lod = getLod('full');
-		if (!lod || !INFO[code]) return;
-		hl = { code, t0: performance.now() + delay, polys: lod.polys.filter((pg) => pg.id === code).map((pg) => pg.g) };
+		const codes = (Array.isArray(code) ? code : [code]).filter((c) => INFO[c]);
+		if (!lod || !codes.length) return;
+		hl = { codes, t0: performance.now() + delay, dur, polys: lod.polys.filter((pg) => codes.includes(pg.id)).map((pg) => pg.g) };
 		markDirty(false);
 	}
 
@@ -1040,7 +1046,7 @@ export function createWorldMap(o: MapOptions) {
 		}
 		c.setTransform(tdpr, 0, 0, tdpr, 0, 0);
 		const P = curProj();
-		if (hl && now >= hl.t0) drawHighlight(c, P, (now - hl.t0) / HL_MS);
+		if (hl && now >= hl.t0) drawHighlight(c, P, (now - hl.t0) / hl.dur);
 		const visited = o.getVisited(),
 			wish = o.getWish(),
 			selected = o.getSelected();
@@ -1122,7 +1128,7 @@ export function createWorldMap(o: MapOptions) {
 				}
 				c.globalAlpha = 1;
 			}
-			if ((micro || tiny) && dotA > 0 && ppd >= LABEL_PPD && !isSel && hl?.code !== f.id) labels.push({ id: f.id, x: p[0], y: p[1], been });
+			if ((micro || tiny) && dotA > 0 && ppd >= LABEL_PPD && !isSel && !hl?.codes.includes(f.id)) labels.push({ id: f.id, x: p[0], y: p[1], been });
 		}
 		// kleine Formen umranden (bereist türkis, sonst hell), damit Vatikan & Co. nicht im Nachbarland verschwinden
 		if (outlined) {
@@ -1141,9 +1147,9 @@ export function createWorldMap(o: MapOptions) {
 		const taken = avoidRects();
 		if (labels.length) drawMicroLabels(c, labels, taken);
 		const caps = placeCaps(P, ppd, taken);
-		drawCountryNames(c, P, ppd, (id) => id === selected || id === hl?.code || dotAlpha(id, ppd) > 0, taken, dotPts);
+		drawCountryNames(c, P, ppd, (id) => id === selected || hl?.codes.includes(id) || dotAlpha(id, ppd) > 0, taken, dotPts);
 		if (caps?.length) drawCaps(c, caps, taken);
-		if (selected && INFO[selected] && hl?.code !== selected) {
+		if (selected && INFO[selected] && !hl?.codes.includes(selected)) {
 			const ctr = INFO[selected].c;
 			if (onFront(ctr)) {
 				const p = P(ctr);
@@ -1207,6 +1213,25 @@ export function createWorldMap(o: MapOptions) {
 		const minK = toModeK(1.8, i.c);
 		const k = opts.keepK ? Math.max(view.k, 1) : opts.zoom ? Math.max(target, minK) : Math.max(target, view.k);
 		flyTo({ lon: i.c[0], lat: i.c[1], k }, opts.ms || 1000);
+	}
+	/** Übersichts-Flug über mehrere Länder: Mittelpunkt aller, so weit herausgezoomt, dass alle ins Bild passen */
+	function flyToCountries(codes: string[], ms = 1500) {
+		const list = codes.filter((c) => INFO[c]);
+		if (!list.length) return;
+		let x = 0,
+			y = 0,
+			z = 0;
+		for (const c of list) {
+			const [lo, la] = INFO[c].c.map((d) => (d * Math.PI) / 180);
+			x += Math.cos(la) * Math.cos(lo);
+			y += Math.cos(la) * Math.sin(lo);
+			z += Math.sin(la);
+		}
+		const c: [number, number] = [(Math.atan2(y, x) * 180) / Math.PI, (Math.atan2(z, Math.hypot(x, y)) * 180) / Math.PI];
+		// Streuung in Grad (größter Abstand zum Mittelpunkt, plus Platz für die Länder selbst)
+		let spread = 6;
+		for (const id of list) spread = Math.max(spread, (geoDistance(INFO[id].c, c) * 180) / Math.PI + INFO[id].size / 2);
+		flyTo({ lon: c[0], lat: c[1], k: toModeK(clamp(75 / spread, 1, 4), c) }, ms);
 	}
 	function flyToContinent(code: string) {
 		const v = CONT_VIEW[code as ContinentCode];
@@ -1554,6 +1579,7 @@ export function createWorldMap(o: MapOptions) {
 		intro,
 		highlight,
 		flyToCountry,
+		flyToCountries,
 		flyToContinent,
 		zoomBy(m: number) {
 			cancelMotion();

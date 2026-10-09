@@ -44,7 +44,7 @@
 {#if shown}
 	{#key shown.key}
 		<div class="unlock" class:leaving role="status" aria-live="polite">
-			<button type="button" class="unlock-card" onclick={dismiss} aria-label="{shown.badge ? `Neues Abzeichen: ${shown.badge}` : shown.rank ? `Neuer Rang: ${shown.rank}` : `Neuer Kontinent: ${shown.cont}`}. Schließen">
+			<button type="button" class="unlock-card" onclick={dismiss} aria-label="{shown.added ? `${shown.sub} neue Länder` : shown.badge ? `Neues Abzeichen: ${shown.badge}` : shown.rank ? `Neuer Rang: ${shown.rank}` : `Neuer Kontinent: ${shown.cont}`}. Schließen">
 				<span class="unlock-medal" aria-hidden="true">
 					<span class="unlock-rays"></span>
 					<span class="unlock-disc" class:emo={!!shown.badge}>{shown.badge ? shown.icon : shown.n}</span>
@@ -52,7 +52,13 @@
 						<i style="--x:{p.x}px;--y:{p.y}px;--r:{p.r}deg;--c:{p.c};--d:{p.d}ms;--w:{p.w}px"></i>
 					{/each}
 				</span>
-				{#if shown.badge}
+				{#if shown.added}
+					<span class="unlock-txt">
+						<small>Auf einen Schlag</small>
+						<strong>+{shown.sub} Länder</strong>
+						<span class="unlock-flags">{shown.added}</span>
+					</span>
+				{:else if shown.badge}
 					<span class="unlock-txt">
 						<small>Neues Abzeichen im Reisepass</small>
 						<strong>{shown.badge}</strong>
@@ -75,3 +81,7 @@
 		</div>
 	{/key}
 {/if}
+
+<style>
+	.unlock-flags{font-size:18px;line-height:1.35;letter-spacing:1px;display:-webkit-box;-webkit-line-clamp:2;line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:break-all}
+</style>

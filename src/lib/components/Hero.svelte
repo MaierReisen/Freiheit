@@ -2,7 +2,8 @@
 	import { untrack } from 'svelte';
 	import { atlas, countedCountries } from '$lib/atlas.svelte';
 	import { scopeTotal } from '$lib/scope';
-	import { CONT, CONT_NAMES, contOf } from '$lib/countries';
+	import { CONT, CONT_NAMES, contOf, flag } from '$lib/countries';
+	import { tourPlan } from '$lib/addTour';
 	import { reduceMotion, dom, easeOutCubic, hooks, introProgress, openPicker, openPlaces, ui } from '$lib/app.svelte';
 	import { rankIndex, ranks } from '$lib/passport';
 	import { badges, tierName } from '$lib/badges';
@@ -41,16 +42,21 @@
 			clearTimeout(done);
 		};
 	});
-	const shownN = $derived(t >= 1 ? n : Math.round(easeOutCubic(t) * n));
-	const shownCont = $derived(t >= 1 ? continents : Math.round(easeOutCubic(t) * continents));
+	// Mehrere Länder auf einmal: Zahl (und Kontinente) zählen im Takt der Globus-Tour hoch (Plan: addTour.ts)
+	let tourN = $state<number | null>(null),
+		tourCont = $state<number | null>(null);
+	const shownN = $derived(tourN ?? (t >= 1 ? n : Math.round(easeOutCubic(t) * n)));
+	const shownCont = $derived(tourCont ?? (t >= 1 ? continents : Math.round(easeOutCubic(t) * continents)));
 
 	// Selbst hinzugefügtes Land: geänderte Ziffern rollen wie ein Zählwerk (von rechts nach links versetzt),
-	// dahinter leuchtet die Sonne kurz auf. Nicht beim Laden/Sync. Neuer Kontinent → Feier-Karte.
+	// dahinter leuchtet die Sonne kurz auf. Nicht beim Laden/Sync. Danach Feier-Karten nacheinander (je 3,9 s, nie überlappend):
+	// bei mehreren Ländern „+N Länder“, dann neuer Kontinent, neuer Rang, neue Abzeichen.
 	let bump = $state({ key: 0, from: 0, on: false });
 	let prevN = -1,
 		prevCont = -1,
 		bumpT: ReturnType<typeof setTimeout> | undefined,
-		rankT: ReturnType<typeof setTimeout> | undefined;
+		timers: ReturnType<typeof setTimeout>[] = [];
+	const CARD = 3900;
 	$effect(() => {
 		const now = n,
 			cont = continents;
@@ -61,40 +67,63 @@
 			prevN = now;
 			prevCont = cont;
 			if (before < 0 || now <= before || t < 1 || Date.now() - atlas.lastAddedAt > 2000) return;
-			const newCont = cont > contBefore && contBefore >= 0;
-			if (newCont) {
+			timers.forEach(clearTimeout);
+			timers = [];
+			const t0 = Date.now(),
+				m = addedAll.length,
+				calm = reduceMotion(),
+				plan = m > 1 && !calm ? tourPlan(m) : null,
+				at = (ms: number, fn: () => void) => timers.push(setTimeout(fn, Math.max(0, ms - (Date.now() - t0))));
+			const card = (c: Partial<typeof ui.unlock>) => (ui.unlock = { key: ui.unlock.key + 1, cont: '', n: now, rank: '', badge: '', icon: '', sub: '', added: '', ...c });
+			let slot = 0;
+			const base = plan ? plan.end : 0;
+			if (m > 1) at(base + slot++ * CARD, () => card({ sub: String(m), added: addedAll.map(flag).join('') }));
+			if (cont > contBefore && contBefore >= 0) {
 				// mehrere Länder auf einmal: alle neuen Kontinente in einer Karte
 				const had = new Set(counted.filter((c) => !addedAll.includes(c.code)).map((c) => CONT[c.code]));
 				const names = [...new Set(addedAll.map((c) => CONT[c]).filter((k) => k && !had.has(k)))].map((k) => CONT_NAMES[k]);
-				ui.unlock = { key: ui.unlock.key + 1, cont: names.join(' · ') || (CONT[atlas.lastAddedCode] ? CONT_NAMES[CONT[atlas.lastAddedCode]] : ''), n: cont, rank: '', badge: '', icon: '', sub: '' };
+				const label = names.join(' · ') || (CONT[atlas.lastAddedCode] ? CONT_NAMES[CONT[atlas.lastAddedCode]] : '');
+				at(base + slot++ * CARD, () => card({ cont: label, n: cont }));
 			}
-			let delay = newCont ? 3900 : 0;
-			// neuer Rang im Reisepass: eigene Feier-Karte (nach der Kontinent-Karte, falls beides zugleich)
+			// neuer Rang im Reisepass: eigene Feier-Karte
 			const ri = rankIndex(now, total);
 			if (ri > rankIndex(before, total)) {
-				clearTimeout(rankT);
 				const r = ranks(total)[ri];
-				rankT = setTimeout(() => (ui.unlock = { key: ui.unlock.key + 1, cont: '', n: now, rank: r.name, badge: '', icon: r.icon, sub: '' }), delay);
-				delay += 3900;
+				at(base + slot++ * CARD, () => card({ rank: r.name, icon: r.icon }));
 			}
-			// neues Abzeichen bzw. neue Stufe: vorher/nachher vergleichen (Länderfakten werden dafür nachgeladen)
-			const list = counted;
+			// neues Abzeichen bzw. neue Stufe: vorher/nachher vergleichen (Länderfakten werden dafür nachgeladen), jedes eine Karte
+			const list = counted,
+				slot0 = slot;
 			loadFacts().then((facts) => {
 				const scope = atlas.settings.countryScope,
 					entered = Object.fromEntries(list.map((c) => [c.code, c.entered]));
 				const codes = list.map((c) => c.code);
 				const was = badges({ codes: codes.filter((c) => !addedAll.includes(c)), facts, entered }, scope);
 				const up = badges({ codes, facts, entered }, scope).filter((b, i) => b.level > was[i].level);
-				if (!up.length) return;
-				const b = up[up.length - 1],
-					more = up.length > 1 ? ` · +${up.length - 1} weitere` : '';
-				setTimeout(
-					() => (ui.unlock = { key: ui.unlock.key + 1, cont: '', n: now, rank: '', badge: b.name, icon: b.icon, sub: `${tierName(b, b.level)} · ${b.fmt(b.v)} ${b.what}${more}` }),
-					delay
-				);
+				up.slice(0, 3).forEach((b, k) => at(base + (slot0 + k) * CARD, () => card({ badge: b.name, icon: b.icon, sub: `${tierName(b, b.level)} · ${b.fmt(b.v)} ${b.what}` })));
 			});
-			if (reduceMotion()) return;
+			if (calm) return;
 			clearTimeout(bumpT);
+			if (plan) {
+				// Tour: Zahl springt je angekommenem Land weiter
+				let last = before;
+				tourN = before;
+				tourCont = contBefore;
+				plan.arrive.forEach((ms, i) =>
+					at(ms, () => {
+						const v = before + Math.round(((i + 1) / m) * (now - before));
+						bump = { key: bump.key + 1, from: last, on: true };
+						tourN = last = v;
+						clearTimeout(bumpT);
+						bumpT = setTimeout(() => (bump = { ...bump, on: false }), 600);
+					})
+				);
+				at(plan.end - 200, () => {
+					tourN = tourCont = null;
+					navigator.vibrate?.(cont > contBefore ? [14, 70, 24] : 12);
+				});
+				return;
+			}
 			bump = { key: bump.key + 1, from: before, on: true };
 			bumpT = setTimeout(() => (bump = { ...bump, on: false }), 1400);
 			navigator.vibrate?.(cont > contBefore ? [14, 70, 24] : 12);

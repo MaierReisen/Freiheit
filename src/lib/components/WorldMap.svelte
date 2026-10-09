@@ -4,6 +4,7 @@
 	import { reduceMotion, closeSheet, hooks, openCountry, openPicker, setFull, ui } from '$lib/app.svelte';
 	import { CONT, CONT_VIEW } from '$lib/countries';
 	import { createWorldMap, type MapSync, type WorldMap } from '$lib/map/engine';
+	import { tourPlan } from '$lib/addTour';
 	import ContinentChips from './ContinentChips.svelte';
 
 	let box: HTMLDivElement;
@@ -134,7 +135,10 @@
 			ui.selected = null;
 		};
 		// jede Berührung des Globus beendet die Einführung (Hinweis ist nur Anzeige und fängt keine Eingaben ab)
-		const onTouchMap = () => hideCoach();
+		const onTouchMap = () => {
+			hideCoach();
+			stopTour(); // Berührung bricht die Tour über neue Länder ab
+		};
 		box.addEventListener('pointerdown', onTouchMap, true);
 		document.addEventListener('pointerdown', onOutside, true);
 		document.addEventListener('wheel', onOutside, { capture: true, passive: true });
@@ -145,6 +149,7 @@
 			scrollIntoView: () => box.scrollIntoView?.({ behavior: reduceMotion() ? 'auto' : 'smooth', block: 'center' })
 		};
 		return () => {
+			stopTour();
 			clearTimeout(coachTimer);
 			box.removeEventListener('pointerdown', onTouchMap, true);
 			document.removeEventListener('pointerdown', onOutside, true);
@@ -171,6 +176,11 @@
 		scheduleCoach(Math.max(0, it.end - now) + 900);
 		map.intro(Math.max(0, it.start - now), Math.max(200, it.end - Math.max(now, it.start)));
 	});
+	let tourT: ReturnType<typeof setTimeout>[] = [];
+	function stopTour() {
+		tourT.forEach(clearTimeout);
+		tourT = [];
+	}
 	// Neues Land selbst hinzugefügt: Globus fliegt hin, Kontinent-Leiste wechselt auf dessen Kontinent
 	$effect(() => {
 		const at = atlas.lastAddedAt,
@@ -179,9 +189,33 @@
 		const k = CONT[code];
 		if (k && CONT_VIEW[k]) ui.focusContinent = k;
 		// mehrere Länder auf einmal: ruhiger, weiterer Flug zum zuletzt gewählten (das leuchtet auf), statt Hin-und-her-Springen
-		const many = atlas.lastAddedCodes.length > 1;
-		map.flyToCountry(code, { ms: many ? 1700 : 1300, zoom: many ? 0.15 : 0.3 });
-		map.highlight(code, reduceMotion() ? 0 : 950); // leuchtet auf, wenn der Globus ankommt
+		const all = [...atlas.lastAddedCodes];
+		stopTour();
+		if (all.length < 2) {
+			map.flyToCountry(code, { ms: 1300, zoom: 0.3 });
+			map.highlight(code, reduceMotion() ? 0 : 950); // leuchtet auf, wenn der Globus ankommt
+			return;
+		}
+		// mehrere Länder auf einmal: Tour nach Plan (gleicher Takt wie die Länderzahl in Hero), Reihenfolge = Auswahl
+		const plan = tourPlan(all.length);
+		if (reduceMotion()) {
+			map.flyToCountries(all, 0);
+			map.highlight(all, 0, 1600);
+		} else if (plan.overview) {
+			map.flyToCountries(all, plan.fly);
+			map.highlight(all, plan.fly - 200, plan.glow);
+		} else {
+			all.forEach((c, i) => {
+				tourT.push(
+					setTimeout(() => {
+						map?.flyToCountry(c, { ms: plan.fly, zoom: 0.3 });
+						map?.highlight(c, plan.fly - 150, plan.glow);
+						const k = CONT[c];
+						if (k && CONT_VIEW[k]) ui.focusContinent = k;
+					}, i * plan.step)
+				);
+			});
+		}
 	});
 	// Aktiviert, Vollbild, Länderseite oder Moduswechsel: Einführung ist erledigt
 	$effect(() => {

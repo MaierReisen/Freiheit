@@ -594,7 +594,7 @@
 			if (slot && el) await tearOff(slot, el, 4, 'WELTWUNDER');
 		}
 		if (all)
-			ui.unlock = { key: ui.unlock.key + 1, cont: '', n: WONDERS.length, rank: '', badge: 'Alle 7 Weltwunder', icon: '🏛️', sub: 'Die neuen 7 Weltwunder komplett gesehen' };
+			ui.unlock = { key: ui.unlock.key + 1, cont: '', n: WONDERS.length, rank: '', badge: 'Alle 7 Weltwunder', icon: '🏛️', sub: 'Die neuen 7 Weltwunder komplett gesehen', added: '' };
 	}
 	function drop(w: Wonder) {
 		if (confirm(`„${w.name}“ wieder aus dem Pass nehmen?`)) setWonder(w.id, false);

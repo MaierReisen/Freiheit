@@ -88,8 +88,8 @@ export const ui = $state({
 	focusContinent: null as string | null,
 	/** gemeinsame Start-Animation (Globus, Zähler, Flugkurve): Zeitpunkte in performance.now() */
 	intro: { key: 0, start: 0, end: 0, resume: false },
-	/** neuer Kontinent, neuer Rang (rank gesetzt) bzw. neues Abzeichen (badge gesetzt) im Reisepass: Feier-Karte (key zählt hoch) */
-	unlock: { key: 0, cont: '', n: 0, rank: '', badge: '', icon: '', sub: '' },
+	/** mehrere Länder auf einmal (added = Flaggen), neuer Kontinent, neuer Rang (rank gesetzt) bzw. neues Abzeichen (badge gesetzt) im Reisepass: Feier-Karte (key zählt hoch) */
+	unlock: { key: 0, cont: '', n: 0, rank: '', badge: '', icon: '', sub: '', added: '' },
 	toastMsg: '',
 	toastShow: false
 });
