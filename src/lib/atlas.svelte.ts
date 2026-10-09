@@ -127,13 +127,15 @@ const removeKey = (key: string) => {
 
 LEGACY_JUNK.forEach(removeKey);
 
-export const atlas = $state<{ data: AtlasData; sync: SyncStatus; settings: Settings; lastAddedAt: number; lastAddedCode: string }>({
+export const atlas = $state<{ data: AtlasData; sync: SyncStatus; settings: Settings; lastAddedAt: number; lastAddedCode: string; lastAddedCodes: string[] }>({
 	data: emptyAtlas(),
 	sync: 'idle',
 	settings: defaultSettings(),
 	/** Zeitpunkt, zu dem zuletzt selbst ein Land hinzugefügt wurde (für die Feier auf der Startseite) */
 	lastAddedAt: 0,
-	lastAddedCode: ''
+	lastAddedCode: '',
+	/** alle Länder der letzten Hinzufügen-Aktion (bei mehreren auf einmal), das zuletzt gewählte steht auch in lastAddedCode */
+	lastAddedCodes: []
 });
 
 let uid: string | null = null;
@@ -393,19 +395,28 @@ if (typeof window !== 'undefined') {
 
 /* ---------- Änderungen ---------- */
 export function addCountry(code: string) {
+	addCountries([code]);
+}
+/** Ein oder mehrere Länder auf einmal hinzufügen (Reihenfolge = Reihenfolge der Liste, daraus folgt „Land Nr. X“).
+    Hero, Globus und Pass bekommen die Aktion als eine Einheit mit (siehe lastAddedCodes). */
+export function addCountries(codes: string[]) {
 	const s = atlas.data;
-	if (s.countries.some((c) => c.code === code)) return;
-	const wasWish = s.wishlist.some((w) => w.code === code);
-	const position = Math.max(-1, ...s.countries.map((c, i) => c.position ?? i)) + 1;
-	atlas.lastAddedCode = code;
+	const have = new Set(s.countries.map((c) => c.code));
+	const fresh = [...new Set(codes)].filter((c) => !have.has(c));
+	if (!fresh.length) return;
+	const start = Math.max(-1, ...s.countries.map((c, i) => c.position ?? i)) + 1;
+	const rows = fresh.map((code, i) => ({ code, name: nameOf(code), position: start + i }));
+	const wished = new Set(s.wishlist.map((w) => w.code));
+	atlas.lastAddedCodes = fresh;
+	atlas.lastAddedCode = fresh[fresh.length - 1];
 	atlas.lastAddedAt = Date.now();
 	atlas.data = {
 		...s,
-		countries: [...s.countries, { code, name: nameOf(code), visits: [], position }],
-		wishlist: s.wishlist.filter((w) => w.code !== code)
+		countries: [...s.countries, ...rows.map((r) => ({ ...r, visits: [] }))],
+		wishlist: s.wishlist.filter((w) => !fresh.includes(w.code))
 	};
 	persist();
-	enqueue({ t: 'addCountry', code, name: nameOf(code), position }, ...(wasWish ? [{ t: 'removeWish', code } as Op] : []));
+	enqueue(...rows.map((r) => ({ t: 'addCountry', ...r }) as Op), ...fresh.filter((c) => wished.has(c)).map((code) => ({ t: 'removeWish', code }) as Op));
 }
 export function removeCountry(code: string) {
 	atlas.data = { ...atlas.data, countries: atlas.data.countries.filter((c) => c.code !== code) };
@@ -499,6 +510,19 @@ export function setWonder(id: string, on: boolean) {
 	atlas.settings = { ...atlas.settings, wonders: on ? [...atlas.settings.wonders, id] : atlas.settings.wonders.filter((w) => w !== id) };
 	if (uid) writeJson(settingsKey(uid), atlas.settings);
 	enqueue({ t: 'settings', s: { ...atlas.settings } });
+}
+
+/** Alle Daten des Kontos zurücksetzen (Länder, Wunschliste, Meilensteine, Stempel-Lose, Weltwunder); Konto, Startregion und Länderliste bleiben.
+    Nur für Tests. Stempel-Lose und „Pass gesehen“ löschen die Aufrufer (eigene Module). */
+export function resetAccountData() {
+	const d = emptyAtlas();
+	atlas.data = d;
+	atlas.settings = { ...atlas.settings, wonders: [] };
+	atlas.lastAddedAt = 0;
+	atlas.lastAddedCodes = [];
+	if (uid) writeJson(settingsKey(uid), atlas.settings);
+	persist();
+	enqueue({ t: 'replaceAll', data: d }, { t: 'settings', s: { ...atlas.settings } });
 }
 
 /* ---------- Export / Import ---------- */

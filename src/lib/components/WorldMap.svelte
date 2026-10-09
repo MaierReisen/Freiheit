@@ -178,7 +178,9 @@
 		if (!at || !map || Date.now() - at > 2000) return;
 		const k = CONT[code];
 		if (k && CONT_VIEW[k]) ui.focusContinent = k;
-		map.flyToCountry(code, { ms: 1300, zoom: 0.3 });
+		// mehrere Länder auf einmal: ruhiger, weiterer Flug zum zuletzt gewählten (das leuchtet auf), statt Hin-und-her-Springen
+		const many = atlas.lastAddedCodes.length > 1;
+		map.flyToCountry(code, { ms: many ? 1700 : 1300, zoom: many ? 0.15 : 0.3 });
 		map.highlight(code, reduceMotion() ? 0 : 950); // leuchtet auf, wenn der Globus ankommt
 	});
 	// Aktiviert, Vollbild, Länderseite oder Moduswechsel: Einführung ist erledigt

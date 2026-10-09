@@ -46,6 +46,15 @@ const drawn = (code: string): Tier | undefined => tierOf(entry(code)?.special) ?
 
 export const specialLevel = (code: string): Tier => preview() ?? drawn(code) ?? 0;
 
+/** Alle lokal gemerkten Lose löschen (Konto zurücksetzen) */
+export function resetSpecials() {
+	special.map = {};
+	try {
+		localStorage.removeItem(KEY);
+		localStorage.removeItem(OLD_KEY);
+	} catch {}
+}
+
 /** Lost für noch nicht ausgeloste Länder einmal aus */
 export function rollSpecials(codes: string[]) {
 	let changed = false;

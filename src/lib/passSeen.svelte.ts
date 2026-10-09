@@ -20,3 +20,11 @@ export function markSeen(codes: string[]) {
 		localStorage.setItem(KEY, JSON.stringify(codes));
 	} catch {}
 }
+
+/** Zurück auf „Pass noch nie geöffnet“ (Konto zurücksetzen) */
+export function resetSeen() {
+	passSeen.codes = null;
+	try {
+		localStorage.removeItem(KEY);
+	} catch {}
+}

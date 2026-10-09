@@ -884,3 +884,6 @@ button.pp-tile:active{transform:scale(.98)}
 @keyframes ppGlow{0%,100%{box-shadow:0 0 0 0 color-mix(in srgb,var(--sun) 60%,transparent)}50%{box-shadow:0 0 0 5px transparent}}
 @keyframes ppPop{0%,100%{transform:scale(1) rotate(0)}50%{transform:scale(1.3) rotate(15deg)}}
 [data-motion="reduce"] .pp-tile.fresh,[data-motion="reduce"] .pp-tile.fresh .pp-cover,[data-motion="reduce"] .pp-new{animation:none}
+.pick-list li.sel-li.on .chk{background:var(--primary);border-color:var(--primary);color:var(--on-primary)}
+.pick-bar{flex:none;display:flex;align-items:center;gap:10px;padding-top:12px;border-top:1px solid var(--line)}
+.btn.primary:disabled{background:var(--chip);border-color:var(--chip);color:var(--muted)}

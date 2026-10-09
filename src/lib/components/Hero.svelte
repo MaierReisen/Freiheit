@@ -56,14 +56,17 @@
 			cont = continents;
 		untrack(() => {
 			const before = prevN,
-				contBefore = prevCont;
+				contBefore = prevCont,
+				addedAll = [...atlas.lastAddedCodes];
 			prevN = now;
 			prevCont = cont;
 			if (before < 0 || now <= before || t < 1 || Date.now() - atlas.lastAddedAt > 2000) return;
 			const newCont = cont > contBefore && contBefore >= 0;
 			if (newCont) {
-				const k = CONT[atlas.lastAddedCode];
-				ui.unlock = { key: ui.unlock.key + 1, cont: k ? CONT_NAMES[k] : '', n: cont, rank: '', badge: '', icon: '', sub: '' };
+				// mehrere Länder auf einmal: alle neuen Kontinente in einer Karte
+				const had = new Set(counted.filter((c) => !addedAll.includes(c.code)).map((c) => CONT[c.code]));
+				const names = [...new Set(addedAll.map((c) => CONT[c]).filter((k) => k && !had.has(k)))].map((k) => CONT_NAMES[k]);
+				ui.unlock = { key: ui.unlock.key + 1, cont: names.join(' · ') || (CONT[atlas.lastAddedCode] ? CONT_NAMES[CONT[atlas.lastAddedCode]] : ''), n: cont, rank: '', badge: '', icon: '', sub: '' };
 			}
 			let delay = newCont ? 3900 : 0;
 			// neuer Rang im Reisepass: eigene Feier-Karte (nach der Kontinent-Karte, falls beides zugleich)
@@ -75,13 +78,12 @@
 				delay += 3900;
 			}
 			// neues Abzeichen bzw. neue Stufe: vorher/nachher vergleichen (Länderfakten werden dafür nachgeladen)
-			const added = atlas.lastAddedCode,
-				list = counted;
+			const list = counted;
 			loadFacts().then((facts) => {
 				const scope = atlas.settings.countryScope,
 					entered = Object.fromEntries(list.map((c) => [c.code, c.entered]));
 				const codes = list.map((c) => c.code);
-				const was = badges({ codes: codes.filter((c) => c !== added), facts, entered }, scope);
+				const was = badges({ codes: codes.filter((c) => !addedAll.includes(c)), facts, entered }, scope);
 				const up = badges({ codes, facts, entered }, scope).filter((b, i) => b.level > was[i].level);
 				if (!up.length) return;
 				const b = up[up.length - 1],

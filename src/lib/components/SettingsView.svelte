@@ -1,7 +1,9 @@
 <script lang="ts">
-	import { atlas, exportJson, importJson, setCountryScope, setHomeContinent } from '$lib/atlas.svelte';
+	import { atlas, exportJson, importJson, resetAccountData, setCountryScope, setHomeContinent } from '$lib/atlas.svelte';
 	import { SCOPES, scopeTotal, type CountryScope } from '$lib/scope';
 	import { auth, signOut } from '$lib/auth.svelte';
+	import { resetSpecials } from '$lib/special.svelte';
+	import { resetSeen } from '$lib/passSeen.svelte';
 	import { CONT_NAMES, CONT_VIEW, type ContinentCode } from '$lib/countries';
 	import { closeSettings, hooks, prefs, setMotionPref, setThemePref, toast, ui, type MotionPref, type ThemePref } from '$lib/app.svelte';
 
@@ -50,6 +52,16 @@
 		}
 		await importJson(f);
 		input.value = '';
+	}
+
+	// Nur für Tests: alles löschen, was zum Konto gehört (Länder, Stempel, Abzeichen, Weltwunder). Das Konto selbst bleibt.
+	function resetData() {
+		if (!confirm('Alle Daten dieses Kontos löschen? Länder, Stempel, Weltwunder und Abzeichen sind danach weg. Dein Konto bleibt bestehen. Das lässt sich nicht rückgängig machen.')) return;
+		if (!confirm('Wirklich alles löschen?')) return;
+		resetAccountData();
+		resetSpecials();
+		resetSeen();
+		toast('Alle Daten gelöscht');
 	}
 
 	async function logout() {
@@ -138,6 +150,12 @@
 			Deine Daten werden in deinem Konto gespeichert und auf all deinen Geräten synchronisiert. Ohne Internet arbeitet die App mit dem letzten Stand weiter und sendet Änderungen später. Der JSON-Export ist eine
 			zusätzliche Sicherung.
 		</p>
+
+		<h2>Zurücksetzen</h2>
+		<div class="data-row">
+			<button class="btn danger" id="resetBtn" onclick={resetData}>Alle Daten löschen</button>
+		</div>
+		<p class="note">Löscht alle Länder, Stempel, Abzeichen und Weltwunder in deinem Konto, auf allen Geräten. Dein Konto, die Startregion und die Länderliste bleiben. Gedacht zum Testen.</p>
 
 		<h2>App</h2>
 		<div class="card">
