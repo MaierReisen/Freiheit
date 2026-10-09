@@ -70,8 +70,10 @@ const rarest = (st: ShareStamp[]) => [...st].sort((a, b) => b.sp - a.sp || a.nr 
 const tw = (s: string, size: number, k = 0.56) => [...s].reduce((w, ch) => w + (/\p{Extended_Pictographic}/u.test(ch) ? 1.15 : /[A-ZÄÖÜ]/.test(ch) ? k * 1.18 : k), 0) * size;
 
 /* ---------- Weltkarte (Miller, mit Antarktis), bereiste Länder in Gold ---------- */
-/** Miller-Zylinderprojektion: gerade Längengrade wie Mercator, aber mit Polen (Antarktis sichtbar) */
-const miller = () => geoProjection((l: number, p: number) => [l, 1.25 * Math.log(Math.tan(Math.PI / 4 + 0.4 * p))]);
+/** Miller-Zylinderprojektion (gerade Längengrade, mit Polen), senkrecht um k gestreckt: Maßstab egal, Hauptsache groß */
+const miller = (k = 1) => geoProjection((l: number, p: number) => [l, k * 1.25 * Math.log(Math.tan(Math.PI / 4 + 0.4 * p))]);
+const MAP_H = 640; // Zielhöhe bei 992 Breite
+const SOUTH = -73; // Antarktis nur als Küstenstreifen andeuten
 const mapCache = new Map<string, { h: number; y0: number; inner: string }>();
 /** Karte in der Breite w; liefert die Höhe und das SVG an Position (x, y) */
 function worldMap(visited: Set<string>, w: number, on: string, off: string) {
@@ -89,10 +91,13 @@ function buildMap(visited: Set<string>, w: number, on: string, off: string) {
 	const lod = getLod('v1')!;
 	// eng an die Landmassen: höher als eine Weltkarte mit gebogenen Rändern, Karte wird größer
 	const land = lod.feats;
-	const proj = miller().fitWidth(w, { type: 'FeatureCollection', features: land } as never);
-	const [[, y0], [, b1]] = geoPath(proj).bounds({ type: 'FeatureCollection', features: land } as never);
-	// Antarktis nur bis 84° S (darunter nur noch breites Eis, kostet viel Höhe)
-	const y1 = Math.min(b1, proj([0, -84])![1]);
+	const fc = { type: 'FeatureCollection', features: land } as never;
+	// erst ungestreckt messen, dann so strecken, dass die Karte bis SOUTH genau die Zielhöhe hat
+	let proj = miller().fitWidth(w, fc);
+	const h1 = proj([0, SOUTH])![1] - geoPath(proj).bounds(fc)[0][1];
+	proj = miller(((MAP_H * w) / 992) / h1).fitWidth(w, fc);
+	const y0 = geoPath(proj).bounds(fc)[0][1];
+	const y1 = proj([0, SOUTH])![1];
 	proj.clipExtent([[-1, y0 - 1], [w + 1, y1]]);
 	const path = geoPath(proj).digits(1);
 	let v = '',
