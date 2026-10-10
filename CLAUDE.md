@@ -16,6 +16,11 @@ Live: https://maierreisen.github.io/Freiheit/ · Repo: MaierReisen/Freiheit · n
 - Lokal ist Node 14 installiert (zu alt). Node ≥ 20 bei Bedarf als offizielles Tarball ins Scratchpad laden und in den PATH setzen. `gh` liegt in `~/.local/bin`.
 - Prüfen: `npm run check` (muss 0 Fehler haben) und `npm run build`. Kein Prettier über ganze Dateien laufen lassen (formatiert sonst alles um).
 
+## Navigation (Konzept, seit v1.37.2)
+- **Tabs** = gleichrangige Bereiche in der Leiste unten (`TABS`/`TAB_LABEL` in `app.svelte.ts`, Icon in `TabBar.svelte`). Erster Tab heißt in der App **„Welt“** (interne ID `home`; Globus + Blöcke „Deine Welt“). Geplant: Flüge, Reisen o. ä.; der Globus ist kein Tab-Name, sondern ein Element, das auch dort vorkommen darf. Bis zum zweiten Tab bleibt die Leiste ausgeblendet. Höchstens 4–5 Tabs; Weiteres (Einstellungen) hinter ein Symbol oben.
+- **Kein Wischen zwischen Tabs**, Tabwechsel schreibt keinen Verlauf (`replaceState`).
+- **Ebenen** über einem Tab: Blatt von unten = Detail zu einer Sache (Land, Rang); Vollbild-Seite = Bereich (Pass, Länder, Kontinente, Einstellungen, Vollbild-Karte). Höchstens EINE Ebene im Browser-Verlauf (`enterLevel`/`leaveLevel`): Wechsel von Ebene zu Ebene ersetzt den Eintrag. Zurück, Schließen-Knopf, Wischen = immer genau diese Ebene schließen; nie durch zuletzt besuchte Seiten blättern.
+
 ## Version
 - Schema `MAJOR.MINOR.PATCH` in `package.json` (`version`), angezeigt in Einstellungen → App. **Bei jeder Änderung hochzählen**: PATCH = Fehlerkorrektur/Daten/Texte, MINOR = neue Funktion (PATCH dann 0), MAJOR = grundlegender Umbau (Rest 0).
 

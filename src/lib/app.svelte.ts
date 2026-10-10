@@ -4,9 +4,11 @@ import { CONT, CONT_VIEW } from './countries';
 /* App-weiter Zustand der Oberfläche: Tabs, Bottom-Sheet, Vollbild-Karte, Länder-Übersicht, Toast.
    Die Komponenten mit DOM-Animationen (Karte, Übersicht) melden ihre Steuerfunktionen in `hooks` an. */
 
-// Weitere Tabs (z. B. Reisen) hier ergänzen; mit nur einem Tab wird die Tab-Leiste ausgeblendet
+// Weitere Tabs (z. B. Flüge, Reisen) hier und in TAB_LABEL ergänzen (Icon in TabBar.svelte); mit nur einem Tab wird die Tab-Leiste ausgeblendet.
+// Tabs sind gleichrangige Bereiche: kein Wischen dazwischen, Wechsel schreibt keinen Verlauf. Der Tab „home“ heißt in der App „Welt“.
 export const TABS = ['home'] as const;
 export type Tab = (typeof TABS)[number];
+export const TAB_LABEL: Record<Tab, string> = { home: 'Welt' };
 // Wunschliste vorerst ausgeblendet (Daten bleiben erhalten)
 export type PickerMode = 'visited' | 'fly';
 export type SheetView = { kind: 'country'; code: string } | { kind: 'picker'; mode: PickerMode };
@@ -166,28 +168,39 @@ export function openPicker(mode: PickerMode) {
 	openSheet({ kind: 'picker', mode });
 }
 
+/* ---------- Verlauf: höchstens EINE Ebene über dem Tab ----------
+   Pass, Länder, Kontinente, Einstellungen und Vollbild-Karte sind „Ebenen“. Öffnet man eine Ebene, kommt ein Verlaufseintrag dazu;
+   wechselt man von einer Ebene zur nächsten (oder zwischen Tabs), wird der Eintrag nur ersetzt. So schließt Zurück/Wischen vom Rand
+   immer genau eine Ebene und blättert nie durch zuletzt besuchte Seiten. */
+let levelPushed = false;
+function enterLevel(h: string) {
+	if (levelPushed) history.replaceState(history.state, '', '#' + h);
+	else {
+		levelPushed = true;
+		location.hash = h;
+	}
+}
+function leaveLevel(h: string) {
+	if (location.hash !== '#' + h) return;
+	if (levelPushed) {
+		levelPushed = false;
+		history.back();
+	} else history.replaceState(history.state, '', '#home');
+}
+
 /* ---------- Vollbild-Karte ---------- */
-let pushedMap = false;
 export function setFull(on: boolean, fromHash = false) {
 	if (on === ui.full) return;
 	ui.full = on;
 	ui.mapActive = false;
 	document.body.classList.toggle('noscroll', on);
 	if (!fromHash) {
-		if (on) {
-			pushedMap = true;
-			location.hash = 'map';
-		} else if (pushedMap && location.hash === '#map') {
-			pushedMap = false;
-			history.back();
-		} else if (location.hash === '#map') {
-			location.hash = 'home';
-		}
-	} else if (!on) pushedMap = false;
+		if (on) enterLevel('map');
+		else leaveLevel('map');
+	}
 }
 
 /* ---------- Einstellungen (Vollbild, über den Button oben rechts) ---------- */
-let pushedSettings = false;
 let settingsReturnFocus: Element | null = null;
 export function openSettings(fromHash = false) {
 	if (ui.settingsOpen) return;
@@ -199,28 +212,19 @@ export function openSettings(fromHash = false) {
 	settingsReturnFocus = document.activeElement;
 	ui.settingsOpen = true;
 	document.body.classList.add('noscroll');
-	if (!fromHash) {
-		pushedSettings = true;
-		location.hash = 'einstellungen';
-	}
+	if (!fromHash) enterLevel('einstellungen');
 	tick().then(() => document.getElementById('setClose')?.focus({ preventScroll: true }));
 }
 export function closeSettings(fromHash = false) {
 	if (!ui.settingsOpen) return;
 	ui.settingsOpen = false;
 	document.body.classList.remove('noscroll');
-	if (!fromHash) {
-		if (pushedSettings && location.hash === '#einstellungen') {
-			pushedSettings = false;
-			history.back();
-		} else if (location.hash === '#einstellungen') location.hash = 'home';
-	} else pushedSettings = false;
+	if (!fromHash) leaveLevel('einstellungen');
 	if (settingsReturnFocus instanceof HTMLElement) settingsReturnFocus.focus({ preventScroll: true });
 }
 const isSettingsHash = (h: string) => h === 'einstellungen' || h === 'more';
 
 /* ---------- Deine Länder (Vollbild, wie die Einstellungen) ---------- */
-let pushedPlaces = false;
 let placesReturnFocus: Element | null = null;
 export function openPlaces(fromHash = false) {
 	if (ui.placesOpen) return;
@@ -232,10 +236,7 @@ export function openPlaces(fromHash = false) {
 	placesReturnFocus = document.activeElement;
 	ui.placesOpen = true;
 	document.body.classList.add('noscroll');
-	if (!fromHash) {
-		pushedPlaces = true;
-		location.hash = 'laender';
-	}
+	if (!fromHash) enterLevel('laender');
 	tick().then(() => document.getElementById('placesClose')?.focus({ preventScroll: true }));
 }
 export function closePlaces(fromHash = false) {
@@ -243,17 +244,11 @@ export function closePlaces(fromHash = false) {
 	ui.placesOpen = false;
 	if (ui.sheetOpen) closeSheet();
 	if (!ui.settingsOpen && !ui.passOpen) document.body.classList.remove('noscroll');
-	if (!fromHash) {
-		if (pushedPlaces && location.hash === '#laender') {
-			pushedPlaces = false;
-			history.back();
-		} else if (location.hash === '#laender') location.hash = 'home';
-	} else pushedPlaces = false;
+	if (!fromHash) leaveLevel('laender');
 	if (placesReturnFocus instanceof HTMLElement) placesReturnFocus.focus({ preventScroll: true });
 }
 
 /* ---------- Deine Kontinente (Vollbild, wie „Deine Länder“) ---------- */
-let pushedConts = false;
 let contsReturnFocus: Element | null = null;
 export function openContinents(fromHash = false) {
 	if (ui.continentsOpen) return;
@@ -265,10 +260,7 @@ export function openContinents(fromHash = false) {
 	contsReturnFocus = document.activeElement;
 	ui.continentsOpen = true;
 	document.body.classList.add('noscroll');
-	if (!fromHash) {
-		pushedConts = true;
-		location.hash = 'kontinente';
-	}
+	if (!fromHash) enterLevel('kontinente');
 	tick().then(() => document.getElementById('contsClose')?.focus({ preventScroll: true }));
 }
 /** refocus: false, wenn danach etwas anderes den Blick bekommt (z. B. der Globus) */
@@ -277,17 +269,11 @@ export function closeContinents(fromHash = false, refocus = true) {
 	ui.continentsOpen = false;
 	if (ui.sheetOpen) closeSheet();
 	if (!ui.settingsOpen && !ui.passOpen && !ui.placesOpen) document.body.classList.remove('noscroll');
-	if (!fromHash) {
-		if (pushedConts && location.hash === '#kontinente') {
-			pushedConts = false;
-			history.back();
-		} else if (location.hash === '#kontinente') location.hash = 'home';
-	} else pushedConts = false;
+	if (!fromHash) leaveLevel('kontinente');
 	if (refocus && contsReturnFocus instanceof HTMLElement) contsReturnFocus.focus({ preventScroll: true });
 }
 
 /* ---------- Reisepass (Vollbild, wie die Einstellungen) ---------- */
-let pushedPass = false;
 let passReturnFocus: Element | null = null;
 export function openPass(fromHash = false) {
 	if (ui.passOpen) return;
@@ -298,10 +284,7 @@ export function openPass(fromHash = false) {
 	passReturnFocus = document.activeElement;
 	ui.passOpen = true;
 	document.body.classList.add('noscroll');
-	if (!fromHash) {
-		pushedPass = true;
-		location.hash = 'pass';
-	}
+	if (!fromHash) enterLevel('pass');
 	tick().then(() => document.getElementById('passClose')?.focus({ preventScroll: true }));
 }
 export function closePass(fromHash = false) {
@@ -309,12 +292,7 @@ export function closePass(fromHash = false) {
 	ui.passOpen = false;
 	if (ui.sheetOpen) closeSheet();
 	if (!ui.settingsOpen) document.body.classList.remove('noscroll');
-	if (!fromHash) {
-		if (pushedPass && location.hash === '#pass') {
-			pushedPass = false;
-			history.back();
-		} else if (location.hash === '#pass') location.hash = 'home';
-	} else pushedPass = false;
+	if (!fromHash) leaveLevel('pass');
 	if (passReturnFocus instanceof HTMLElement) passReturnFocus.focus({ preventScroll: true });
 }
 
@@ -343,7 +321,11 @@ export function goTab(tab: string, push = true, dir?: number) {
 	if (dir === undefined) dir = Math.sign(TABS.indexOf(t) - TABS.indexOf(ui.tab));
 	const same = t === ui.tab;
 	showTab(t, dir);
-	if (push && location.hash !== '#' + t) location.hash = t;
+	if (push && location.hash !== '#' + t) {
+		// Tabwechsel schreibt keinen neuen Verlauf
+		history.replaceState(history.state, '', '#' + t);
+		levelPushed = false;
+	}
 	if (!same) window.scrollTo(0, 0);
 }
 
@@ -395,6 +377,7 @@ export function onHashChange() {
 		if (ui.tab !== 'home') showTab('home', 0);
 		openContinents(true);
 	} else {
+		levelPushed = false; // zurück auf Tab-Ebene: kein Eintrag mehr offen
 		if (ui.full) setFull(false, true);
 		if (ui.placesOpen) closePlaces(true);
 		if (ui.continentsOpen) closeContinents(true);
