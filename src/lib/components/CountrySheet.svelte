@@ -139,6 +139,9 @@
 				<span class="cs-badge been"
 					><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>Bereist{counted ? ` · Land Nr. ${nr}` : isTerritory(code) ? ' · Gebiet' : ''}</span
 				>
+				<button type="button" class="cs-badge cs-del" onclick={remove}
+					><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17" /></svg>Entfernen</button
+				>
 			{/if}
 			{#if been}
 				<!-- Erste Einreise (für den Reisepass-Stempel): Monat und Jahr über die Auswahl des Geräts -->
@@ -276,8 +279,5 @@
 		<p class="cs-note">Fakten werden geladen …</p>
 	{/if}
 
-	{#if been}
-		<button type="button" class="cs-remove" onclick={remove}>Aus Liste entfernen</button>
-	{/if}
 	<p class="cs-src">Daten: Wikidata, mledoze/countries (ODbL), IANA-Zeitzonen · Kurse: fawazahmed0/currency-api</p>
 </div>

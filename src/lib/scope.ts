@@ -27,9 +27,9 @@ export const DEFAULT_SCOPE: CountryScope = 'sovereign';
 export const isScope = (s: unknown): s is CountryScope => typeof s === 'string' && s in LISTS;
 
 export const SCOPES: { id: CountryScope; label: string; tag: string; desc: string }[] = [
-	{ id: 'un', label: 'UN-Mitglieder', tag: 'UN', desc: 'Nur die Mitgliedsstaaten der Vereinten Nationen (plus Antarktis).' },
-	{ id: 'un_observer', label: 'UN + Beobachter', tag: 'UN+2', desc: 'UN-Mitglieder plus Vatikanstadt und Palästina (plus Antarktis).' },
-	{ id: 'sovereign', label: 'Alle Staaten', tag: 'UN+4', desc: 'UN-Mitglieder, Vatikanstadt und Palästina sowie Kosovo und Taiwan (plus Antarktis).' }
+	{ id: 'un', label: 'UN-Mitglieder', tag: 'UN', desc: 'Nur die Mitgliedsstaaten der Vereinten Nationen. Die Antarktis zählt nur für die Kontinente.' },
+	{ id: 'un_observer', label: 'UN + Beobachter', tag: 'UN+2', desc: 'UN-Mitglieder plus die Beobachterstaaten Vatikanstadt und Palästina.' },
+	{ id: 'sovereign', label: 'Alle Staaten', tag: 'UN+4', desc: 'Alle oben genannten sowie Kosovo und Taiwan. Gebiete wie Grönland zählen nie als Land.' }
 ];
 
 export const inScope = (code: string, scope: CountryScope) => LISTS[scope].has(code);

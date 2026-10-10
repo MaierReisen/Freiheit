@@ -37,7 +37,6 @@
 		toast(`Startregion: ${CONT_NAMES[k]}`);
 	}
 
-	const scopeDesc = $derived(SCOPES.find((s) => s.id === atlas.settings.countryScope)?.desc ?? '');
 	function chooseScope(s: CountryScope) {
 		if (s === atlas.settings.countryScope) return;
 		setCountryScope(s);
@@ -124,12 +123,14 @@
 		<div class="card">
 			<div class="field" style="margin-bottom:0">
 				<span class="lbl" id="scopeLbl">Was zählt als Land?<small>Bestimmt deine Länderzahl und den Fortschritt. Gebiete wie Grönland kannst du trotzdem markieren, sie zählen dann nicht mit.</small></span>
-				<div class="chips" role="group" aria-labelledby="scopeLbl">
+				<div class="opts" role="group" aria-labelledby="scopeLbl">
 					{#each SCOPES as s (s.id)}
-						<button type="button" class="chip" aria-pressed={atlas.settings.countryScope === s.id} onclick={() => chooseScope(s.id)}>{s.label} ({s.tag})<small>{scopeTotal(s.id)}</small></button>
+						<button type="button" class="opt" aria-pressed={atlas.settings.countryScope === s.id} onclick={() => chooseScope(s.id)}
+							><b>{s.label} ({s.tag})<small>{scopeTotal(s.id)} Länder</small></b><span>{s.desc}</span></button
+						>
 					{/each}
 				</div>
-				<p class="note" style="margin-bottom:0">{scopeDesc} Das Kürzel (UN, UN+2, UN+4) steht in der Länderauswahl hinter dem Namen und auf der Länderseite unter dem Namen und zeigt, ab welcher Liste ein Land zählt.</p>
+				<p class="note" style="margin-bottom:0">Das Kürzel steht in der Länderauswahl hinter dem Namen und auf der Länderseite unter dem Namen.</p>
 			</div>
 		</div>
 

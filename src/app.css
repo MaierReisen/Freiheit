@@ -114,6 +114,13 @@ h2{font-family:var(--display);font-size:19px;font-weight:700;margin:40px 0 14px;
 .chip small{font-weight:400;color:var(--muted);margin-left:4px}
 .chip[aria-pressed="true"]{background:var(--primary);border-color:var(--primary);color:var(--on-primary)}
 .chip[aria-pressed="true"] small{color:inherit;opacity:.85}
+.opts{display:grid;gap:8px}
+.opt{display:block;width:100%;text-align:left;border:1.5px solid var(--line);background:var(--surface);border-radius:14px;padding:12px 14px}
+.opt b{display:flex;justify-content:space-between;gap:8px;font-size:15px}
+.opt b small{font-weight:400;color:var(--muted)}
+.opt span{display:block;margin-top:4px;font-size:13px;line-height:1.35;color:var(--muted)}
+.opt[aria-pressed="true"]{border-color:var(--primary);background:color-mix(in srgb,var(--primary) 12%,transparent)}
+.opt[aria-pressed="true"] b{color:var(--primary)}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:20px}
 
 /* sheet */
@@ -542,7 +549,7 @@ input,textarea,[contenteditable="true"]{-webkit-user-select:text;user-select:tex
 .cs-chip{display:inline-flex;align-items:center;gap:6px;padding:8px 13px;border:1px solid var(--line);border-radius:999px;background:var(--surface);color:var(--ink);font-size:14px;font-weight:600}
 .cs-chip.been{background:color-mix(in srgb,var(--primary) 14%,transparent);border-color:color-mix(in srgb,var(--primary) 40%,transparent);color:var(--primary)}
 .cs-note{color:var(--muted);font-size:14px;margin:18px 0 0}
-.cs-remove{display:block;margin:24px auto 0;padding:10px 16px;border:0;background:none;color:var(--err);font-weight:600;font-size:15px}
+.cs-del{border:0;background:color-mix(in srgb,var(--err) 12%,transparent);color:var(--err)}
 .cs-src{margin:18px 0 0;text-align:center;font-size:11px;color:var(--muted);opacity:.8}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .cs-tile .sub.warn{color:#FDBA74}}
 :root[data-theme="dark"] .cs-tile .sub.warn{color:#FDBA74}
