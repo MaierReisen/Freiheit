@@ -8,6 +8,8 @@ export interface SwipeCloseOpts {
 	onclose: () => void;
 	/** Berührung ignorieren (z. B. im Suchfeld) */
 	skip?: (t: Element) => boolean;
+	/** false: nur nach unten schließen (Standard: auch nach rechts) */
+	sideways?: boolean;
 }
 
 export function swipeClose(view: HTMLElement, opts: SwipeCloseOpts) {
@@ -35,7 +37,7 @@ export function swipeClose(view: HTMLElement, opts: SwipeCloseOpts) {
 		if (!s.dir) {
 			if (Math.abs(dx) < 6 && Math.abs(dy) < 6) return;
 			const atTop = (view.querySelector('.ov-body')?.scrollTop ?? 0) <= 0;
-			s.dir = dx > 0 && dx > Math.abs(dy) * 1.3 ? 'h' : dy > 0 && dy > Math.abs(dx) && atTop ? 'd' : 'v';
+			s.dir = o.sideways !== false && dx > 0 && dx > Math.abs(dy) * 1.3 ? 'h' : dy > 0 && dy > Math.abs(dx) && atTop ? 'd' : 'v';
 			if (s.dir === 'h') s.x += 6; // ohne Sprung loslegen
 			else if (s.dir === 'd') s.y += 6;
 			if (s.dir !== 'v') {

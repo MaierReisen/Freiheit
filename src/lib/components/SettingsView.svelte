@@ -5,10 +5,12 @@
 	import { resetSpecials } from '$lib/special.svelte';
 	import { resetSeen } from '$lib/passSeen.svelte';
 	import { CONT_NAMES, CONT_VIEW, type ContinentCode } from '$lib/countries';
+	import { swipeClose } from '$lib/swipeClose';
 	import { closeSettings, hooks, prefs, setMotionPref, setThemePref, toast, ui, type MotionPref, type ThemePref } from '$lib/app.svelte';
 
 	/* Einstellungen: Darstellung (Design, Animationen – nur dieses Gerät), Karte (Startregion), Statistik (Was zählt als Land?), Konto (E-Mail, Sync, Abmelden), Daten (Export/Import) */
 
+	let view: HTMLElement;
 	const continents = Object.keys(CONT_VIEW) as ContinentCode[];
 	const THEMES: { id: ThemePref; label: string }[] = [
 		{ id: 'system', label: 'System' },
@@ -75,7 +77,7 @@
 </script>
 
 <!-- svelte-ignore a11y_no_noninteractive_element_to_interactive_role -->
-<section class="ov set-view" id="settingsView" role="dialog" aria-modal="true" aria-labelledby="setTitle" hidden={!ui.settingsOpen}>
+<section class="ov set-view" id="settingsView" role="dialog" aria-modal="true" aria-labelledby="setTitle" hidden={!ui.settingsOpen} bind:this={view} use:swipeClose={{ onclose: () => closeSettings(false), sideways: false }}>
 	<div class="ov-head">
 		<button type="button" class="ov-close" id="setClose" aria-label="Einstellungen schließen" onclick={() => closeSettings(false)}
 			><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg></button
