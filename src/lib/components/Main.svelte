@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { TABS, closeContinents, closePass, closePlaces, closeSettings, closeSheet, initFromHash, onHashChange, setFull, startIntro, ui } from '$lib/app.svelte';
+	import { TABS, closeContinents, closePass, closePlaces, closeSettings, closeSheet, goTab, initFromHash, onHashChange, setFull, startIntro, ui } from '$lib/app.svelte';
 	import ContinentChips from './ContinentChips.svelte';
 	import Hero from './Hero.svelte';
 	import SettingsView from './SettingsView.svelte';
@@ -39,6 +39,29 @@
 		closeSheet();
 	}
 
+	/* Wischen zwischen den Tabs: nur zum Nachbar-Tab, schreibt keinen Verlauf (siehe goTab) */
+	let swipe: { x: number; y: number; t: number } | null = null;
+	function onTouchStart(e: TouchEvent) {
+		swipe = null;
+		if (TABS.length < 2 || e.touches.length !== 1 || ui.full || ui.placesOpen || ui.continentsOpen || ui.sheetOpen || ui.settingsOpen || ui.passOpen) return;
+		const target = e.target as Element | null;
+		if (target?.closest?.('#mapBox,input,textarea,select,.continents,.chips,.tabbar,.sheet,.count-btn,.hero-add')) return;
+		const t = e.touches[0];
+		if (t.clientX < 28 || t.clientX > window.innerWidth - 28) return; // Rand frei lassen: Zurück-Geste von iOS
+		swipe = { x: t.clientX, y: t.clientY, t: Date.now() };
+	}
+	function onTouchEnd(e: TouchEvent) {
+		if (!swipe) return;
+		const t = e.changedTouches[0],
+			dx = t.clientX - swipe.x,
+			dy = t.clientY - swipe.y,
+			dt = Date.now() - swipe.t;
+		swipe = null;
+		if (Math.abs(dx) < 70 || Math.abs(dx) < Math.abs(dy) * 1.6 || dt > 700) return;
+		const n = TABS.indexOf(ui.tab) + (dx < 0 ? 1 : -1);
+		if (n >= 0 && n < TABS.length) goTab(TABS[n], true, dx < 0 ? 1 : -1);
+	}
+
 	onMount(() => {
 		initFromHash();
 		// Start-Animation: Globus, Länderzahl, Kontinente, Flugkurve und Prozent enden gleichzeitig
@@ -65,7 +88,12 @@
 </script>
 
 <svelte:window onhashchange={onHashChange} />
-<svelte:document onkeydown={onKeydown} />
+<svelte:document
+	onkeydown={onKeydown}
+	ontouchstart={onTouchStart}
+	ontouchend={onTouchEnd}
+	ontouchcancel={() => (swipe = null)}
+/>
 
 <div id="appMain">
 	<main class="tab" id="tab-home" hidden={ui.tab !== 'home'}>
