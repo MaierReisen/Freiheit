@@ -168,25 +168,10 @@ export function openPicker(mode: PickerMode) {
 	openSheet({ kind: 'picker', mode });
 }
 
-/* ---------- Verlauf: höchstens EINE Ebene über dem Tab ----------
-   Pass, Länder, Kontinente, Einstellungen und Vollbild-Karte sind „Ebenen“. Öffnet man eine Ebene, kommt ein Verlaufseintrag dazu;
-   wechselt man von einer Ebene zur nächsten (oder zwischen Tabs), wird der Eintrag nur ersetzt. So schließt Zurück/Wischen vom Rand
-   immer genau eine Ebene und blättert nie durch zuletzt besuchte Seiten. */
-let levelPushed = false;
-function enterLevel(h: string) {
-	if (levelPushed) history.replaceState(history.state, '', '#' + h);
-	else {
-		levelPushed = true;
-		location.hash = h;
-	}
-}
-function leaveLevel(h: string) {
-	if (location.hash !== '#' + h) return;
-	if (levelPushed) {
-		levelPushed = false;
-		history.back();
-	} else history.replaceState(history.state, '', '#home');
-}
+/* ---------- Ebenen und Verlauf ----------
+   Pass, Länder, Kontinente, Einstellungen und Vollbild-Karte sind „Ebenen“ über einem Tab. Sie schreiben bewusst KEINEN Verlaufseintrag:
+   die Zurück-Geste von iOS/Android soll keine Ebene schließen und nicht durch besuchte Seiten blättern. Geschlossen wird nur per
+   Wischen nach unten oder mit dem Schließen-Knopf (Esc am Rechner). */
 
 /* ---------- Vollbild-Karte ---------- */
 export function setFull(on: boolean, fromHash = false) {
@@ -194,10 +179,6 @@ export function setFull(on: boolean, fromHash = false) {
 	ui.full = on;
 	ui.mapActive = false;
 	document.body.classList.toggle('noscroll', on);
-	if (!fromHash) {
-		if (on) enterLevel('map');
-		else leaveLevel('map');
-	}
 }
 
 /* ---------- Einstellungen (Vollbild, über den Button oben rechts) ---------- */
@@ -212,14 +193,12 @@ export function openSettings(fromHash = false) {
 	settingsReturnFocus = document.activeElement;
 	ui.settingsOpen = true;
 	document.body.classList.add('noscroll');
-	if (!fromHash) enterLevel('einstellungen');
 	tick().then(() => document.getElementById('setClose')?.focus({ preventScroll: true }));
 }
 export function closeSettings(fromHash = false) {
 	if (!ui.settingsOpen) return;
 	ui.settingsOpen = false;
 	document.body.classList.remove('noscroll');
-	if (!fromHash) leaveLevel('einstellungen');
 	if (settingsReturnFocus instanceof HTMLElement) settingsReturnFocus.focus({ preventScroll: true });
 }
 const isSettingsHash = (h: string) => h === 'einstellungen' || h === 'more';
@@ -236,7 +215,6 @@ export function openPlaces(fromHash = false) {
 	placesReturnFocus = document.activeElement;
 	ui.placesOpen = true;
 	document.body.classList.add('noscroll');
-	if (!fromHash) enterLevel('laender');
 	tick().then(() => document.getElementById('placesClose')?.focus({ preventScroll: true }));
 }
 export function closePlaces(fromHash = false) {
@@ -244,7 +222,6 @@ export function closePlaces(fromHash = false) {
 	ui.placesOpen = false;
 	if (ui.sheetOpen) closeSheet();
 	if (!ui.settingsOpen && !ui.passOpen) document.body.classList.remove('noscroll');
-	if (!fromHash) leaveLevel('laender');
 	if (placesReturnFocus instanceof HTMLElement) placesReturnFocus.focus({ preventScroll: true });
 }
 
@@ -260,7 +237,6 @@ export function openContinents(fromHash = false) {
 	contsReturnFocus = document.activeElement;
 	ui.continentsOpen = true;
 	document.body.classList.add('noscroll');
-	if (!fromHash) enterLevel('kontinente');
 	tick().then(() => document.getElementById('contsClose')?.focus({ preventScroll: true }));
 }
 /** refocus: false, wenn danach etwas anderes den Blick bekommt (z. B. der Globus) */
@@ -269,7 +245,6 @@ export function closeContinents(fromHash = false, refocus = true) {
 	ui.continentsOpen = false;
 	if (ui.sheetOpen) closeSheet();
 	if (!ui.settingsOpen && !ui.passOpen && !ui.placesOpen) document.body.classList.remove('noscroll');
-	if (!fromHash) leaveLevel('kontinente');
 	if (refocus && contsReturnFocus instanceof HTMLElement) contsReturnFocus.focus({ preventScroll: true });
 }
 
@@ -284,7 +259,6 @@ export function openPass(fromHash = false) {
 	passReturnFocus = document.activeElement;
 	ui.passOpen = true;
 	document.body.classList.add('noscroll');
-	if (!fromHash) enterLevel('pass');
 	tick().then(() => document.getElementById('passClose')?.focus({ preventScroll: true }));
 }
 export function closePass(fromHash = false) {
@@ -292,7 +266,6 @@ export function closePass(fromHash = false) {
 	ui.passOpen = false;
 	if (ui.sheetOpen) closeSheet();
 	if (!ui.settingsOpen) document.body.classList.remove('noscroll');
-	if (!fromHash) leaveLevel('pass');
 	if (passReturnFocus instanceof HTMLElement) passReturnFocus.focus({ preventScroll: true });
 }
 
@@ -324,7 +297,6 @@ export function goTab(tab: string, push = true, dir?: number) {
 	if (push && location.hash !== '#' + t) {
 		// Tabwechsel schreibt keinen neuen Verlauf
 		history.replaceState(history.state, '', '#' + t);
-		levelPushed = false;
 	}
 	if (!same) window.scrollTo(0, 0);
 }
@@ -377,7 +349,6 @@ export function onHashChange() {
 		if (ui.tab !== 'home') showTab('home', 0);
 		openContinents(true);
 	} else {
-		levelPushed = false; // zurück auf Tab-Ebene: kein Eintrag mehr offen
 		if (ui.full) setFull(false, true);
 		if (ui.placesOpen) closePlaces(true);
 		if (ui.continentsOpen) closeContinents(true);

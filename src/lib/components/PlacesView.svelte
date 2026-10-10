@@ -135,14 +135,10 @@
 			dy = p.clientY - back.y;
 		if (!back.dir) {
 			if (Math.abs(dx) < 6 && Math.abs(dy) < 6) return;
-			// nur klar waagerecht nach rechts; nach links gehört der Zeile (Löschen)
+			// nur nach unten schließen; seitlich gehört der Zeile (Löschen)
 			const atTop = (view.querySelector('.ov-body')?.scrollTop ?? 0) <= 0;
-			back.dir = dx > 0 && dx > Math.abs(dy) * 1.3 ? 'h' : dy > 0 && dy > Math.abs(dx) && atTop ? 'd' : 'v';
-			if (back.dir === 'h') {
-				back.x += 6; // ohne Sprung loslegen
-				view.classList.add('swiping');
-				view.style.transition = 'none';
-			} else if (back.dir === 'd') {
+			back.dir = dy > 0 && dy > Math.abs(dx) && atTop ? 'd' : 'v';
+			if (back.dir === 'd') {
 				back.y += 6;
 				view.classList.add('swiping', 'down');
 				view.style.transition = 'none';
