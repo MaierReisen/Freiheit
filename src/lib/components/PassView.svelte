@@ -9,6 +9,7 @@
 	import { badgeLevels, badges, tierName, type Badge, type DetailItem } from '$lib/badges';
 	import { loadFacts, type Facts } from '$lib/facts';
 	import { scopeTotal } from '$lib/scope';
+	import { ALL } from '$lib/map/geo';
 	import { markSeen, passSeen } from '$lib/passSeen.svelte';
 	import { stickOn } from '$lib/markfx';
 	import { CHANCE, specialLevel, rollSpecials, type Tier } from '$lib/special.svelte';
@@ -870,7 +871,7 @@
 		{#if ui.passOpen && scenesOk}
 			<div class="pp-top"><PassTile inPass onrank={() => { choose(null); sOff = 0; leaf = 'ranks'; }} /></div>
 			<div class="pp-tabs" role="tablist" aria-label="Bereiche des Passes">
-				<button type="button" role="tab" aria-selected={tab === 'st'} onclick={() => pickTab('st')}>Stempel<small>{stamps.length}</small></button>
+				<button type="button" role="tab" aria-selected={tab === 'st'} onclick={() => pickTab('st')}>Stempel<small>{stamps.length} / {ALL.length}</small></button>
 				<button type="button" role="tab" aria-selected={tab === 'ww'} onclick={() => pickTab('ww')}
 					>Weltwunder<small>{wonderCount} / {WONDERS.length}</small>{#if wonderOpen.length}<i class="pp-dot" aria-label="wartet auf dich"></i>{/if}</button
 				>

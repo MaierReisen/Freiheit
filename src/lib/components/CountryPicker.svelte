@@ -1,12 +1,13 @@
 <script lang="ts">
 	import { addCountries, visitedSet } from '$lib/atlas.svelte';
-	import { CONT, CONT_NAMES, compareNames, flag, nameOf } from '$lib/countries';
+	import { CONT, CONT_NAMES, compareNames, contOf, flag, nameOf } from '$lib/countries';
 	import { ALL } from '$lib/map/geo';
-	import { placeLabel } from '$lib/scope';
+	import { listTag } from '$lib/scope';
 	import { closeSheet, hooks, openCountry, toast, type PickerMode } from '$lib/app.svelte';
 
 	/* mode "fly": Land auf der Karte suchen (alle Länder und Gebiete).
-	   Sonst Länder als bereist hinzufügen – auch Gebiete (statt Kontinent „Gebiet · Dänemark“: Stempel ja, zählen nicht). Wie „Auswählen“ in der Länderliste:
+	   Sonst Länder als bereist hinzufügen – auch Gebiete (Stempel ja, zählen nicht). Wie „Auswählen“ in der Länderliste:
+	   Hinter dem Namen steht, ab welcher Liste ein Land zählt („(UN)“, „(UN+2)“, „(UN+4)“), bei Gebieten nichts; rechts nur der Kontinent.
 	   Länder antippen = markieren (Haken), unten „Alle“ / „Hinzufügen“. Die Reihenfolge des Antippens bestimmt „Land Nr. X“.
 	   Suche und Auswahl bleiben unabhängig: markierte Länder bleiben auch nach neuer Suche markiert. */
 	let { mode }: { mode: PickerMode } = $props();
@@ -100,7 +101,7 @@
 {#snippet row(c: string)}
 	<li class:sel-li={!flyMode} class:on={picked.includes(c)}>
 		<button data-code={c} aria-pressed={flyMode ? undefined : picked.includes(c)} onclick={() => choose(c)}
-			>{#if !flyMode}<span class="chk" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg></span>{/if}<span>{flag(c)}</span>{flyMode && visited.has(c) ? '✓ ' : ''}{nameOf(c)}<span class="ct">{placeLabel(c)}</span></button
+			>{#if !flyMode}<span class="chk" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg></span>{/if}<span>{flag(c)}</span>{flyMode && visited.has(c) ? '✓ ' : ''}{nameOf(c)}{#if listTag(c)}<span class="tag">({listTag(c)})</span>{/if}<span class="ct">{contOf(c)}</span></button
 		>
 	</li>
 {/snippet}

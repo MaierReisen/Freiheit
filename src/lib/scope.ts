@@ -57,5 +57,7 @@ export const isTerritory = (code: string) => !LISTS.sovereign.has(code);
 export const areaLabel = (code: string) => (PARENT[code] ? `Gebiet · ${PARENT[code]}` : 'Gebiet');
 /** Zweite Zeile unter einem Ländernamen (Auswahl, Liste, Länderseite): Kontinent, bei Gebieten „Gebiet · Dänemark“ */
 export const placeLabel = (code: string) => (isTerritory(code) ? areaLabel(code) : contOf(code));
+/** Ab welcher Liste ein Land zählt, für die Auswahl: „UN“, „UN+2“ (Beobachter), „UN+4“ (Kosovo, Taiwan); Gebiete und Antarktis leer */
+export const listTag = (code: string) => (UN.has(code) ? 'UN' : OBSERVERS.includes(code) ? 'UN+2' : DE_FACTO.includes(code) ? 'UN+4' : '');
 /** Alle Länder der Liste */
 export const scopeCodes = (scope: CountryScope): ReadonlySet<string> => LISTS[scope];
