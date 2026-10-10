@@ -8,7 +8,7 @@
 	import { WONDERS, type Wonder } from '$lib/wonders';
 	import { badgeLevels, badges, tierName, type Badge, type DetailItem } from '$lib/badges';
 	import { loadFacts, type Facts } from '$lib/facts';
-	import { scopeTotal } from '$lib/scope';
+	import { countsForContinent, scopeTotal } from '$lib/scope';
 	import { ALL } from '$lib/map/geo';
 	import { markSeen, passSeen } from '$lib/passSeen.svelte';
 	import { stickOn } from '$lib/markfx';
@@ -109,6 +109,8 @@
 	});
 	/** Stempel der zählenden Länder (für Rang, Abzeichen und die Zahl auf dem Pass-Umschlag) */
 	const countedStamps = $derived(stamps.filter((s) => s.nr > 0));
+	/** dazu die Antarktis: für Kontinente und Abzeichen */
+	const contStamps = $derived(stamps.filter((s) => s.nr > 0 || countsForContinent(s.code, atlas.settings.countryScope)));
 	const tierCount = $derived.by(() => {
 		const n = [0, 0, 0, 0];
 		for (const st of stamps) n[st.sp]++;
@@ -385,7 +387,7 @@
 		if (ui.passOpen && !facts) loadFacts().then((f) => (facts = f));
 	});
 	const bs = $derived(
-		facts ? badges({ codes: countedStamps.map((s) => s.code), facts, entered: Object.fromEntries(countedStamps.map((s) => [s.code, s.entered])) }, atlas.settings.countryScope) : []
+		facts ? badges({ codes: contStamps.map((s) => s.code), facts, entered: Object.fromEntries(contStamps.map((s) => [s.code, s.entered])) }, atlas.settings.countryScope) : []
 	);
 	let picked = $state<string | null>(null);
 	const pick = $derived(bs.find((b) => b.id === picked) ?? null);
@@ -748,7 +750,7 @@
 			{
 				n: countedStamps.length,
 				rank: ri >= 0 ? { icon: allRanks[ri].icon, name: allRanks[ri].name } : null,
-				conts: [...new Set(countedStamps.map((s) => CONT[s.code]).filter(Boolean))],
+				conts: [...new Set(contStamps.map((s) => CONT[s.code]).filter(Boolean))],
 				since: years.length ? Math.min(...years) : 0,
 				area: area ? area.v : null,
 				wonders: wonderCount,

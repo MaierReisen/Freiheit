@@ -1,6 +1,6 @@
 import { CONT_VIEW, nameOf, type ContinentCode } from './countries';
 import { toast } from './app.svelte';
-import { DEFAULT_SCOPE, inScope, isScope, type CountryScope } from './scope';
+import { DEFAULT_SCOPE, countsForContinent, inScope, isScope, type CountryScope } from './scope';
 import { supabase } from './supabase';
 import { isWonder } from './wonders';
 
@@ -158,6 +158,8 @@ export const visitedSet = () => new Set(atlas.data.countries.map((c) => c.code))
 export const isCounted = (code: string) => inScope(code, atlas.settings.countryScope);
 /** Bereiste Länder, die in der gewählten Liste zählen (in Reihenfolge = "Land Nr. X") */
 export const countedCountries = () => atlas.data.countries.filter((c) => isCounted(c.code));
+/** Bereiste Stempel, die für Kontinente und Abzeichen zählen (Länder der Liste plus Antarktis) */
+export const continentCountries = () => atlas.data.countries.filter((c) => countsForContinent(c.code, atlas.settings.countryScope));
 export const isEntered = (v: unknown): v is string => typeof v === 'string' && /^\d{4}(-(0[1-9]|1[0-2]))?$/.test(v);
 export const wishSet = () => new Set(atlas.data.wishlist.map((c) => c.code));
 

@@ -1,6 +1,6 @@
 import { CONT, CONT_NAMES, compareNames, nameOf, type ContinentCode } from './countries';
 import type { Facts } from './facts';
-import { scopeCodes, scopeTotalIn, type CountryScope } from './scope';
+import { contCodes, scopeTotalIn, type CountryScope } from './scope';
 
 /* Abzeichen (Visa-Seiten im Reisepass): Sonderauszeichnungen in bis zu drei Stufen (Bronze, Silber, Gold).
    Berechnet aus den bereisten Ländern, den Länderfakten (facts.json) und den Einreisedaten. */
@@ -207,7 +207,7 @@ export const CONT_BADGES: Record<Exclude<ContinentCode, 'AN'>, [string, string]>
 };
 
 function defs(scope: CountryScope, facts: Record<string, Facts>): Def[] {
-	const all = [...scopeCodes(scope)];
+	const all = [...contCodes(scope)];
 	const area = (c: string) => facts[c]?.area ?? 0;
 	const giants = new Set([...all].filter((c) => c !== 'AQ').sort((a, b) => area(b) - area(a)).slice(0, 10));
 	const eight = new Set(all.filter((c) => (facts[c]?.peak?.[1] ?? 0) >= 8000));

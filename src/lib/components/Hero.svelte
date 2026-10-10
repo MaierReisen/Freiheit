@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
-	import { atlas, countedCountries, isCounted } from '$lib/atlas.svelte';
+	import { atlas, continentCountries, countedCountries, isCounted } from '$lib/atlas.svelte';
 	import { scopeTotal } from '$lib/scope';
 	import { CONT, CONT_NAMES, contOf } from '$lib/countries';
 	import { tourPlan } from '$lib/addTour';
@@ -21,7 +21,7 @@
 	const n = $derived(counted.length);
 	const total = $derived(scopeTotal(atlas.settings.countryScope));
 	const pct = $derived(total ? Math.round((n / total) * 100) : 0);
-	const continents = $derived(new Set(counted.map((c) => contOf(c.code) || 'Sonstige')).size);
+	const continents = $derived(new Set(continentCountries().map((c) => contOf(c.code) || 'Sonstige')).size);
 
 	// Start-Animation: Länderzahl und Kontinente zählen hoch (schnell, dann langsamer) und enden
 	// gleichzeitig mit Globus und Flugkurve. Nachgeladene Länder werden unterwegs mitgezählt.
@@ -70,7 +70,7 @@
 			timers.forEach(clearTimeout);
 			timers = [];
 			const t0 = Date.now(),
-				m = addedAll.length,
+				m = addedAll.filter((c) => isCounted(c)).length,
 				calm = reduceMotion(),
 				plan = m > 1 && !calm ? tourPlan(m) : null,
 				at = (ms: number, fn: () => void) => timers.push(setTimeout(fn, Math.max(0, ms - (Date.now() - t0))));
@@ -84,7 +84,7 @@
 				at(base + slot++ * CARD, () => card({ rank: r.name, icon: r.icon }));
 			}
 			// neues Abzeichen bzw. neue Stufe: vorher/nachher vergleichen (Länderfakten werden dafür nachgeladen), jedes eine Karte
-			const list = counted,
+			const list = continentCountries(),
 				slot0 = slot;
 			if (m < 2) loadFacts().then((facts) => {
 				const scope = atlas.settings.countryScope,

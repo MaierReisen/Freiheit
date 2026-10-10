@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { tick } from 'svelte';
-	import { atlas, countedCountries } from '$lib/atlas.svelte';
+	import { atlas, continentCountries } from '$lib/atlas.svelte';
 	import { CONT, CONT_NAMES, compareNames, flag, nameOf, type ContinentCode } from '$lib/countries';
-	import { SCOPES, scopeCodes } from '$lib/scope';
+	import { SCOPES, contCodes } from '$lib/scope';
 	import { CONT_BADGES, TIER_NAMES } from '$lib/badges';
 	import { longDate } from '$lib/passport';
 	import { closeContinents, hooks, openCountry, openPass, reduceMotion, ui } from '$lib/app.svelte';
@@ -21,13 +21,13 @@
 	// alle Länder der Liste je Kontinent, alphabetisch (nur bei Wechsel der Länderliste neu)
 	const pool = $derived.by(() => {
 		const m = Object.fromEntries(KEYS.map((k) => [k, [] as string[]])) as Record<ContinentCode, string[]>;
-		for (const c of scopeCodes(scope)) if (CONT[c]) m[CONT[c]].push(c);
+		for (const c of contCodes(scope)) if (CONT[c]) m[CONT[c]].push(c);
 		for (const k of KEYS) m[k].sort((a, b) => compareNames(nameOf(a), nameOf(b)));
 		return m;
 	});
 	// bereiste Länder (eigene Reihenfolge): je Kontinent Menge und erstes Land
 	const stats = $derived.by(() => {
-		const list = countedCountries();
+		const list = continentCountries();
 		return KEYS.map((k) => {
 			const mine = list.filter((c) => CONT[c.code] === k);
 			const total = pool[k].length,

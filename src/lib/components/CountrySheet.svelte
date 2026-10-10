@@ -117,8 +117,8 @@
 			onclick={() => ui.sheetDetent === 'peek' && setSheetDetent('full')}
 			onkeydown={(e) => e.key === 'Enter' && ui.sheetDetent === 'peek' && setSheetDetent('full')}
 		>
-			<h3 id="sheetTitle" class:long={name.length > 13} class:xlong={name.length > 20}>{name}{#if listTag(code)}<span class="tag">({listTag(code)})</span>{/if}</h3>
-			<div class="cs-sub">{[placeLabel(code), facts?.cap?.[0]].filter(Boolean).join(' · ')}</div>
+			<h3 id="sheetTitle" class:long={name.length > 13} class:xlong={name.length > 20}>{name}</h3>
+			<div class="cs-sub">{[placeLabel(code) + (listTag(code) ? ` (${listTag(code)})` : ''), facts?.cap?.[0]].filter(Boolean).join(' · ')}</div>
 		</div>
 		{#if !been}
 			<button type="button" class="cs-mark" class:busy disabled={busy} onclick={markVisited} aria-label="Als bereist markieren"

@@ -940,5 +940,4 @@ button.pp-tile:active{transform:scale(.98)}
 .pick-list li.sel-li.on .chk{background:var(--primary);border-color:var(--primary);color:var(--on-primary)}
 .pick-bar{flex:none;display:flex;align-items:center;gap:10px;padding-top:12px;border-top:1px solid var(--line)}
 .btn.primary:disabled{background:var(--chip);border-color:var(--chip);color:var(--muted)}
-.cs-head .tag,#sheetTitle .tag{margin-left:6px;color:var(--muted);font:600 13px var(--text);letter-spacing:0;white-space:nowrap}
-#sheetTitle .tag{margin-left:6px;color:var(--muted);font:600 13px var(--text);letter-spacing:0;white-space:nowrap}
+.cs-head .tag,

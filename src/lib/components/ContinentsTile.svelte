@@ -1,6 +1,7 @@
 <script lang="ts">
-	import { atlas, isCounted } from '$lib/atlas.svelte';
+	import { atlas } from '$lib/atlas.svelte';
 	import { CONT, CONT_NAMES, type ContinentCode } from '$lib/countries';
+	import { countsForContinent } from '$lib/scope';
 	import { openContinents } from '$lib/app.svelte';
 
 	/* Zeile „Meine Kontinente“ im Bereich „Meine Welt“: wie viele der 7 Kontinente bereist sind, hinter der Zahl je bereistem
@@ -11,7 +12,7 @@
 		const s = new Set<ContinentCode>();
 		atlas.data.countries.forEach((x) => {
 			const k = CONT[x.code];
-			if (k && isCounted(x.code)) s.add(k);
+			if (k && countsForContinent(x.code, atlas.settings.countryScope)) s.add(k);
 		});
 		return KEYS.filter((k) => s.has(k));
 	});

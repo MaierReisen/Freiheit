@@ -15,12 +15,12 @@ const UN = new Set(
 );
 const OBSERVERS = ['VA', 'PS']; // Beobachterstaaten: Vatikanstadt, Palästina
 const DE_FACTO = ['XK', 'TW']; // Kosovo, Taiwan
-const EXTRA = ['AQ']; // Antarktis: kein Staat, zählt aber immer mit, damit man alle sieben Kontinente bereisen kann
+const EXTRA = ['AQ']; // Antarktis: kein Staat, also ein Gebiet: zählt nie als Land, wird aber als Kontinent gewertet (sieben Kontinente)
 
 const LISTS: Record<CountryScope, Set<string>> = {
-	un: new Set([...UN, ...EXTRA]),
-	un_observer: new Set([...UN, ...OBSERVERS, ...EXTRA]),
-	sovereign: new Set([...UN, ...OBSERVERS, ...DE_FACTO, ...EXTRA])
+	un: new Set([...UN]),
+	un_observer: new Set([...UN, ...OBSERVERS]),
+	sovereign: new Set([...UN, ...OBSERVERS, ...DE_FACTO])
 };
 
 export const DEFAULT_SCOPE: CountryScope = 'sovereign';
@@ -34,9 +34,13 @@ export const SCOPES: { id: CountryScope; label: string; tag: string; desc: strin
 
 export const inScope = (code: string, scope: CountryScope) => LISTS[scope].has(code);
 export const scopeTotal = (scope: CountryScope) => LISTS[scope].size;
+/** Zählt dieser Stempel für den Kontinent (Länder der Liste plus Antarktis)? Für die Länderzahl gilt nur inScope. */
+export const countsForContinent = (code: string, scope: CountryScope) => LISTS[scope].has(code) || EXTRA.includes(code);
+/** Länder der Liste plus Antarktis (Grundlage für Kontinente und Abzeichen) */
+export const contCodes = (scope: CountryScope): ReadonlySet<string> => new Set([...LISTS[scope], ...EXTRA]);
 export function scopeTotalIn(scope: CountryScope, cont: ContinentCode) {
 	let n = 0;
-	for (const c of LISTS[scope]) if (CONT[c] === cont) n++;
+	for (const c of contCodes(scope)) if (CONT[c] === cont) n++;
 	return n;
 }
 /* Gebiete: zählen in keiner Liste, bekommen aber einen Stempel. Überall gleich beschriftet: „Gebiet · Dänemark“
@@ -53,6 +57,7 @@ const PARENT: Record<string, string> = {
 };
 /** Gebiet = zählt in keiner Länderliste (z. B. Grönland, Hongkong) */
 export const isTerritory = (code: string) => !LISTS.sovereign.has(code);
+// (Antarktis steht in keiner Liste, ist also automatisch ein Gebiet)
 /** Kurze Beschriftung eines Gebiets, z. B. „Gebiet · Dänemark“ */
 export const areaLabel = (code: string) => (PARENT[code] ? `Gebiet · ${PARENT[code]}` : 'Gebiet');
 /** Zweite Zeile unter einem Ländernamen (Auswahl, Liste, Länderseite): Kontinent, bei Gebieten „Gebiet · Dänemark“ */
