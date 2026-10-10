@@ -1,4 +1,4 @@
-import { CONT, type ContinentCode } from './countries';
+import { CONT, contOf, type ContinentCode } from './countries';
 
 /* Was zählt als Land? Grundlage für Länderzahl, Fortschritt, Nummerierung und für das, was auf der Karte markierbar ist.
    Gebiete (z. B. Grönland, Puerto Rico) zählen in keiner Liste: man kann sie trotzdem als bereist markieren und sie bekommen einen
@@ -39,5 +39,23 @@ export function scopeTotalIn(scope: CountryScope, cont: ContinentCode) {
 	for (const c of LISTS[scope]) if (CONT[c] === cont) n++;
 	return n;
 }
+/* Gebiete: zählen in keiner Liste, bekommen aber einen Stempel. Überall gleich beschriftet: „Gebiet · Dänemark“
+   (statt Kontinent), auf dem Stempel „Gebiet“ statt „Nr.“. Westsahara ist umstritten und steht ohne Staat da. */
+const DK = 'Dänemark', GB = 'Großbritannien', US = 'USA', FR = 'Frankreich', NL = 'Niederlande', NZ = 'Neuseeland', AU = 'Australien', NO = 'Norwegen';
+const PARENT: Record<string, string> = {
+	GL: DK, FO: DK, AX: 'Finnland', HK: 'China', MO: 'China', SJ: NO, BV: NO,
+	AI: GB, BM: GB, FK: GB, GG: GB, GI: GB, GS: GB, IM: GB, IO: GB, JE: GB, KY: GB, MS: GB, PN: GB, SH: GB, TC: GB, VG: GB,
+	AS: US, GU: US, MP: US, PR: US, UM: US, VI: US,
+	BL: FR, GF: FR, GP: FR, MF: FR, MQ: FR, NC: FR, PF: FR, PM: FR, RE: FR, TF: FR, WF: FR, YT: FR,
+	AW: NL, BQ: NL, CW: NL, SX: NL,
+	CK: NZ, NU: NZ, TK: NZ,
+	CC: AU, CX: AU, HM: AU, NF: AU
+};
+/** Gebiet = zählt in keiner Länderliste (z. B. Grönland, Hongkong) */
+export const isTerritory = (code: string) => !LISTS.sovereign.has(code);
+/** Kurze Beschriftung eines Gebiets, z. B. „Gebiet · Dänemark“ */
+export const areaLabel = (code: string) => (PARENT[code] ? `Gebiet · ${PARENT[code]}` : 'Gebiet');
+/** Zweite Zeile unter einem Ländernamen (Auswahl, Liste, Länderseite): Kontinent, bei Gebieten „Gebiet · Dänemark“ */
+export const placeLabel = (code: string) => (isTerritory(code) ? areaLabel(code) : contOf(code));
 /** Alle Länder der Liste */
 export const scopeCodes = (scope: CountryScope): ReadonlySet<string> => LISTS[scope];

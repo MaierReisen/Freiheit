@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
-	import { atlas, countedCountries } from '$lib/atlas.svelte';
+	import { atlas, countedCountries, isCounted } from '$lib/atlas.svelte';
 	import { scopeTotal } from '$lib/scope';
 	import { CONT, CONT_NAMES, contOf } from '$lib/countries';
 	import { tourPlan } from '$lib/addTour';
@@ -74,7 +74,7 @@
 				calm = reduceMotion(),
 				plan = m > 1 && !calm ? tourPlan(m) : null,
 				at = (ms: number, fn: () => void) => timers.push(setTimeout(fn, Math.max(0, ms - (Date.now() - t0))));
-			const card = (c: Partial<typeof ui.unlock>) => (ui.unlock = { key: ui.unlock.key + 1, cont: '', n: now, rank: '', badge: '', badgeId: '', icon: '', sub: '', added: '', ...c });
+			const card = (c: Partial<typeof ui.unlock>) => (ui.unlock = { key: ui.unlock.key + 1, cont: '', n: now, rank: '', badge: '', badgeId: '', icon: '', sub: '', added: '', area: '', ...c });
 			let slot = 0;
 			const base = plan ? plan.end : 0;
 			// Feier-Karten: neuer Rang (auch bei mehreren Ländern) und neue Abzeichen; kein Kontinent, Abzeichen nicht bei mehreren Ländern auf einmal
@@ -119,6 +119,16 @@
 			bump = { key: bump.key + 1, from: before, on: true };
 			bumpT = setTimeout(() => (bump = { ...bump, on: false }), 1400);
 			navigator.vibrate?.(cont > contBefore ? [14, 70, 24] : 12);
+		});
+	});
+	// Nur Gebiete hinzugefügt (Zahl bleibt gleich): eigene Karte „Neues Gebiet“ – Stempel wartet im Pass
+	$effect(() => {
+		const at = atlas.lastAddedAt;
+		untrack(() => {
+			const codes = atlas.lastAddedCodes;
+			if (!at || Date.now() - at > 2000 || !codes.length || codes.some((c) => isCounted(c))) return;
+			ui.unlock = { key: ui.unlock.key + 1, cont: '', n: 0, rank: '', badge: '', badgeId: '', icon: '', sub: '', added: '', area: codes.join(',') };
+			navigator.vibrate?.(12);
 		});
 	});
 	// Ziffern für das Zählwerk: rechtsbündig gegen die alte Zahl verglichen

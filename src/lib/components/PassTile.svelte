@@ -13,8 +13,8 @@
 	const codes = $derived(countedCountries().map((c) => c.code));
 	const n = $derived(codes.length);
 	const info = $derived(rankInfo(n, scopeTotal(atlas.settings.countryScope)));
-	// neue Stempel seit dem letzten Blick in den Pass
-	const fresh = $derived(passSeen.codes ? codes.filter((c) => !passSeen.codes!.includes(c)).length : 0);
+	// neue Stempel seit dem letzten Blick in den Pass (auch von Gebieten, die nicht zählen)
+	const fresh = $derived(passSeen.codes ? atlas.data.countries.filter((c) => !passSeen.codes!.includes(c.code)).length : 0);
 </script>
 
 {#snippet body()}
@@ -32,19 +32,19 @@
 		{#if info.tier >= 2}<i class="pp-pips">{#each Array(Math.min(info.tier, 7)) as _}<u></u>{/each}</i>{/if}
 	</span>
 	<span class="pp-tile-txt">
-		<span class="pp-tile-n">{n}<small>Stempel</small>{#if fresh && !inPass}<em class="pp-new">✨ {fresh} neu</em>{/if}</span>
+		<span class="pp-tile-n">{n}<small>{n === 1 ? 'Land' : 'Länder'}</small>{#if fresh && !inPass}<em class="pp-new">✨ {fresh} neu</em>{/if}</span>
 		{#if info.rank}<span class="pp-rank">{info.rank.icon} {info.rank.name}</span>{/if}
 		<span class="pp-bar"><i style="width:{info.p * 100}%"></i></span>
 		<span class="pp-bar-t"
-			>{#if info.next}Noch {info.left} Stempel bis <b>{info.next.name}</b>{:else}Höchster Rang erreicht{/if}</span
+			>{#if info.next}Noch {info.left} {info.left === 1 ? 'Land' : 'Länder'} bis <b>{info.next.name}</b>{:else}Höchster Rang erreicht{/if}</span
 		>
 	</span>
 {/snippet}
 
 {#if inPass}
-	<button type="button" class="pp-tile in-pass" aria-label="{n} Stempel{info.rank ? `, Rang ${info.rank.name}` : ''} – alle Ränge zeigen" onclick={() => onrank?.()}
+	<button type="button" class="pp-tile in-pass" aria-label="{n} {n === 1 ? 'Land' : 'Länder'}{info.rank ? `, Rang ${info.rank.name}` : ''} – alle Ränge zeigen" onclick={() => onrank?.()}
 		>{@render body()}<span class="pp-chev" aria-hidden="true">›</span></button
 	>
 {:else}
-	<button type="button" class="pp-tile" class:fresh={fresh > 0} aria-label="Reisepass öffnen: {n} Stempel{fresh ? `, ${fresh} neu` : ''}{info.rank ? `, Rang ${info.rank.name}` : ''}" onclick={() => openPass()}>{@render body()}</button>
+	<button type="button" class="pp-tile" class:fresh={fresh > 0} aria-label="Reisepass öffnen: {n} {n === 1 ? 'Land' : 'Länder'}{fresh ? `, ${fresh} neue Stempel` : ''}{info.rank ? `, Rang ${info.rank.name}` : ''}" onclick={() => openPass()}>{@render body()}</button>
 {/if}

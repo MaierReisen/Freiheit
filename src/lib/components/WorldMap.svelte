@@ -14,7 +14,6 @@
 	let s = $state<MapSync>({ mode: 'globe', spin: false, fineState: 'idle' });
 
 	// Legende "zählt nicht" nur zeigen, wenn es solche bereisten Gebiete gibt
-	const hasUncounted = $derived(atlas.data.countries.some((c) => !isCounted(c.code)));
 
 	// Touch-Geräte: Tipp öffnet ein Land, langes Drücken aktiviert Drehen/Verschieben – sonst scrollt die Seite (siehe engine.ts)
 	const coarse = typeof window !== 'undefined' && !!window.matchMedia?.('(pointer: coarse)').matches;
@@ -264,7 +263,7 @@
 	{/if}
 	<span class="map-hint" id="mapHint">{hint}</span>
 	<div class="map-panel" id="mapPanel">
-		<div class="legend"><span><i class="sw v"></i>Bereist</span>{#if hasUncounted}<span><i class="sw vs"></i>Bereist, zählt nicht</span>{/if}</div>
+		<div class="legend"><span><i class="sw v"></i>Bereist</span></div>
 		<div class="panel-row">
 			<button type="button" class="mchip" id="mSpin" aria-pressed={s.spin} hidden={s.mode !== 'globe'} onclick={() => map?.toggleSpin()}>Drehen</button>
 			<button type="button" class="mchip" id="mSearch" onclick={() => openPicker('fly')}>Land suchen</button>
@@ -272,7 +271,7 @@
 		<ContinentChips id="mapConts" all />
 	</div>
 </div>
-<div class="legend"><span><i class="sw v"></i>Bereist</span>{#if hasUncounted}<span><i class="sw vs"></i>Bereist, zählt nicht</span>{/if}</div>
+<div class="legend"><span><i class="sw v"></i>Bereist</span></div>
 
 <style>
 	.coach{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:14px;pointer-events:none;z-index:5;animation:coach-in .5s ease both}

@@ -1,8 +1,9 @@
 <script lang="ts">
-	import { CONT_NAMES } from '$lib/countries';
+	import { CONT_NAMES, flag, nameOf } from '$lib/countries';
+	import { areaLabel } from '$lib/scope';
 	import { openContinents, openPass, reduceMotion, ui } from '$lib/app.svelte';
 
-	/* Neuer Kontinent freigeschaltet bzw. neuer Rang im Reisepass: Karte gleitet von oben herein, Sonnen-Medaille mit Strahlenkranz
+	/* Neuer Kontinent freigeschaltet, neuer Rang im Reisepass oder neues Gebiet (Zahl bleibt gleich, Stempel wartet im Pass): Karte gleitet von oben herein, Sonnen-Medaille mit Strahlenkranz
 	   und kurzem Konfetti. Verschwindet von selbst oder per Tipp. */
 
 	const TOTAL = Object.keys(CONT_NAMES).length;
@@ -10,6 +11,7 @@
 
 	let shown = $state<typeof ui.unlock | null>(null);
 	let leaving = $state(false);
+	const areas = $derived(shown?.area ? shown.area.split(',') : []);
 	let pieces = $state<{ x: number; y: number; r: number; c: string; d: number; w: number }[]>([]);
 	let tShow: ReturnType<typeof setTimeout> | undefined, tHide: ReturnType<typeof setTimeout> | undefined, tGone: ReturnType<typeof setTimeout> | undefined;
 
@@ -38,8 +40,10 @@
 		const id = shown?.badgeId,
 			rank = !!shown?.rank,
 			cont = !!shown?.cont && !shown?.added && !shown?.badge;
+		const area = !!shown?.area;
 		dismiss();
-		if (id || rank) {
+		if (area) openPass(); // neues Gebiet: im Pass wartet der Stempel
+		else if (id || rank) {
 			if (id) ui.passBadge = id;
 			else ui.passRanks = true;
 			openPass();
@@ -55,15 +59,21 @@
 {#if shown}
 	{#key shown.key}
 		<div class="unlock" class:leaving role="status" aria-live="polite">
-			<button type="button" class="unlock-card" onclick={onTap} aria-label="{shown.added ? `${shown.sub} neue Länder` : shown.badge ? `Neues Abzeichen: ${shown.badge}` : shown.rank ? `Neuer Rang: ${shown.rank}` : `Neuer Kontinent: ${shown.cont}`}. {shown.badgeId || shown.rank ? 'Im Reisepass öffnen' : shown.cont && !shown.added && !shown.badge ? 'Deine Kontinente öffnen' : 'Schließen'}">
+			<button type="button" class="unlock-card" onclick={onTap} aria-label="{shown.area ? `Neuer Stempel: ${areas.map(nameOf).join(', ')}` : shown.added ? `${shown.sub} neue Länder` : shown.badge ? `Neues Abzeichen: ${shown.badge}` : shown.rank ? `Neuer Rang: ${shown.rank}` : `Neuer Kontinent: ${shown.cont}`}. {shown.area || shown.badgeId || shown.rank ? 'Im Reisepass öffnen' : shown.cont && !shown.added && !shown.badge ? 'Deine Kontinente öffnen' : 'Schließen'}">
 				<span class="unlock-medal" aria-hidden="true">
 					<span class="unlock-rays"></span>
-					<span class="unlock-disc" class:emo={!!shown.badge}>{shown.badge ? shown.icon : shown.n}</span>
+					<span class="unlock-disc" class:emo={!!shown.badge || !!shown.area}>{shown.area ? flag(areas[0]) : shown.badge ? shown.icon : shown.n}</span>
 					{#each pieces as p, i (i)}
 						<i style="--x:{p.x}px;--y:{p.y}px;--r:{p.r}deg;--c:{p.c};--d:{p.d}ms;--w:{p.w}px"></i>
 					{/each}
 				</span>
-				{#if shown.added}
+				{#if shown.area}
+					<span class="unlock-txt">
+						<small>Neuer Stempel im Reisepass</small>
+						<strong>{areas.length > 1 ? `+${areas.length} Gebiete` : nameOf(areas[0])}</strong>
+						<span>{areas.length > 1 ? areas.map(flag).join(' ') : areaLabel(areas[0])}</span>
+					</span>
+				{:else if shown.added}
 					<span class="unlock-txt">
 						<small>Auf einen Schlag</small>
 						<strong>+{shown.sub} Länder</strong>
@@ -79,7 +89,7 @@
 					<span class="unlock-txt">
 						<small>Neuer Rang im Reisepass</small>
 						<strong>{shown.icon} {shown.rank}</strong>
-						<span>{shown.n} Stempel im Pass</span>
+						<span>{shown.n} {shown.n === 1 ? 'Land' : 'Länder'} bereist</span>
 					</span>
 				{:else}
 					<span class="unlock-txt">

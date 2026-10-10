@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { addCountry, atlas, countedCountries, isCounted, removeCountry, setEntered, visitedSet } from '$lib/atlas.svelte';
 	import { longDate } from '$lib/passport';
-	import { SCOPES, inScope } from '$lib/scope';
-	import { compareNames, contOf, flag, nameOf } from '$lib/countries';
+	import { SCOPES, isTerritory, placeLabel } from '$lib/scope';
+	import { compareNames, flag, nameOf } from '$lib/countries';
 	import { closeSheet, hooks, openCountry, reduceMotion, setSheetDetent, ui } from '$lib/app.svelte';
 	import { compareArea, currencies, factsNow, loadClimate, loadEntry, loadHighlights, fmtArea, fmtAreaShort, fmtDensity, fmtPop, languages, loadFacts, localTime, type Facts } from '$lib/facts';
 	import { fmtMoney, fmtRateDate, getRates, type Rates } from '$lib/rates';
@@ -20,13 +20,9 @@
 	const been = $derived(!!entry);
 	const counted = $derived(isCounted(code));
 	const nr = $derived(countedCountries().findIndex((c) => c.code === code) + 1);
-	// Gebiet (zählt in keiner Liste) oder Staat außerhalb der gewählten Liste (z. B. Kosovo bei „UN-Mitglieder“)
+	// Gebiete erkennt man an „Gebiet · Dänemark“ unter dem Namen; Hinweis nur für Staaten außerhalb der gewählten Liste (z. B. Kosovo bei „UN-Mitglieder“)
 	const why = $derived(
-		counted
-			? ''
-			: inScope(code, 'sovereign')
-				? `zählt bei „${SCOPES.find((x) => x.id === atlas.settings.countryScope)?.label}“ nicht als Land`
-				: 'Gebiet, zählt nicht als eigenes Land'
+		counted || isTerritory(code) ? '' : `zählt bei „${SCOPES.find((x) => x.id === atlas.settings.countryScope)?.label}“ nicht als Land`
 	);
 	const name = $derived(nameOf(code));
 	const maxMonth = new Date().toISOString().slice(0, 7);
@@ -122,7 +118,7 @@
 			onkeydown={(e) => e.key === 'Enter' && ui.sheetDetent === 'peek' && setSheetDetent('full')}
 		>
 			<h3 id="sheetTitle" class:long={name.length > 13} class:xlong={name.length > 20}>{name}</h3>
-			<div class="cs-sub">{[contOf(code), facts?.cap?.[0]].filter(Boolean).join(' · ')}</div>
+			<div class="cs-sub">{[placeLabel(code), facts?.cap?.[0]].filter(Boolean).join(' · ')}</div>
 		</div>
 		{#if !been}
 			<button type="button" class="cs-mark" class:busy disabled={busy} onclick={markVisited} aria-label="Als bereist markieren"
@@ -141,7 +137,7 @@
 		<div class="cs-status">
 			{#if been}
 				<span class="cs-badge been"
-					><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>Bereist{counted ? ` · Land Nr. ${nr}` : ''}</span
+					><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>Bereist{counted ? ` · Land Nr. ${nr}` : isTerritory(code) ? ' · Gebiet' : ''}</span
 				>
 			{/if}
 			{#if been}

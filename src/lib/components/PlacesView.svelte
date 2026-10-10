@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { atlas, countedCountries, isCounted, removeCountries, removeCountry, reorderCountries, type CountryEntry } from '$lib/atlas.svelte';
-	import { CONT, CONT_NAMES, compareNames, contOf, flag } from '$lib/countries';
-	import { SCOPES, scopeTotal } from '$lib/scope';
+	import { CONT, CONT_NAMES, compareNames, flag } from '$lib/countries';
+	import { SCOPES, isTerritory, placeLabel, scopeTotal } from '$lib/scope';
 	import { closePlaces, openCountry, reduceMotion, ui } from '$lib/app.svelte';
 	import { reorder } from '$lib/reorder';
 	import SwipeRow from './SwipeRow.svelte';
@@ -204,13 +204,13 @@
 			<button type="button" data-code={c.code} aria-pressed={picked.includes(c.code)} onclick={() => toggle(c.code)}
 				><span class="chk" aria-hidden="true"
 					><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg></span
-				><span class="nr">{c.nr ?? ''}</span><span class="flag">{flag(c.code)}</span><span class="nm">{c.name}</span><span class="ct">{contOf(c.code)}</span></button
+				><span class="nr">{c.nr ?? ''}</span><span class="flag">{flag(c.code)}</span><span class="nm">{c.name}</span><span class="ct">{placeLabel(c.code)}</span></button
 			>
 		</li>
 	{:else}
 		<SwipeRow ondelete={() => removeCountry(c.code)}>
 			<button data-code={c.code} onclick={() => openCountry(c.code)}
-				><span class="nr">{c.nr ?? ''}</span><span class="flag">{flag(c.code)}</span><span class="nm">{c.name}</span><span class="ct">{contOf(c.code)}</span></button
+				><span class="nr">{c.nr ?? ''}</span><span class="flag">{flag(c.code)}</span><span class="nm">{c.name}</span><span class="ct">{placeLabel(c.code)}</span></button
 			>
 		</SwipeRow>
 	{/if}
@@ -254,8 +254,13 @@
 			{/if}
 
 			{#if others.length}
-				<h3 class="list-sub">Weitere bereiste Gebiete</h3>
-				<p class="note">Zählen bei „{scopeLabel} ({total})“ nicht als Land. Ändern kannst du das in den Einstellungen.</p>
+				{#if others.every((c) => isTerritory(c.code))}
+					<h3 class="list-sub">Gebiete</h3>
+					<p class="note">Haben einen Stempel im Pass, zählen aber nicht als Land.</p>
+				{:else}
+					<h3 class="list-sub">Gebiete und weitere Staaten</h3>
+					<p class="note">Haben einen Stempel im Pass, zählen bei „{scopeLabel} ({total})“ aber nicht als Land. Die Länderliste stellst du in den Einstellungen ein.</p>
+				{/if}
 				<ul class="list" id="otherList">
 					{#each others as c (c.code)}{@render row(c)}{/each}
 				</ul>

@@ -166,7 +166,7 @@ ${stats
 	.join('')}
 ${top.length ? `<text x="540" y="${sy + 200}" text-anchor="middle" font-family="${FIG}" font-weight="700" font-size="28" letter-spacing="7" fill="${G}">${top.some((s) => s.sp) ? 'SELTENSTE STEMPEL' : 'MEINE STEMPEL'}</text>` : ''}
 ${order.map(({ s, f: [x, y, w, r] }) => place(s.s, x, y, w, w * 0.82, r, true)).join('')}
-<text x="96" y="1862" font-family="${FIG}" font-weight="500" font-size="30" fill="#F4EBD3" fill-opacity=".75">${d.since ? `unterwegs seit ${d.since}` : `${d.n} Stempel im Pass`}</text>
+<text x="96" y="1862" font-family="${FIG}" font-weight="500" font-size="30" fill="#F4EBD3" fill-opacity=".75">${d.since ? `unterwegs seit ${d.since}` : `${d.n} ${d.n === 1 ? 'Land' : 'Länder'} bereist`}</text>
 <text x="984" y="1822" text-anchor="end" font-family="${UNB}" font-weight="800" font-size="40" fill="${G}">Freiheit</text>
 <text x="984" y="1862" text-anchor="end" font-family="${FIG}" font-weight="500" font-size="26" fill="#F4EBD3" fill-opacity=".75">by Maier Reisen</text>
 </svg>`;

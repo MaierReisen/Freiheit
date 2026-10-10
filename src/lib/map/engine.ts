@@ -60,7 +60,6 @@ const PAL = {
 	border: '#0D2A3D',
 	grat: 'rgba(255,255,255,.07)',
 	visited: '#34D1BF',
-	visitedSoft: 'rgba(52,209,191,.32)', // bereist, zählt nicht (Grundfarbe unter der Schraffur)
 	wish: '#F6C445',
 	sel: '#FFFFFF',
 	label: 'rgba(7,20,31,.92)'
@@ -178,27 +177,6 @@ export function createWorldMap(o: MapOptions) {
 	let baseDirty = true,
 		topDirty = true,
 		refineT: ReturnType<typeof setTimeout> | undefined;
-
-	// Schraffur für bereiste Gebiete, die nicht zählen
-	let hatch: CanvasPattern | null = null;
-	function hatchPattern(c: CanvasRenderingContext2D) {
-		if (hatch) return hatch;
-		const t = document.createElement('canvas');
-		t.width = t.height = 6;
-		const g = t.getContext('2d');
-		if (!g) return null;
-		g.strokeStyle = PAL.visited;
-		g.lineWidth = 1.3;
-		g.beginPath();
-		g.moveTo(-1, 7);
-		g.lineTo(7, -1);
-		g.moveTo(5, 7);
-		g.lineTo(7, 5);
-		g.moveTo(-1, 1);
-		g.lineTo(1, -1);
-		g.stroke();
-		return (hatch = c.createPattern(t, 'repeat'));
-	}
 
 	const sync = () => o.onSync({ mode: view.mode, spin: view.spin, fineState });
 
@@ -626,18 +604,16 @@ export function createWorldMap(o: MapOptions) {
 		const seenIds: Record<string, boolean> = {},
 			base: GeoJSON.Polygon[] = [],
 			vis: GeoJSON.Polygon[] = [],
-			soft: GeoJSON.Polygon[] = [],
 			wsh: GeoJSON.Polygon[] = [],
 			// Zwergstaaten zuletzt (obenauf), damit sie nicht vom umgebenden Land (Italien → Vatikan) überdeckt werden
 			mBase: GeoJSON.Polygon[] = [],
-			mVis: GeoJSON.Polygon[] = [],
-			mSoft: GeoJSON.Polygon[] = [];
+			mVis: GeoJSON.Polygon[] = [];
 		for (const pg of lod.polys) {
 			let ok = seenIds[pg.id];
 			if (ok === undefined) ok = seenIds[pg.id] = inView(pg.id, ci);
 			if (!ok || pg.size < minDeg) continue;
 			const mi = microIds.has(pg.id);
-			(visited.has(pg.id) ? (o.isCounted(pg.id) ? (mi ? mVis : vis) : mi ? mSoft : soft) : wish.has(pg.id) ? wsh : mi ? mBase : base).push(pg.g);
+			(visited.has(pg.id) ? (mi ? mVis : vis) : wish.has(pg.id) ? wsh : mi ? mBase : base).push(pg.g);
 		}
 		const fillGroup = (arr: GeoJSON.Polygon[], ...fills: (string | CanvasPattern | null)[]) => {
 			if (!arr.length) return;
@@ -651,10 +627,8 @@ export function createWorldMap(o: MapOptions) {
 		};
 		fillGroup(base, PAL.land);
 		fillGroup(wsh, PAL.wish);
-		fillGroup(soft, PAL.land, PAL.visitedSoft, hatchPattern(c));
 		fillGroup(vis, PAL.visited);
 		fillGroup(mBase, PAL.land);
-		fillGroup(mSoft, PAL.land, PAL.visitedSoft, hatchPattern(c));
 		fillGroup(mVis, PAL.visited);
 		c.beginPath();
 		pathQ(lod.borders);
@@ -1102,11 +1076,10 @@ export function createWorldMap(o: MapOptions) {
 			if (micro && sz >= 5) (outlined ??= []).push(f.id);
 			if (dotA > 0) {
 				dotPts.push({ x: p[0], y: p[1] });
-				const counted = o.isCounted(f.id);
 				c.globalAlpha = dotA;
 				if (been) {
 					const g = c.createRadialGradient(p[0], p[1], 0, p[0], p[1], 11);
-					g.addColorStop(0, counted ? 'rgba(52,209,191,.6)' : 'rgba(52,209,191,.32)');
+					g.addColorStop(0, 'rgba(52,209,191,.6)');
 					g.addColorStop(1, 'rgba(52,209,191,0)');
 					c.fillStyle = g;
 					c.beginPath();
@@ -1117,17 +1090,11 @@ export function createWorldMap(o: MapOptions) {
 					c.lineWidth = 1.6;
 					c.strokeStyle = 'rgba(7,20,31,.85)';
 					c.stroke();
-					if (counted) {
-						c.fillStyle = PAL.visited;
-						c.fill();
-						c.lineWidth = 1.2;
-						c.strokeStyle = 'rgba(255,255,255,.9)';
-						c.stroke();
-					} else {
-						c.lineWidth = 2;
-						c.strokeStyle = PAL.visited;
-						c.stroke();
-					}
+					c.fillStyle = PAL.visited;
+					c.fill();
+					c.lineWidth = 1.2;
+					c.strokeStyle = 'rgba(255,255,255,.9)';
+					c.stroke();
 				} else if (tiny) {
 					// unbereist: in der Landfarbe wie große unbereiste Länder, mit hellem Rand (sichtbar über Meer und Land)
 					c.beginPath();
