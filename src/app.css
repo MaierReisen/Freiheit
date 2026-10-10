@@ -35,6 +35,8 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--text);font
 button,input{font:inherit;color:inherit}
 button{cursor:pointer}
 :focus-visible{outline:2.5px solid var(--primary);outline-offset:2px;border-radius:6px}
+/* Knöpfe zeigen nie einen Fokusring (kam sonst je nach Öffnungsweg als türkiser Ring um das X) */
+button:focus,button:focus-visible,[role="button"]:focus,[role="button"]:focus-visible{outline:none}
 .wrap{max-width:760px;margin:0 auto;padding:0 20px 110px}
 
 /* app bar */
@@ -549,7 +551,8 @@ input,textarea,[contenteditable="true"]{-webkit-user-select:text;user-select:tex
 .cs-chip{display:inline-flex;align-items:center;gap:6px;padding:8px 13px;border:1px solid var(--line);border-radius:999px;background:var(--surface);color:var(--ink);font-size:14px;font-weight:600}
 .cs-chip.been{background:color-mix(in srgb,var(--primary) 14%,transparent);border-color:color-mix(in srgb,var(--primary) 40%,transparent);color:var(--primary)}
 .cs-note{color:var(--muted);font-size:14px;margin:18px 0 0}
-.cs-del{border:0;background:color-mix(in srgb,var(--err) 12%,transparent);color:var(--err)}
+.cs-del{border:1.5px solid var(--err);background:var(--err);color:#fff;padding:5px 14px;box-shadow:0 1px 3px rgb(0 0 0/.25)}
+.cs-del:active{transform:scale(.96)}
 .cs-src{margin:18px 0 0;text-align:center;font-size:11px;color:var(--muted);opacity:.8}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .cs-tile .sub.warn{color:#FDBA74}}
 :root[data-theme="dark"] .cs-tile .sub.warn{color:#FDBA74}
