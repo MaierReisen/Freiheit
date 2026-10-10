@@ -5,7 +5,7 @@
 	import { closeSheet, hooks, openCountry, toast, type PickerMode } from '$lib/app.svelte';
 
 	/* mode "fly": Land auf der Karte suchen (alle Länder und Gebiete).
-	   Sonst Länder als bereist hinzufügen – nur Länder, die in der gewählten Länderliste zählen. Wie „Auswählen“ in der Länderliste:
+	   Sonst Länder als bereist hinzufügen – auch Gebiete (bekommen einen Stempel, zählen aber nicht, Hinweis „zählt nicht“). Wie „Auswählen“ in der Länderliste:
 	   Länder antippen = markieren (Haken), unten „Alle“ / „Hinzufügen“. Die Reihenfolge des Antippens bestimmt „Land Nr. X“.
 	   Suche und Auswahl bleiben unabhängig: markierte Länder bleiben auch nach neuer Suche markiert. */
 	let { mode }: { mode: PickerMode } = $props();
@@ -36,7 +36,7 @@
 
 	const items = $derived.by(() => {
 		const s = q.trim().toLowerCase();
-		const list = ALL.filter((c) => (flyMode || (!visited.has(c) && isCounted(c))) && (!s || nameOf(c).toLowerCase().includes(s)));
+		const list = ALL.filter((c) => (flyMode || !visited.has(c)) && (!s || nameOf(c).toLowerCase().includes(s)));
 		return list.sort((a, b) => compareNames(nameOf(a), nameOf(b)));
 	});
 	// Nach Kontinent: Gruppen nach Anzahl, innerhalb alphabetisch (wie in der Länderliste)
@@ -99,7 +99,7 @@
 {#snippet row(c: string)}
 	<li class:sel-li={!flyMode} class:on={picked.includes(c)}>
 		<button data-code={c} aria-pressed={flyMode ? undefined : picked.includes(c)} onclick={() => choose(c)}
-			>{#if !flyMode}<span class="chk" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg></span>{/if}<span>{flag(c)}</span>{flyMode && visited.has(c) ? '✓ ' : ''}{nameOf(c)}<span class="ct">{contOf(c)}{flyMode && !isCounted(c) ? ' · zählt nicht' : ''}</span></button
+			>{#if !flyMode}<span class="chk" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg></span>{/if}<span>{flag(c)}</span>{flyMode && visited.has(c) ? '✓ ' : ''}{nameOf(c)}<span class="ct">{contOf(c)}{!isCounted(c) ? ' · zählt nicht' : ''}</span></button
 		>
 	</li>
 {/snippet}

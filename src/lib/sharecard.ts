@@ -65,7 +65,7 @@ function place(s: Stamp, x: number, y: number, w: number, h: number, rot: number
 	return `<g transform="rotate(${rot} ${r1(x + w / 2)} ${r1(y + h / 2)})" style="color:${s.color}"${shadow ? ' filter="url(#scSh)"' : ''}>${svg}</g>`;
 }
 /** seltenste zuerst (Legendary, Epic, Rare), danach in Reihenfolge der Länder */
-const rarest = (st: ShareStamp[]) => [...st].sort((a, b) => b.sp - a.sp || a.nr - b.nr);
+const rarest = (st: ShareStamp[]) => [...st].sort((a, b) => b.sp - a.sp || (a.nr || 1e4) - (b.nr || 1e4));
 /** grobe Textbreite (für Pillen und Umbrüche) */
 const tw = (s: string, size: number, k = 0.56) => [...s].reduce((w, ch) => w + (/\p{Extended_Pictographic}/u.test(ch) ? 1.15 : /[A-ZÄÖÜ]/.test(ch) ? k * 1.18 : k), 0) * size;
 

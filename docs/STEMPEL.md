@@ -1,6 +1,6 @@
 # Stempel – Übersicht
 
-> Automatisch erzeugt aus dem Code (App-Version 1.28.9). Nicht von Hand ändern, sondern neu erzeugen: `node scripts/build-stempel-doc.mjs`.
+> Automatisch erzeugt aus dem Code (App-Version 1.38.0). Nicht von Hand ändern, sondern neu erzeugen: `node scripts/build-stempel-doc.mjs`.
 
 > **Bilder aller Stempel:** [stempel.html](stempel.html) öffnen (Galerie mit Suche; Common, Rare, Epic, Legendary je Land + Weltwunder).
 
@@ -108,7 +108,7 @@ Sonderauszeichnungen auf der Visa-Seite im Pass, in bis zu drei Stufen **Bronze 
 
 Spalten: **Stempelname** = Text im Stempel · **Form/Farbe** = Rahmen und Stempelfarbe · **Common** = Motiv des normalen Stempels · **Rare / Epic / Legendary** = Bild der jeweiligen Briefmarke.
 
-### Europa (50)
+### Europa (51)
 
 | Land | Stempelname | Form / Farbe | Common | Rare | Epic | Legendary |
 |---|---|---|---|---|---|---|
@@ -125,6 +125,7 @@ Spalten: **Stempelname** = Text im Stempel · **Form/Farbe** = Rahmen und Stempe
 | Färöer (FO) | Färöer | Sechseck / Türkis | Wasserfall Múlafossur und Grasdachhäuser | Kirche mit Grasdach | Sørvágsvatn über den Klippen | Felsnadeln, Papageitaucher und Schafe |
 | Finnland (FI) | Finnland | Kreis / Marine | Rentier unter dem Mond | Saunahütte am See | Tausend Seen mit Wäldern | Lappland: Rentier, Polarlicht und Glas-Iglu |
 | Frankreich (FR) | Frankreich | Oval / Blau | Eiffelturm mit Herz | Eiffelturm | Paris an der Seine | Feuerwerk am 14. Juli |
+| Gibraltar (GI) | Gibraltar | Kerbe / Braun | Berberaffe vor dem Felsen | der Felsen | der mit Schiff und Berberaffe | mit Leuchtturm und Delfinen |
 | Griechenland (GR) | Griechenland | Kreis / Türkis | Tempel mit Säulen am Meer | Kapelle mit blauer Kuppel | Santorini-Klippe mit Windmühle | Sonnenuntergang über der Caldera |
 | Großbritannien (GB) | GROẞBRITANNIEN | Oval / Marine | Big Ben | Big Ben und Doppeldeckerbus | Tower Bridge an der Themse | Stonehenge bei Sonnenaufgang |
 | Guernsey (GG) | Guernsey | Achteck / Blau | Castle Cornet auf dem Felsen vor St. Peter Port | Little Chapel | Hafen von St. Peter Port mit Castle Cornet | Kuh auf der Klippe über dem Meer |
@@ -343,17 +344,19 @@ Spalten: **Stempelname** = Text im Stempel · **Form/Farbe** = Rahmen und Stempe
 | Uruguay (UY) | Uruguay | Banner / Blau | Mate-Becher mit Bombilla und Thermoskanne | Skulptur „Los Dedos“ in Punta del Este | Leuchtturm von Colonia del Sacramento | Gaucho beim Asado im Abendrot |
 | Venezuela (VE) | Venezuela | Wappen / Türkis | Salto Ángel am Tafelberg | Strand von Los Roques mit Pelikan | Llanos mit Wasserschweinen und Scharlachsichlern | Salto Ángel, der höchste Wasserfall der Welt, vom Tafelberg (bisheriges Bild) |
 
-### Ozeanien (24)
+### Ozeanien (27)
 
 | Land | Stempelname | Form / Farbe | Common | Rare | Epic | Legendary |
 |---|---|---|---|---|---|---|
 | Amerikanisch-Samoa (AS) | Amerikanisch-Samoa | Achteck / Türkis | Felsinsel Pola vor Vatia | Flughund im Regenwald | Strand auf Ofu | Flughunde in der Dämmerung über der Bucht von Pago Pago |
+| Amerikanische Überseeinseln (UM) | US-Überseeinseln | Briefmarkenrand / Marine | Laysan-Albatros auf Midway | Albatros-Küken auf Midway | Lagune des Palmyra-Atolls | Mönchsrobbe am Strand im Abendrot |
 | Australien (AU) | Australien | Kerbe / Türkis | Opernhaus Sydney mit Sternen | Opernhaus Sydney | Uluru | Great Barrier Reef mit Schildkröte und Clownfischen |
 | Cookinseln (CK) | Cookinseln | Wappen / Grün | geschnitzter Gott Tangaroa | One Foot Island in der Lagune von Aitutaki | Gipfel von Rarotonga über der Lagune | Riesenmuschel und Auslegerkanu im Abendrot |
 | Fidschi (FJ) | Fidschi | Kreis / Pflaume | Hibiskusblüte | Bure am Strand | Yasawa-Inseln | Feuerläufer von Beqa bei Nacht |
 | Französisch-Polynesien (PF) | POLYNESIEN | Etikett / Türkis | Wasserbungalows vor dem Otemanu | Auslegerkanu-Rennen | Lagune von Bora Bora | Schwarze Perle und Tiare-Blüte |
 | Guam (GU) | Guam | Banner / Koralle | Latte-Steine | Klippe der zwei Liebenden | Bucht von Tumon | Latte-Steine im Abendrot mit Flughund |
 | Kiribati (KI) | Kiribati | Zackenkreis / Rot | Fregattvogel über der Sonne im Meer | Versammlungshaus (Maneaba) auf Tarawa | Lagune von Tarawa mit Kanus | erste Sonne der Welt über dem Pazifik, Fregattvogel (wie auf der Flagge) (bisheriges Bild) |
+| Kokosinseln (CC) | Kokosinseln | Zackenkreis / Türkis | Palme über der Lagune mit Einsiedlerkrebs | Einsiedlerkrebs am Strand | Lagune mit Kitesurfern | Suppenschildkröte unter Wasser |
 | Marshallinseln (MH) | Marshallinseln | Sechseck / Marine | Stabkarte der Seefahrer | Atoll Majuro von oben | Kanurennen mit Krebsscherensegeln | Auslegerkanu mit Krebsscherensegel, Riffinseln (bisheriges Bild) |
 | Mikronesien (FM) | Mikronesien | Kreis / Braun | Steingeld (Rai) auf Yap | Basaltruinen von Nan Madol | Wracktauchen in der Chuuk-Lagune | Steingeld (Rai) auf Yap unter Palmen (bisheriges Bild) |
 | Nauru (NR) | Nauru | Zickzack / Blau | Kalksteinzinnen an der Küste | Buada-Lagune zwischen Palmen | Strand der Anibare-Bucht | Kalkstein-Zinnen am Anibare-Strand, Fregattvogel (bisheriges Bild) |
@@ -371,6 +374,7 @@ Spalten: **Stempelname** = Text im Stempel · **Form/Farbe** = Rahmen und Stempe
 | Tuvalu (TV) | Tuvalu | Kreis / Blau | Atoll Funafuti von oben | Pandanus und Kokospalmen mit Kanu | Lagune von Funafuti von oben | Atoll – Palmenstrand, Lagune mit Auslegerkanu, Riffinsel am Horizont (bisheriges Bild) |
 | Vanuatu (VU) | Vanuatu | Zickzack / Grün | Lianenspringer auf Pentecost | Unterwasser-Briefkasten | Blue Hole auf Espiritu Santo mit Seilschaukel | Vulkan Yasur und Turmspringer von Pentecost (bisheriges Bild) |
 | Wallis und Futuna (WF) | Wallis und Futuna | Wappen / Rot | Kathedrale von Mata-Utu | Kratersee Lalolalo | Küste von Futuna | Festungsruine Talietumu im Abendrot |
+| Weihnachtsinsel (CX) | Weihnachtsinsel | Kreis / Rot | Wanderung der Roten Krabben | Blaslöcher an der Küste | Wanderung der Roten Krabben über die Straße | Palmendieb und Goldener Tropikvogel |
 
 ### Antarktis (3)
 
@@ -380,23 +384,19 @@ Spalten: **Stempelname** = Text im Stempel · **Form/Farbe** = Rahmen und Stempe
 | Französische Süd- und Antarktisgebiete (TF) | Franz. Süd-Gebiete | Briefmarkenrand / Blau | See-Elefant auf Kerguelen | Felsbogen von Kerguelen | Königspinguine auf den Crozetinseln | Albatros über den Klippen im Abendrot |
 | Heard und McDonaldinseln (HM) | Heard-Insel | Sechseck / Türkis | Vulkan Mawson Peak über den Gletschern | See-Elefanten am Strand | Gletscher und Vulkan | Ausbruch des Big Ben bei Nacht mit Polarlicht |
 
-### Ohne Kontinent (13)
+### Ohne Kontinent (9)
 
 | Land | Stempelname | Form / Farbe | Common | Rare | Epic | Legendary |
 |---|---|---|---|---|---|---|
-| Amerikanische Überseeinseln (UM) | US-Überseeinseln | Briefmarkenrand / Marine | Laysan-Albatros auf Midway | Albatros-Küken auf Midway | Lagune des Palmyra-Atolls | Mönchsrobbe am Strand im Abendrot |
 | Bonaire, Sint Eustatius und Saba (BQ) | Bonaire | Briefmarkenrand / Pflaume | Salzberge an den rosa Salinen | Flamingos in den Salinen | Riff vor Klein Bonaire | Salzberge im Abendrot mit Flamingos |
 | Bouvetinsel (BV) | Bouvetinsel | Sechseck / Marine | vergletscherte Vulkaninsel im Südpolarmeer | Robbenkolonie am Strand | vergletscherte Insel | Polarlicht über der Bouvetinsel |
 | Französisch-Guayana (GF) | Franz.-Guayana | Etikett / Grün | Raketenstart in Kourou | Lederschildkröte am Strand | Startplatz in Kourou | Raketenstart bei Nacht |
-| Gibraltar (GI) | Gibraltar | Kerbe / Braun | Berberaffe vor dem Felsen | der Felsen | der mit Schiff und Berberaffe | mit Leuchtturm und Delfinen |
 | Guadeloupe (GP) | Guadeloupe | Kreis / Rot | Pointe des Châteaux mit dem Kreuz | Carbet-Wasserfälle | Vulkan Soufrière über Bananenfeldern | Bucht von Les Saintes im Abendrot |
-| Kokosinseln (CC) | Kokosinseln | Zackenkreis / Türkis | Palme über der Lagune mit Einsiedlerkrebs | Einsiedlerkrebs am Strand | Lagune mit Kitesurfern | Suppenschildkröte unter Wasser |
 | Martinique (MQ) | Martinique | Dreieck / Türkis | Rocher du Diamant vor der Küste, dahinter die Montagne Pelée | Montagne Pelée | Strand Les Salines | Rocher du Diamant im Abendrot mit Segelbooten |
 | Mayotte (YT) | Mayotte | Oval / Pflaume | Maki in der Lagune | Ylang-Ylang-Blüten | Doppellagune mit Schildkröte | Buckelwal springt in der Lagune |
 | Réunion (RE) | Réunion | Dreieck / Koralle | Lava des Piton de la Fournaise und Tropikvogel | Talkessel des Piton des Neiges | Ausbruch des Piton de la Fournaise | Cirque de Mafate mit Wolken, Wanderern und Tropikvogel |
 | Spitzbergen und Jan Mayen (SJ) | Spitzbergen | Achteck / Marine | Eisbär auf der Scholle | Walross auf der Scholle | bunte Häuser von Longyearbyen | Eisbärin mit Jungem unter dem Polarlicht |
 | Tokelau (TK) | Tokelau | Zickzack / Blau | Auslegerkanu im Sonnenuntergang | Atollhaus unter Palmen | Lagune des Atolls von oben | Fliegende-Fische-Fang mit Fackeln bei Nacht |
-| Weihnachtsinsel (CX) | Weihnachtsinsel | Kreis / Rot | Wanderung der Roten Krabben | Blaslöcher an der Küste | Wanderung der Roten Krabben über die Straße | Palmendieb und Goldener Tropikvogel |
 
 ## 7. Stempel-Technik (Kurzfassung)
 

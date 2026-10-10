@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { tick, untrack } from 'svelte';
 	import { fade } from 'svelte/transition';
-	import { atlas, countedCountries, setWonder, visitedSet } from '$lib/atlas.svelte';
+	import { atlas, isCounted, setWonder, visitedSet } from '$lib/atlas.svelte';
 	import { closePass, openCountry, reduceMotion, ui } from '$lib/app.svelte';
 	import { CONT, flag, nameOf } from '$lib/countries';
 	import { INK_FILTERS, loadScenes, rankIndex, ranks, scenesLoaded, stamp, TIER_LABEL, wonderStamp, yearOf } from '$lib/passport';
@@ -99,8 +99,15 @@
 	};
 	const stamps = $derived.by(() => {
 		void scenesOk; // nach dem Nachladen der Bilder neu berechnen
-		return countedCountries().map((c, i) => ({ code: c.code, name: c.name, nr: i + 1, entered: c.entered, ...withLevel(c.code, i + 1, c.entered) }));
+		// alle bereisten Länder und Gebiete bekommen einen Stempel; die Nr. haben nur Länder, die in der gewählten Liste zählen (Gebiete: 0)
+		let k = 0;
+		return atlas.data.countries.map((c) => {
+			const nr = isCounted(c.code) ? ++k : 0;
+			return { code: c.code, name: c.name, nr, entered: c.entered, ...withLevel(c.code, nr, c.entered) };
+		});
 	});
+	/** Stempel der zählenden Länder (für Rang, Abzeichen und die Zahl auf dem Pass-Umschlag) */
+	const countedStamps = $derived(stamps.filter((s) => s.nr > 0));
 	const tierCount = $derived.by(() => {
 		const n = [0, 0, 0, 0];
 		for (const st of stamps) n[st.sp]++;
@@ -124,7 +131,7 @@
 	});
 	const total = $derived(scopeTotal(atlas.settings.countryScope));
 	const allRanks = $derived(ranks(total));
-	const ri = $derived(rankIndex(stamps.length, total));
+	const ri = $derived(rankIndex(countedStamps.length, total));
 
 	/* ---------- Blättern ----------
 	   Flüssig auf jedem Gerät: Die Nachbarseiten liegen schon fertig gezeichnet (eigene Grafik-Ebene) unter der aktuellen
@@ -377,7 +384,7 @@
 		if (ui.passOpen && !facts) loadFacts().then((f) => (facts = f));
 	});
 	const bs = $derived(
-		facts ? badges({ codes: stamps.map((s) => s.code), facts, entered: Object.fromEntries(stamps.map((s) => [s.code, s.entered])) }, atlas.settings.countryScope) : []
+		facts ? badges({ codes: countedStamps.map((s) => s.code), facts, entered: Object.fromEntries(countedStamps.map((s) => [s.code, s.entered])) }, atlas.settings.countryScope) : []
 	);
 	let picked = $state<string | null>(null);
 	const pick = $derived(bs.find((b) => b.id === picked) ?? null);
@@ -738,9 +745,9 @@
 		const years = stamps.map((s) => yearOf(s.entered)).filter(Boolean);
 		const svg = await sc.cardSvg(
 			{
-				n: stamps.length,
+				n: countedStamps.length,
 				rank: ri >= 0 ? { icon: allRanks[ri].icon, name: allRanks[ri].name } : null,
-				conts: [...new Set(stamps.map((s) => CONT[s.code]).filter(Boolean))],
+				conts: [...new Set(countedStamps.map((s) => CONT[s.code]).filter(Boolean))],
 				since: years.length ? Math.min(...years) : 0,
 				area: area ? area.v : null,
 				wonders: wonderCount,
@@ -908,7 +915,7 @@
 											class:wait={pending.includes(sl.st.code)}
 											class:sp={sl.st.sp > 0}
 											style="transform:translateY({sl.st.s.dy}px) rotate({sl.st.s.rot}deg);--c:{sl.st.s.color};--w:{sl.st.s.w}%"
-											aria-label="{sl.st.name}, Land Nr. {sl.st.nr}{sl.st.sp ? `, Briefmarke ${TIER_NAME[sl.st.sp]}` : ''}"
+											aria-label="{sl.st.name}, {sl.st.nr ? `Land Nr. ${sl.st.nr}` : 'Gebiet'}{sl.st.sp ? `, Briefmarke ${TIER_NAME[sl.st.sp]}` : ''}"
 											onclick={() => openCountry(sl.st.code)}>{@html sl.st.s.svg}</button
 										>
 									{:else}

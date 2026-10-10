@@ -30,6 +30,48 @@ const NUM2A2 = ISO_NUMERIC as Record<string, string>;
 
 export const wrapLon = (l: number) => ((l + 540) % 360) - 180;
 
+/* Teile ohne ISO-Code in den Kartendaten (sonst Lücken auf dem Globus, die sich nicht antippen lassen): dem Land zuordnen,
+   zu dem sie gehören bzw. das sie verwaltet. Die „Indian Ocean Ter.“ werden in Weihnachtsinsel und Kokosinseln geteilt.
+   Strittige Riffe (Spratly, Scarborough) bleiben ohne Land. Gilt für die mittleren (50m) und die feinen Daten (10m). */
+const NO_ISO: Record<string, string> = {
+	Somaliland: 'SO',
+	'N. Cyprus': 'CY',
+	'Cyprus U.N. Buffer Zone': 'CY',
+	Akrotiri: 'CY',
+	Dhekelia: 'CY',
+	'Siachen Glacier': 'IN',
+	Baikonur: 'KZ',
+	'USNB Guantanamo Bay': 'CU',
+	'Coral Sea Is.': 'AU',
+	'Clipperton I.': 'FR',
+	'Bajo Nuevo Bank': 'CO',
+	'Serranilla Bank': 'CO'
+};
+type TopoGeom = { id?: string; type: string; arcs: unknown[]; properties?: { name?: string } };
+function assignIds(topo: Topology) {
+	const geoms: TopoGeom[] = topo.objects.countries.geometries;
+	const out: TopoGeom[] = [];
+	for (const g of geoms) {
+		const nm = g.properties?.name ?? '';
+		if (!g.id && NO_ISO[nm]) g.id = NO_ISO[nm];
+		if (!g.id && nm === 'Indian Ocean Ter.') {
+			// Weihnachtsinsel liegt bei 105,7° O, die Kokosinseln bei 96,8° O
+			const polys = g.type === 'MultiPolygon' ? g.arcs : [g.arcs];
+			for (const code of ['CX', 'CC']) {
+				const own = polys.filter((a) => {
+					const lon = geoCentroid(feature(topo, { type: 'Polygon', arcs: a } as never) as never)[0];
+					return code === 'CX' ? lon > 101 : lon <= 101;
+				});
+				if (own.length) out.push({ ...g, id: code, type: 'MultiPolygon', arcs: own });
+			}
+			continue;
+		}
+		out.push(g);
+	}
+	topo.objects.countries.geometries = out;
+}
+assignIds(WORLD_JSON);
+
 const toFeatures = (topo: Topology): CountryFeature[] =>
 	(feature(topo, topo.objects.countries) as unknown as GeoJSON.FeatureCollection<CountryGeometry>).features as CountryFeature[];
 
@@ -259,6 +301,7 @@ export async function fetchFineLod(): Promise<Lod> {
 	t.objects.countries.geometries.forEach((g: { id?: string; properties?: { name?: string } }) => {
 		g.id = NUM2A2[g.id!] || (g.properties && g.properties.name === 'Kosovo' ? 'XK' : undefined);
 	});
+	assignIds(t);
 	FINE_TOPO = t;
 	const lod = makeLod(t);
 	// Datenfehler der feinen Karte ausgleichen: der Vatikan ist dort zu einer Linie ohne Fläche zusammengefallen.

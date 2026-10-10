@@ -1,7 +1,8 @@
 import { CONT, type ContinentCode } from './countries';
 
 /* Was zählt als Land? Grundlage für Länderzahl, Fortschritt, Nummerierung und für das, was auf der Karte markierbar ist.
-   Gebiete (z. B. Grönland, Puerto Rico) zählen in keiner Liste; bereits gespeicherte Einträge bleiben erhalten, werden aber ausgeblendet. */
+   Gebiete (z. B. Grönland, Puerto Rico) zählen in keiner Liste: man kann sie trotzdem als bereist markieren und sie bekommen einen
+   Stempel im Pass (ohne Nr.), gehen aber nicht in Länderzahl, Rang, Fortschritt und Abzeichen ein. */
 
 export type CountryScope = 'un' | 'un_observer' | 'sovereign';
 

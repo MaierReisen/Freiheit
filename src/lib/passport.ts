@@ -2125,7 +2125,7 @@ function markFrame(t: Txt, scene: string | null, m: Motif, tier: number, nr: num
 		'0 0 200 240',
 		`${paper}<clipPath id="${id}"><rect x="18" y="18" width="164" height="150"/></clipPath>
 <g class="pic"><rect x="18" y="18" width="164" height="150" class="bg"/><g clip-path="url(#${id})">${art}</g><rect x="18" y="18" width="164" height="150" stroke-width="2"/>
-<text class="v" x="27" y="46" font-size="24">${nr}</text></g>
+${nr ? `<text class="v" x="27" y="46" font-size="24">${nr}</text>` : ''}</g>
 ${nameBlock(t.name, 100, two ? 211 : 200, 164, two ? 19 : 22)}${small(100, 226, label, fs)}${star(100 - sx, 222, 5)}${star(100 + sx, 222, 5)}`
 	];
 }
@@ -2139,7 +2139,7 @@ function wideFrame(t: Txt, scene: string, nr: number): [string, string] {
 		'0 0 280 200',
 		`<linearGradient id="${id}s" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="var(--sv1)"/><stop offset=".3" stop-color="var(--sv2)"/><stop offset=".5" stop-color="var(--sv3)"/><stop offset=".72" stop-color="var(--sv2)"/><stop offset="1" stop-color="var(--sv1)"/></linearGradient><path d="${perfPath(4, 4, 272, 192, 4.5, 15)}" fill="url(#${id}s)" stroke="none"/><rect x="12" y="12" width="256" height="176" class="pp"/>
 <clipPath id="${id}"><rect x="18" y="18" width="244" height="118"/></clipPath><g class="pic"><rect x="18" y="18" width="244" height="118" class="bg"/><g clip-path="url(#${id})"><g transform="translate(18,18) scale(.904)">${scene}</g></g><rect x="18" y="18" width="244" height="118" stroke-width="2"/>
-<text class="v" x="27" y="46" font-size="24">${nr}</text></g>
+${nr ? `<text class="v" x="27" y="46" font-size="24">${nr}</text>` : ''}</g>
 ${split(t.name).length > 1 ? nameBlock(t.name, 140, 168, 230, 17) : nameBlock(t.name, 140, 164, 230, 22)}${small(140, 183, label, 10.5)}${star(140 - sx, 179, 5)}${star(140 + sx, 179, 5)}`
 	];
 }
@@ -2479,7 +2479,7 @@ export function stamp(code: string, nr: number, entered?: string, special: 0 | 1
 	const name = (def?.short ?? SHORT[code] ?? nameOf(code)).toLocaleUpperCase('de');
 	const frame: Frame = def?.f ?? (name.length > 13 ? TWO_LINE[h % TWO_LINE.length] : GENERIC[h % GENERIC.length]);
 	const motif = (MOTIFS[code] && def ? MOTIFS[code] : (CONT_MOTIFS[CONT[code]] ?? CONT_MOTIFS.AN))();
-	const txt = { name, date: stampDate(entered), nr: `Nr. ${nr}` };
+	const txt = { name, date: stampDate(entered), nr: nr ? `Nr. ${nr}` : 'Gebiet' }; // Gebiete zählen nicht: keine Nr.
 	const [vb, inner] = special ? markFrame(txt, (SC && (SC.TIERED[code]?.[special - 1] ?? SC.SCENES[code])?.()) || null, motif, special, nr, special === 2 ? SC?.WIDE[code]?.() : undefined) : FRAMES[frame](txt, motif);
 	const wide = !special && +vb.split(' ')[2] / +vb.split(' ')[3] > 1.25;
 	const s: Stamp = {
