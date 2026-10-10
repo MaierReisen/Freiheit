@@ -47,7 +47,7 @@
 			if (id) ui.passBadge = id;
 			else ui.passRanks = true;
 			openPass();
-		} else if (cont) openContinents(); // reine Kontinent-Meldung: Seite „Deine Kontinente“
+		} else if (cont) openContinents(); // reine Kontinent-Meldung: Seite „Meine Kontinente“
 	}
 	function dismiss() {
 		clearTimeout(tHide);
@@ -59,7 +59,7 @@
 {#if shown}
 	{#key shown.key}
 		<div class="unlock" class:leaving role="status" aria-live="polite">
-			<button type="button" class="unlock-card" onclick={onTap} aria-label="{shown.area ? `Neuer Stempel: ${areas.map(nameOf).join(', ')}` : shown.added ? `${shown.sub} neue Länder` : shown.badge ? `Neues Abzeichen: ${shown.badge}` : shown.rank ? `Neuer Rang: ${shown.rank}` : `Neuer Kontinent: ${shown.cont}`}. {shown.area || shown.badgeId || shown.rank ? 'Im Reisepass öffnen' : shown.cont && !shown.added && !shown.badge ? 'Deine Kontinente öffnen' : 'Schließen'}">
+			<button type="button" class="unlock-card" onclick={onTap} aria-label="{shown.area ? `Neuer Stempel: ${areas.map(nameOf).join(', ')}` : shown.added ? `${shown.sub} neue Länder` : shown.badge ? `Neues Abzeichen: ${shown.badge}` : shown.rank ? `Neuer Rang: ${shown.rank}` : `Neuer Kontinent: ${shown.cont}`}. {shown.area || shown.badgeId || shown.rank ? 'Im Reisepass öffnen' : shown.cont && !shown.added && !shown.badge ? 'Meine Kontinente öffnen' : 'Schließen'}">
 				<span class="unlock-medal" aria-hidden="true">
 					<span class="unlock-rays"></span>
 					<span class="unlock-disc" class:emo={!!shown.badge || !!shown.area}>{shown.area ? flag(areas[0]) : shown.badge ? shown.icon : shown.n}</span>

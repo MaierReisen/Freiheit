@@ -12,6 +12,7 @@
 
 	const codes = $derived(countedCountries().map((c) => c.code));
 	const n = $derived(codes.length);
+	const stamps = $derived(atlas.data.countries.length);
 	const info = $derived(rankInfo(n, scopeTotal(atlas.settings.countryScope)));
 	// neue Stempel seit dem letzten Blick in den Pass (auch von Gebieten, die nicht zählen)
 	const fresh = $derived(passSeen.codes ? atlas.data.countries.filter((c) => !passSeen.codes!.includes(c.code)).length : 0);
@@ -32,7 +33,7 @@
 		{#if info.tier >= 2}<i class="pp-pips">{#each Array(Math.min(info.tier, 7)) as _}<u></u>{/each}</i>{/if}
 	</span>
 	<span class="pp-tile-txt">
-		<span class="pp-tile-n">{n}<small>{n === 1 ? 'Land' : 'Länder'}</small>{#if fresh && !inPass}<em class="pp-new">✨ {fresh} neu</em>{/if}</span>
+		<span class="pp-tile-n">{inPass ? n : stamps}<small>{inPass ? (n === 1 ? 'Land' : 'Länder') : 'Stempel'}</small>{#if fresh && !inPass}<em class="pp-new">✨ {fresh} neu</em>{/if}</span>
 		{#if info.rank}<span class="pp-rank">{info.rank.icon} {info.rank.name}</span>{/if}
 		<span class="pp-bar"><i style="width:{info.p * 100}%"></i></span>
 		<span class="pp-bar-t"
@@ -46,5 +47,5 @@
 		>{@render body()}<span class="pp-chev" aria-hidden="true">›</span></button
 	>
 {:else}
-	<button type="button" class="pp-tile" class:fresh={fresh > 0} aria-label="Reisepass öffnen: {n} {n === 1 ? 'Land' : 'Länder'}{fresh ? `, ${fresh} neue Stempel` : ''}{info.rank ? `, Rang ${info.rank.name}` : ''}" onclick={() => openPass()}>{@render body()}</button>
+	<button type="button" class="pp-tile" class:fresh={fresh > 0} aria-label="Reisepass öffnen: {stamps} {'Stempel'}{fresh ? `, ${fresh} neue Stempel` : ''}{info.rank ? `, Rang ${info.rank.name}` : ''}" onclick={() => openPass()}>{@render body()}</button>
 {/if}

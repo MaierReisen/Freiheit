@@ -7,7 +7,7 @@
 	import { reorder } from '$lib/reorder';
 	import SwipeRow from './SwipeRow.svelte';
 
-	/* Seite „Deine Länder“ (öffnet über den Block auf der Startseite): Liste der bereisten Länder, sortierbar.
+	/* Seite „Meine Länder“ (öffnet über den Block auf der Startseite): Liste der bereisten Länder, sortierbar.
 	   Gebiete, die nicht zählen, stehen darunter. Wischen nach links legt „Löschen“ frei (wie in iOS).
 	   Bei Sortierung „Nr.“ lässt sich die Reihenfolge durch Halten und Ziehen ändern (gilt dann überall: Pass, Länderseite …).
 	   „Auswählen“ markiert mehrere Länder, die zusammen gelöscht werden. */
@@ -219,10 +219,10 @@
 <!-- svelte-ignore a11y_no_noninteractive_element_to_interactive_role -->
 <section class="ov set-view" id="placesView" role="dialog" aria-modal="true" aria-labelledby="placesTitle" hidden={!ui.placesOpen} bind:this={view} ontouchstart={backStart} ontouchend={backEnd} ontouchcancel={backEnd}>
 	<div class="ov-head lv-head">
-		<button type="button" class="ov-close" id="placesClose" aria-label="Deine Länder schließen" onclick={() => closePlaces(false)}
+		<button type="button" class="ov-close" id="placesClose" aria-label="Meine Länder schließen" onclick={() => closePlaces(false)}
 			><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg></button
 		>
-		<h1 class="set-title" id="placesTitle">Deine Länder <span class="ov-of">{numbered.length} von {total}</span></h1>
+		<h1 class="set-title" id="placesTitle">Meine Länder <span class="ov-of">{numbered.length} von {total}</span></h1>
 		{#if numbered.length || others.length}
 			<button type="button" class="lv-sel" onclick={() => (selecting ? stopSelecting() : (selecting = true))}>{selecting ? 'Fertig' : 'Auswählen'}</button>
 		{/if}

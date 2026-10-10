@@ -8,7 +8,7 @@
 	import { closeContinents, hooks, openCountry, openPass, reduceMotion, ui } from '$lib/app.svelte';
 	import { swipeClose } from '$lib/swipeClose';
 
-	/* Seite „Deine Kontinente“ (öffnet über den Block auf der Startseite): je Kontinent eine Karte mit Fortschrittsring.
+	/* Seite „Meine Kontinente“ (öffnet über den Block auf der Startseite): je Kontinent eine Karte mit Fortschrittsring.
 	   Antippen klappt die Länder des Kontinents auf (bereiste mit Flagge, fehlende blass), dazu „Zuerst betreten“,
 	   das Kontinent-Abzeichen aus dem Pass und „Auf dem Globus zeigen“. Gesamtzahl je nach gewählter Länderliste. */
 
@@ -83,10 +83,10 @@
 <!-- svelte-ignore a11y_no_noninteractive_element_to_interactive_role -->
 <section class="ov set-view" id="continentsView" role="dialog" aria-modal="true" aria-labelledby="contsTitle" hidden={!ui.continentsOpen} bind:this={view} use:swipeClose={{ onclose: () => closeContinents(false) }}>
 	<div class="ov-head lv-head">
-		<button type="button" class="ov-close" id="contsClose" aria-label="Deine Kontinente schließen" onclick={() => closeContinents(false)}
+		<button type="button" class="ov-close" id="contsClose" aria-label="Meine Kontinente schließen" onclick={() => closeContinents(false)}
 			><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg></button
 		>
-		<h1 class="set-title" id="contsTitle">Deine Kontinente <span class="ov-of">{reached} von {KEYS.length}</span></h1>
+		<h1 class="set-title" id="contsTitle">Meine Kontinente <span class="ov-of">{reached} von {KEYS.length}</span></h1>
 	</div>
 	{#if ui.continentsOpen}
 		<div class="ov-body cv-body">

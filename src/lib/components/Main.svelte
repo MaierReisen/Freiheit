@@ -102,7 +102,7 @@
 		<WorldMap />
 		<div class="blocks">
 			<PassTile />
-			<h2 class="blocks-h">Deine Welt</h2>
+			<h2 class="blocks-h">Meine Welt</h2>
 			<div class="cats">
 				<PlacesTile />
 				<ContinentsTile />

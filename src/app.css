@@ -311,7 +311,7 @@ button.cont{border:0;font:inherit;font-size:14px;color:inherit}
 /* Dreistellige Länderzahl etwas kleiner, damit der „+ Land“-Button daneben bleibt */
 .count.d3{font-size:clamp(72px,24vw,140px)}
 
-/* Startseite unter dem Globus: Pass-Block, darunter der Bereich „Deine Welt“ mit einer Zeile je Kategorie */
+/* Startseite unter dem Globus: Pass-Block, darunter der Bereich „Meine Welt“ mit einer Zeile je Kategorie */
 .blocks{display:flex;flex-direction:column;margin-top:18px}
 .blocks-h{display:flex;align-items:center;gap:12px;margin:14px 2px 10px;font:700 12.5px var(--text);letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
 .blocks-h::after{content:"";flex:1;height:1px;background:var(--line)}
@@ -336,13 +336,13 @@ button.cont{border:0;font:inherit;font-size:14px;color:inherit}
 /* noch leere Zeilen (Kontinente, Hauptstädte): nur „Kommt bald“, nicht antippbar */
 .cat-row.soon .cat-bar{opacity:.6}
 
-/* Kontinent-Farben (Punkte im Block, Ringe auf der Seite „Deine Kontinente“): Stempeltinten, passen sich hell/dunkel an */
+/* Kontinent-Farben (Punkte im Block, Ringe auf der Seite „Meine Kontinente“): Stempeltinten, passen sich hell/dunkel an */
 :root{--ct-EU:var(--st-blue);--ct-AS:var(--st-coral);--ct-AF:var(--st-gold);--ct-NA:var(--st-plum);--ct-SA:var(--st-green);--ct-OC:var(--st-teal);--ct-AN:var(--st-navy)}
 .cat-dots{display:inline-flex;gap:4px;margin-left:8px;vertical-align:1px}
 .cat-dots i{width:8px;height:8px;border-radius:50%;background:var(--cc)}
 .cat-dots i.off{background:none;box-shadow:inset 0 0 0 1.3px var(--muted);opacity:.6} /* noch nicht bereist: leerer Kreis */
 
-/* Seite „Deine Kontinente“ */
+/* Seite „Meine Kontinente“ */
 .cv-list{list-style:none;margin:14px 0 0;padding:0;display:flex;flex-direction:column;gap:10px}
 .cv-card{border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface);overflow:hidden;scroll-margin:12px}
 .cv-head{width:100%;display:flex;align-items:center;gap:14px;padding:12px 14px;border:0;background:none;color:var(--ink);text-align:left;-webkit-tap-highlight-color:transparent}
@@ -384,7 +384,7 @@ button.cont{border:0;font:inherit;font-size:14px;color:inherit}
 .cv-ok svg{width:14px;height:14px;fill:none;stroke:#fff;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
 .cv-note{margin:16px 0 0}
 
-/* Seite „Deine Länder“ */
+/* Seite „Meine Länder“ */
 .lv-head .set-title{font-size:22px;white-space:nowrap}
 .set-title .ov-of{display:block}
 .set-view.lv-head,#placesView,#continentsView{touch-action:pan-y}
@@ -940,3 +940,5 @@ button.pp-tile:active{transform:scale(.98)}
 .pick-list li.sel-li.on .chk{background:var(--primary);border-color:var(--primary);color:var(--on-primary)}
 .pick-bar{flex:none;display:flex;align-items:center;gap:10px;padding-top:12px;border-top:1px solid var(--line)}
 .btn.primary:disabled{background:var(--chip);border-color:var(--chip);color:var(--muted)}
+.cs-head .tag,#sheetTitle .tag{margin-left:6px;color:var(--muted);font:600 13px var(--text);letter-spacing:0;white-space:nowrap}
+#sheetTitle .tag{margin-left:6px;color:var(--muted);font:600 13px var(--text);letter-spacing:0;white-space:nowrap}

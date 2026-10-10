@@ -78,9 +78,9 @@ export const ui = $state({
 	sheetDetent: 'full' as 'peek' | 'full',
 	/** Höhe der kompakten Karte in px (misst die Länderseite selbst) */
 	sheetPeek: 260,
-	/** Seite „Deine Länder“ (Vollbild, über den Block auf der Startseite) */
+	/** Seite „Meine Länder“ (Vollbild, über den Block auf der Startseite) */
 	placesOpen: false,
-	/** Seite „Deine Kontinente“ (Vollbild, über den Block auf der Startseite) */
+	/** Seite „Meine Kontinente“ (Vollbild, über den Block auf der Startseite) */
 	continentsOpen: false,
 	full: false,
 	settingsOpen: false,
@@ -203,7 +203,7 @@ export function closeSettings(fromHash = false) {
 }
 const isSettingsHash = (h: string) => h === 'einstellungen' || h === 'more';
 
-/* ---------- Deine Länder (Vollbild, wie die Einstellungen) ---------- */
+/* ---------- Meine Länder (Vollbild, wie die Einstellungen) ---------- */
 let placesReturnFocus: Element | null = null;
 export function openPlaces(fromHash = false) {
 	if (ui.placesOpen) return;
@@ -225,7 +225,7 @@ export function closePlaces(fromHash = false) {
 	if (placesReturnFocus instanceof HTMLElement) placesReturnFocus.focus({ preventScroll: true });
 }
 
-/* ---------- Deine Kontinente (Vollbild, wie „Deine Länder“) ---------- */
+/* ---------- Meine Kontinente (Vollbild, wie „Meine Länder“) ---------- */
 let contsReturnFocus: Element | null = null;
 export function openContinents(fromHash = false) {
 	if (ui.continentsOpen) return;

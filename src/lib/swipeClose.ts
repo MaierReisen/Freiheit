@@ -1,7 +1,7 @@
 import { reduceMotion } from './app.svelte';
 
 /* Svelte-Aktion für Vollbild-Seiten: nach rechts wischen = zurück, nach unten wischen (oben in der Liste) = schließen.
-   Gleiches Verhalten wie in „Deine Länder“: Seite folgt dem Finger ohne Ruck, beim Loslassen entscheiden Weg und Tempo.
+   Gleiches Verhalten wie in „Meine Länder“: Seite folgt dem Finger ohne Ruck, beim Loslassen entscheiden Weg und Tempo.
    Die Liste muss in `.ov-body` liegen (dort wird geprüft, ob ganz oben). */
 
 export interface SwipeCloseOpts {

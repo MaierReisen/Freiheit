@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { addCountry, atlas, countedCountries, isCounted, removeCountry, setEntered, visitedSet } from '$lib/atlas.svelte';
 	import { longDate } from '$lib/passport';
-	import { SCOPES, isTerritory, placeLabel } from '$lib/scope';
+	import { SCOPES, isTerritory, listTag, placeLabel } from '$lib/scope';
 	import { compareNames, flag, nameOf } from '$lib/countries';
 	import { closeSheet, hooks, openCountry, reduceMotion, setSheetDetent, ui } from '$lib/app.svelte';
 	import { compareArea, currencies, factsNow, loadClimate, loadEntry, loadHighlights, fmtArea, fmtAreaShort, fmtDensity, fmtPop, languages, loadFacts, localTime, type Facts } from '$lib/facts';
@@ -117,7 +117,7 @@
 			onclick={() => ui.sheetDetent === 'peek' && setSheetDetent('full')}
 			onkeydown={(e) => e.key === 'Enter' && ui.sheetDetent === 'peek' && setSheetDetent('full')}
 		>
-			<h3 id="sheetTitle" class:long={name.length > 13} class:xlong={name.length > 20}>{name}</h3>
+			<h3 id="sheetTitle" class:long={name.length > 13} class:xlong={name.length > 20}>{name}{#if listTag(code)}<span class="tag">({listTag(code)})</span>{/if}</h3>
 			<div class="cs-sub">{[placeLabel(code), facts?.cap?.[0]].filter(Boolean).join(' · ')}</div>
 		</div>
 		{#if !been}
