@@ -1,79 +1,41 @@
 import { geoArea, geoBounds, geoCentroid, geoDistance } from 'd3-geo';
-import { feature, mesh } from 'topojson-client';
-import { presimplify, simplify } from 'topojson-simplify';
 import WORLD_JSON from '../data/world-50m.topo.json';
-import ISO_NUMERIC from '../data/iso-numeric.json';
 import { compareNames, nameOf } from '../countries';
+import {
+	FINE_URL,
+	FINE_W,
+	SIMP_W,
+	assignIds,
+	bordersOf,
+	fixFine,
+	makeLod as makeLodOf,
+	packTopo,
+	patch,
+	polysOf,
+	prepFineTopo,
+	presimplify,
+	simpLod as simpLodOf,
+	toFeatures,
+	unpackLod,
+	type CountryFeature,
+	type CountryGeometry,
+	type Lod,
+	type PackedLod,
+	type Poly,
+	type Topology
+} from './lodcore';
 
 /* Geodaten der Weltkarte: Länderflächen, Lage/Größe je Land und Detailstufen (LOD). */
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type Topology = any;
+export type { CountryFeature, CountryGeometry, Lod, Poly };
+export { FINE_W, SIMP_W };
 type Ring = [number, number][];
-export type CountryGeometry = GeoJSON.Polygon | GeoJSON.MultiPolygon;
-export interface CountryFeature extends GeoJSON.Feature<CountryGeometry> {
-	id: string;
-}
-export interface Poly {
-	id: string;
-	g: GeoJSON.Polygon;
-	size: number;
-}
-export interface Lod {
-	feats: CountryFeature[];
-	polys: Poly[];
-	borders: GeoJSON.MultiLineString;
-}
 
 export const WORLD: Topology = WORLD_JSON;
-const NUM2A2 = ISO_NUMERIC as Record<string, string>;
 
 export const wrapLon = (l: number) => ((l + 540) % 360) - 180;
 
-/* Teile ohne ISO-Code in den Kartendaten (sonst Lücken auf dem Globus, die sich nicht antippen lassen): dem Land zuordnen,
-   zu dem sie gehören bzw. das sie verwaltet. Die „Indian Ocean Ter.“ werden in Weihnachtsinsel und Kokosinseln geteilt.
-   Strittige Riffe (Spratly, Scarborough) bleiben ohne Land. Gilt für die mittleren (50m) und die feinen Daten (10m). */
-const NO_ISO: Record<string, string> = {
-	Somaliland: 'SO',
-	'N. Cyprus': 'CY',
-	'Cyprus U.N. Buffer Zone': 'CY',
-	Akrotiri: 'CY',
-	Dhekelia: 'CY',
-	'Siachen Glacier': 'IN',
-	Baikonur: 'KZ',
-	'USNB Guantanamo Bay': 'CU',
-	'Coral Sea Is.': 'AU',
-	'Clipperton I.': 'FR',
-	'Bajo Nuevo Bank': 'CO',
-	'Serranilla Bank': 'CO'
-};
-type TopoGeom = { id?: string; type: string; arcs: unknown[]; properties?: { name?: string } };
-function assignIds(topo: Topology) {
-	const geoms: TopoGeom[] = topo.objects.countries.geometries;
-	const out: TopoGeom[] = [];
-	for (const g of geoms) {
-		const nm = g.properties?.name ?? '';
-		if (!g.id && NO_ISO[nm]) g.id = NO_ISO[nm];
-		if (!g.id && nm === 'Indian Ocean Ter.') {
-			// Weihnachtsinsel liegt bei 105,7° O, die Kokosinseln bei 96,8° O
-			const polys = g.type === 'MultiPolygon' ? g.arcs : [g.arcs];
-			for (const code of ['CX', 'CC']) {
-				const own = polys.filter((a) => {
-					const lon = geoCentroid(feature(topo, { type: 'Polygon', arcs: a } as never) as never)[0];
-					return code === 'CX' ? lon > 101 : lon <= 101;
-				});
-				if (own.length) out.push({ ...g, id: code, type: 'MultiPolygon', arcs: own });
-			}
-			continue;
-		}
-		out.push(g);
-	}
-	topo.objects.countries.geometries = out;
-}
 assignIds(WORLD_JSON);
-
-const toFeatures = (topo: Topology): CountryFeature[] =>
-	(feature(topo, topo.objects.countries) as unknown as GeoJSON.FeatureCollection<CountryGeometry>).features as CountryFeature[];
 
 // Tuvalu fehlt in den 50m-Kartendaten: als winzige Fläche um Funafuti ergänzen (wird wie andere Kleinstaaten als Punkt gezeichnet)
 const TUVALU: CountryFeature = {
@@ -82,27 +44,6 @@ const TUVALU: CountryFeature = {
 	properties: { name: 'Tuvalu' },
 	geometry: { type: 'Polygon', coordinates: [[[179.17, -8.56], [179.17, -8.48], [179.23, -8.48], [179.23, -8.56], [179.17, -8.56]]] }
 };
-
-// Vatikan: in beiden Kartendaten zu grob (50m: rund 1,5 km nach Westen versetzt, 10m: zu einer Linie ohne Fläche
-// zusammengefallen). Eigene, genauere Form (Uhrzeigersinn, wie d3 es erwartet); seine Grenzlinien aus den Daten entfallen.
-const VATICAN: GeoJSON.Polygon = {
-	type: 'Polygon',
-	coordinates: [
-		[
-			[12.4457, 41.9015],
-			[12.4462, 41.9041],
-			[12.4489, 41.9065],
-			[12.4532, 41.9075],
-			[12.456, 41.9062],
-			[12.4585, 41.9022],
-			[12.4566, 41.9006],
-			[12.4519, 41.9003],
-			[12.4478, 41.9002],
-			[12.4457, 41.9015]
-		]
-	]
-};
-const patch = (f: CountryFeature): CountryFeature => (f.id === 'VA' ? { ...f, geometry: VATICAN } : f);
 
 export const features = [...toFeatures(WORLD).filter((f) => f.id).map(patch), TUVALU];
 
@@ -180,39 +121,7 @@ function decimateTopology(topo: Topology, step: number): Topology {
 	});
 	return { type: 'Topology', objects: topo.objects, arcs };
 }
-function polysOf(feats: CountryFeature[]): Poly[] {
-	const out: Poly[] = [];
-	for (const f of feats) {
-		const g = f.geometry,
-			list = g.type === 'MultiPolygon' ? g.coordinates : [g.coordinates];
-		for (const rings of list) {
-			let mnx = 181,
-				mxx = -181,
-				mny = 91,
-				mxy = -91;
-			for (const p of rings[0]) {
-				if (p[0] < mnx) mnx = p[0];
-				if (p[0] > mxx) mxx = p[0];
-				if (p[1] < mny) mny = p[1];
-				if (p[1] > mxy) mxy = p[1];
-			}
-			// Kippt bei einer Detailstufe die Umlaufrichtung (winzige/zusammengefallene Ringe), würde d3 „alles außer dem Land“ füllen
-			// – dann färbt sich der ganze Globus in der Farbe des Landes. Deshalb hier für jede Stufe umdrehen.
-			let g: GeoJSON.Polygon = { type: 'Polygon', coordinates: rings };
-			if (geoArea(g) > 2 * Math.PI) g = { type: 'Polygon', coordinates: rings.map((r) => [...r].reverse()) };
-			out.push({ id: f.id, g, size: Math.max(mxx - mnx, mxy - mny) });
-		}
-	}
-	return out;
-}
-const bordersOf = (topo: Topology) =>
-	mesh(topo, topo.objects.countries, (a, b) => a !== b && a.id !== 'VA' && b.id !== 'VA') as GeoJSON.MultiLineString;
-function makeLod(topo: Topology): Lod {
-	const feats = toFeatures(topo)
-		.filter((f) => f.id && FC[f.id])
-		.map(patch);
-	return { feats, polys: polysOf(feats), borders: bordersOf(topo) };
-}
+const makeLod = (topo: Topology) => makeLodOf(topo, (id) => !!FC[id]);
 // Flächen füllen: jeden Ring einzeln ausdünnen und prüfen. Kippt die Umlaufrichtung oder schrumpft die Form stark,
 // bleibt der Originalring erhalten (sonst würde die Karte die Insel als "alles außer der Insel" füllen).
 const ringArea = (r: Ring) => {
@@ -243,24 +152,9 @@ function decimateFeatures(feats: CountryFeature[], step: number): CountryFeature
 	});
 }
 
-/* --- Formerhaltende Stufen (Visvalingam): Schwelle = Fläche des kleinsten bleibenden Dreiecks in Grad².
-   Anders als „jeden n-ten Punkt behalten“ bleiben Buchten, Kaps und Grenzverläufe erhalten – die Formen werden
-   nicht zackig. Die Karte wählt je Zoom die gröbste Stufe, deren Fehler auf dem Bildschirm unter ~0,4 px bleibt. --- */
-export const SIMP_W = [0.1, 0.03, 0.01, 0.003, 0.001, 0.0003, 0.0001]; // 50m-Daten: 'v0' … 'v6'
-export const FINE_W = [0.0003, 0.0001, 0.00003, 0.00001, 0.000003, 0.000001]; // 10m-Daten: 'w0' … 'w5'
 let PRE: Topology | null = null,
 	PRE_FINE: Topology | null = null;
-function simpLod(pre: Topology, w: number, keep?: Lod): Lod {
-	const lod = makeLod(simplify(pre, w));
-	// Die Antarktis umschließt den Südpol: die Vereinfachung (ebene Dreiecksflächen) lässt ihr Festland zu einem Punkt
-	// zusammenfallen. Sie behält deshalb die unvereinfachte Form (50m: rund 260 Punkte, kostet beim Zeichnen nichts).
-	if (keep) {
-		lod.polys = [...lod.polys.filter((pg) => pg.id !== 'AQ'), ...keep.polys.filter((pg) => pg.id === 'AQ')];
-		const aq = keep.feats.find((f) => f.id === 'AQ');
-		if (aq) lod.feats = lod.feats.map((f) => (f.id === 'AQ' ? aq : f));
-	}
-	return lod;
-}
+const simpLod = (pre: Topology, w: number, keep?: Lod) => simpLodOf(pre, w, (id) => !!FC[id], keep);
 
 const LODS: Record<string, Lod> = {};
 let FINE_TOPO: Topology | null = null;
@@ -292,35 +186,85 @@ export function getLod(name: string): Lod | null {
 	return null;
 }
 
-const FINE_URL = 'https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/countries-10m.json';
-/** Feine Grenzen (10m) für starken Zoom nachladen; numerische IDs auf Alpha-2 abbilden */
+/** Feine Grenzen (10m) für starken Zoom nachladen – im Hintergrund-Rechner, sonst hier */
 export async function fetchFineLod(): Promise<Lod> {
+	if (lodWorker()) {
+		await requestLod('fine', true);
+		if (LODS.fine) return LODS.fine;
+	}
 	const r = await fetch(FINE_URL);
 	if (!r.ok) throw new Error('http');
 	const t = await r.json();
-	t.objects.countries.geometries.forEach((g: { id?: string; properties?: { name?: string } }) => {
-		g.id = NUM2A2[g.id!] || (g.properties && g.properties.name === 'Kosovo' ? 'XK' : undefined);
-	});
-	assignIds(t);
+	prepFineTopo(t);
 	FINE_TOPO = t;
 	const lod = makeLod(t);
-	// Datenfehler der feinen Karte ausgleichen: der Vatikan ist dort zu einer Linie ohne Fläche zusammengefallen.
-	// Zwergstaaten, deren feine Form deutlich kleiner ist als die mittlere, bekommen die mittlere Form.
-	const full = getLod('full');
-	if (full) {
-		const fullById = new Map(full.feats.map((f) => [f.id, f]));
-		let fixed = false;
-		lod.feats = lod.feats.map((f) => {
-			const ff = fullById.get(f.id);
-			if (!ff || INFO[f.id]?.area >= 0.0001) return f;
-			const a = geoArea(f); // bei zusammengefallenen Ringen kann d3 durch Rundung „fast die ganze Kugel“ liefern
-			if (a >= 0.4 * geoArea(ff) && a < Math.PI) return f;
-			fixed = true;
-			return { ...f, geometry: ff.geometry };
-		});
-		if (fixed) lod.polys = polysOf(lod.feats);
-	}
+	fixFine(lod, getLod('full')!, (id) => INFO[id]?.area < 0.0001);
 	return (LODS.fine = lod);
+}
+
+/* --- Hintergrund-Rechner (lod.worker.ts): baut die vereinfachten ('v…', 'w…') und feinen Stufen, ohne dass die App
+   dabei stockt. Das fertige Ergebnis kommt als Zahlenreihen und wird hier in kleinen Schritten ausgepackt. --- */
+let worker: Worker | null | undefined;
+const waiting = new Map<string, { ok: () => void; fail: (e: Error) => void }[]>();
+function lodWorker(): Worker | null {
+	if (worker !== undefined) return worker;
+	worker = null;
+	if (typeof Worker === 'undefined') return null;
+	try {
+		const w = new Worker(new URL('./lod.worker.ts', import.meta.url), { type: 'module' });
+		const micro = Object.keys(INFO).filter((id) => INFO[id].area < 0.0001);
+		const topo = packTopo(WORLD);
+		w.postMessage({ t: 'init', topo, ids: Object.keys(FC), micro }, [topo.aLen.buffer, topo.axy.buffer]);
+		w.onmessage = (e) => onWorker(e.data);
+		w.onerror = () => {
+			// Hintergrund-Rechner fällt aus: ab jetzt wie früher hier rechnen
+			worker = null;
+			const all = [...waiting.values()].flat();
+			waiting.clear();
+			all.forEach((c) => c.fail(new Error('worker')));
+		};
+		worker = w;
+	} catch {
+		worker = null;
+	}
+	return worker;
+}
+function settle(name: string, err?: Error) {
+	const cs = waiting.get(name) || [];
+	waiting.delete(name);
+	cs.forEach((c) => (err ? c.fail(err) : c.ok()));
+}
+function onWorker(m: { t: string; name: string; p?: PackedLod; net?: boolean; msg?: string }) {
+	if (m.t === 'err') return settle(m.name, new Error(m.msg));
+	const it = unpackLod(m.p!);
+	const step = () => {
+		const t0 = performance.now();
+		for (;;) {
+			const r = it.next();
+			if (r.done) {
+				if (r.value) LODS[m.name] = r.value;
+				return settle(m.name, r.value ? undefined : new Error('unpack'));
+			}
+			if (performance.now() - t0 > 6) return void setTimeout(step, 0);
+		}
+	};
+	step();
+}
+const idle = (f: () => void) => (typeof requestIdleCallback !== 'undefined' ? requestIdleCallback(f, { timeout: 1200 }) : setTimeout(f, 60));
+/** Detailstufe bauen lassen (ohne die App zu blockieren); ohne Hintergrund-Rechner hier im Leerlauf.
+    `strict`: Fehler (z. B. kein Netz für die feinen Daten) weitergeben statt hier nachzurechnen. */
+export function requestLod(name: string, strict = false): Promise<void> {
+	if (LODS[name]) return Promise.resolve();
+	const local = () => new Promise<void>((ok) => idle(() => (getLod(name), ok())));
+	const w = lodWorker();
+	if (!w) return name === 'fine' ? Promise.reject(new Error('worker')) : local();
+	return new Promise<void>((ok, fail) => {
+		const cs = waiting.get(name);
+		const c = { ok, fail: (e: Error) => (strict || name === 'fine' || name[0] === 'w' ? fail(e) : local().then(ok)) };
+		if (cs) return void cs.push(c);
+		waiting.set(name, [c]);
+		w.postMessage({ t: 'lod', name });
+	});
 }
 export const fineLod = () => LODS.fine as Lod | undefined;
 /** Ist die Detailstufe schon gebaut? (so lässt sich vermeiden, sie mitten in einer Geste zu erzeugen) */

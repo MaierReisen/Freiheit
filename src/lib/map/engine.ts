@@ -2,7 +2,7 @@ import { geoContains, geoDistance, geoGraticule10, geoNaturalEarth1, geoOrthogra
 import { CONT_VIEW, nameOf, type ContinentCode } from '../countries';
 import LABEL_JSON from '../data/labels.json';
 import { loadFacts } from '../facts';
-import { FC, FINE_W, INFO, SIMP_W, features, fetchFineLod, fineLod, getLod, lodReady, smallIds, wrapLon, type Lod, type Poly } from './geo';
+import { FC, FINE_W, INFO, SIMP_W, features, fetchFineLod, fineLod, getLod, lodReady, requestLod, smallIds, wrapLon, type Lod, type Poly } from './geo';
 import { fastGlobe, type FastGlobe } from './fastglobe';
 import { WATER_TOL, loadWaterLayer, waterInView, waterLayer } from './water';
 
@@ -391,16 +391,17 @@ export function createWorldMap(o: MapOptions) {
 		// Stufe noch nicht gebaut: im Leerlauf bauen, bis dahin Rückfall (in Bewegung grob, in Ruhe die volle Stufe)
 		if (!building.has(name)) {
 			building.add(name);
-			idle(() => {
-				if (destroyed) return;
-				getLod(name);
-				building.delete(name);
-				markDirty(true);
-			});
+			// im Hintergrund-Rechner (sonst im Leerlauf); schlägt es fehl, bleibt es beim Rückfall
+			requestLod(name).then(
+				() => {
+					building.delete(name);
+					if (!destroyed) markDirty(true);
+				},
+				() => {}
+			);
 		}
 		return moving ? (fine && lodReady('f' + MOVE_STEPS[stepIdx]) ? 'f' + MOVE_STEPS[stepIdx] : 's' + MOVE_STEPS[stepIdx]) : fine ? 'fine' : 'full';
 	}
-	const idle = (f: () => void) => (window.requestIdleCallback ? window.requestIdleCallback(f, { timeout: 1200 }) : setTimeout(f, 60));
 	function scheduleRefine() {
 		clearTimeout(refineT);
 		refineT = setTimeout(() => {
@@ -1555,10 +1556,14 @@ export function createWorldMap(o: MapOptions) {
 				prewarmT = setTimeout(() => later(() => !destroyed && loadFine()), 4000);
 				return;
 			}
-			try {
-				getLod(names[i++]);
-			} catch {}
-			later(next);
+			const name = names[i++];
+			if (name[0] === 'v') requestLod(name).then(() => later(next), () => later(next));
+			else {
+				try {
+					getLod(name);
+				} catch {}
+				later(next);
+			}
 		};
 		prewarmT = setTimeout(() => later(next), 500);
 	})();
