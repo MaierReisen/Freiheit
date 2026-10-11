@@ -2,6 +2,7 @@
    Ergebnisse werden je Land gemerkt; die Nachbarländer der geöffneten Seite werden in Leerlaufzeiten vorberechnet,
    damit der Wechsel zu einem Nachbarn sofort die fertige Karte zeigt. */
 import { geoDistance, geoGraticule10, geoInterpolate, geoOrthographic, geoPath } from 'd3-geo';
+import { fastGlobe, type PathSink } from './fastglobe';
 import { shapeOf } from './geo';
 import { fmtHeight, type Facts, type Water } from '$lib/facts';
 
@@ -22,6 +23,20 @@ export interface MiniMap {
 	peakDir: number | null;
 	/** Länge/Breite → Punkt auf der Minikarte (null, wenn nicht sichtbar) */
 	proj: (ll: [number, number]) => [number, number] | null;
+}
+
+/** sammelt Pfadbefehle als SVG-Text */
+class PathText implements PathSink {
+	d = '';
+	moveTo(x: number, y: number) {
+		this.d += 'M' + x.toFixed(1) + ' ' + y.toFixed(1);
+	}
+	lineTo(x: number, y: number) {
+		this.d += 'L' + x.toFixed(1) + ' ' + y.toFixed(1);
+	}
+	closePath() {
+		this.d += 'Z';
+	}
 }
 
 const inside = (p: [number, number] | null) => !!p && p[0] >= 0 && p[0] <= W && p[1] >= 0 && p[1] <= H;
@@ -104,8 +119,18 @@ function build(code: string, facts: Facts | null, water: Water): MiniMap | null 
 	}
 	const path = geoPath(P);
 	const land = path(s.shape) ?? '';
-	const ag = s.around.geometry as GeoJSON.MultiPolygon;
-	const around = ag.coordinates.map((coordinates, k) => ({ id: s.aroundIds[k], d: path({ type: 'Polygon', coordinates }) ?? '' })).filter((x) => x.d);
+	// Nachbarn über die schnelle Umrechnung (fastglobe.ts): Punkte außerhalb des Bildes entfallen, Zahlen mit einer Nachkommastelle
+	const rot = P.rotate(),
+		tr = P.translate();
+	const fast = fastGlobe(-rot[0], -rot[1], tr![0], tr![1], P.scale(), W, H);
+	const around = s.aroundPolys
+		.map((pg) => {
+			if (!fast.ok(pg)) return { id: pg.id, d: path(pg.g) ?? '' };
+			const sink = new PathText();
+			fast.add(sink, pg);
+			return { id: pg.id, d: sink.d };
+		})
+		.filter((x) => x.d);
 	// Sichtweite in Bogenmaß (für das Vorsortieren der Gewässer)
 	const reach = Math.hypot(W, H) / 2 / P.scale() + 0.02;
 	const c = s.c;

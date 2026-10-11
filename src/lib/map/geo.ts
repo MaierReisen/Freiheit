@@ -331,7 +331,7 @@ export const ALL = [...new Set(features.map((f) => f.id))].sort((a, b) => compar
 
 /** Form eines Landes für Vorschaubilder: alle Teile nahe am Hauptgebiet (weit Entferntes wie Alaska, Hawaii oder
     Französisch-Guayana bleibt weg, damit das Land groß genug erscheint) – plus die Nachbarschaft als Umgebung. */
-type Shape = { shape: GeoJSON.Feature; around: GeoJSON.Feature; aroundIds: string[]; c: [number, number] };
+type Shape = { shape: GeoJSON.Feature; around: GeoJSON.Feature; aroundIds: string[]; aroundPolys: Poly[]; c: [number, number] };
 // Mittelpunkte und fertige Formen merken: das Durchsuchen aller Länderteile kostet sonst bei jedem Öffnen spürbar Zeit
 const centroids = new WeakMap<GeoJSON.Polygon, [number, number]>();
 const centroidOf = (g: GeoJSON.Polygon) => {
@@ -370,11 +370,19 @@ function buildShape(id: string, i: (typeof INFO)[string], lod: Lod): Shape | nul
 		: (features.find((f) => f.id === id)?.geometry ?? { type: 'MultiPolygon', coordinates: [] });
 	// Umgebung: andere Länder in der Nähe (für den Kartenausschnitt)
 	const R2 = R * 2.2;
-	const others = lod.polys.filter((p) => p.id !== id && geoDistance(centroidOf(p.g), i.c) < R2 + (p.size * Math.PI) / 180);
+	// Weit Entferntes erst mit einer Ecke grob aussortieren (der Mittelpunkt liegt höchstens ~1,5 Teilgrößen davon entfernt) –
+	// den Mittelpunkt für alle ~1600 Teile zu berechnen kostete beim ersten Öffnen eines Landes mehrere hundert Millisekunden
+	const others = lod.polys.filter((p) => {
+		if (p.id === id) return false;
+		const sz = (p.size * Math.PI) / 180;
+		if (p.size < 60 && geoDistance(p.g.coordinates[0][0] as [number, number], i.c) > R2 + 2.5 * sz + 0.01) return false;
+		return geoDistance(centroidOf(p.g), i.c) < R2 + sz;
+	});
 	return {
 		shape: { type: 'Feature', properties: {}, geometry: geom },
 		around: { type: 'Feature', properties: {}, geometry: { type: 'MultiPolygon', coordinates: others.map((p) => p.g.coordinates) } },
 		aroundIds: others.map((p) => p.id), // je Teil das Land (z. B. für bereiste Nachbarn in Türkis)
+		aroundPolys: others,
 		c: parts.length ? (geoCentroid({ type: 'MultiPolygon', coordinates: parts.map((p) => p.g.coordinates) }) as [number, number]) : i.c
 	};
 }

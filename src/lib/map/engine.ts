@@ -2,7 +2,8 @@ import { geoContains, geoDistance, geoGraticule10, geoNaturalEarth1, geoOrthogra
 import { CONT_VIEW, nameOf, type ContinentCode } from '../countries';
 import LABEL_JSON from '../data/labels.json';
 import { loadFacts } from '../facts';
-import { FC, FINE_W, INFO, SIMP_W, features, fetchFineLod, fineLod, getLod, lodReady, smallIds, wrapLon, type Lod } from './geo';
+import { FC, FINE_W, INFO, SIMP_W, features, fetchFineLod, fineLod, getLod, lodReady, smallIds, wrapLon, type Lod, type Poly } from './geo';
+import { fastGlobe, type FastGlobe } from './fastglobe';
 import { WATER_TOL, loadWaterLayer, waterInView, waterLayer } from './water';
 
 /* Weltkarte auf zwei Canvas-Ebenen: Globus (orthografisch) und flache Karte (Natural Earth).
@@ -592,10 +593,13 @@ export function createWorldMap(o: MapOptions) {
 			path({ type: 'Sphere' });
 			c.fill();
 		}
+		// Globus: Umrisse, Grenzen und Gitter über die schnelle Formel (siehe fastglobe.ts), die Flachkarte über d3
+		const fast: FastGlobe | null = globe ? fastGlobe(view.lon, view.lat, cx, cy, R, cw, ch) : null;
 		c.strokeStyle = PAL.grat;
 		c.lineWidth = 0.6;
 		c.beginPath();
-		pathQ(GRAT);
+		if (fast) fast.lines(c, GRAT);
+		else pathQ(GRAT);
 		c.stroke();
 
 		// Inseln unter ~0,6 Pixel weglassen (unsichtbar) – in Bewegung und in Ruhe gleich, damit nach dem Loslassen nichts auftaucht
@@ -608,30 +612,38 @@ export function createWorldMap(o: MapOptions) {
 			// Zwergstaaten zuletzt (obenauf), damit sie nicht vom umgebenden Land (Italien → Vatikan) überdeckt werden
 			mBase: GeoJSON.Polygon[] = [],
 			mVis: GeoJSON.Polygon[] = [];
+		const fBase: Poly[] = [],
+			fVis: Poly[] = [],
+			fWsh: Poly[] = [],
+			fMBase: Poly[] = [],
+			fMVis: Poly[] = [];
 		for (const pg of lod.polys) {
 			let ok = seenIds[pg.id];
 			if (ok === undefined) ok = seenIds[pg.id] = inView(pg.id, ci);
 			if (!ok || pg.size < minDeg) continue;
 			const mi = microIds.has(pg.id);
-			(visited.has(pg.id) ? (mi ? mVis : vis) : wish.has(pg.id) ? wsh : mi ? mBase : base).push(pg.g);
+			if (fast?.ok(pg)) (visited.has(pg.id) ? (mi ? fMVis : fVis) : wish.has(pg.id) ? fWsh : mi ? fMBase : fBase).push(pg);
+			else (visited.has(pg.id) ? (mi ? mVis : vis) : wish.has(pg.id) ? wsh : mi ? mBase : base).push(pg.g);
 		}
-		const fillGroup = (arr: GeoJSON.Polygon[], ...fills: (string | CanvasPattern | null)[]) => {
-			if (!arr.length) return;
+		const fillGroup = (arr: GeoJSON.Polygon[], fa: Poly[], ...fills: (string | CanvasPattern | null)[]) => {
+			if (!arr.length && !fa.length) return;
 			c.beginPath();
 			for (const g of arr) path(g);
+			for (const pg of fa) fast!.add(c, pg);
 			for (const f of fills) {
 				if (!f) continue;
 				c.fillStyle = f;
 				c.fill();
 			}
 		};
-		fillGroup(base, PAL.land);
-		fillGroup(wsh, PAL.wish);
-		fillGroup(vis, PAL.visited);
-		fillGroup(mBase, PAL.land);
-		fillGroup(mVis, PAL.visited);
+		fillGroup(base, fBase, PAL.land);
+		fillGroup(wsh, fWsh, PAL.wish);
+		fillGroup(vis, fVis, PAL.visited);
+		fillGroup(mBase, fMBase, PAL.land);
+		fillGroup(mVis, fMVis, PAL.visited);
 		c.beginPath();
-		pathQ(lod.borders);
+		if (fast) fast.lines(c, lod.borders);
+		else pathQ(lod.borders);
 		c.strokeStyle = PAL.border;
 		c.lineWidth = 0.7;
 		c.stroke();
