@@ -4,6 +4,7 @@ import LABEL_JSON from '../data/labels.json';
 import { loadFacts } from '../facts';
 import { FC, FINE_W, INFO, SIMP_W, features, fetchFineLod, fineLod, getLod, lodReady, requestLod, smallIds, wrapLon, type Lod, type Poly } from './geo';
 import { fastGlobe, type FastGlobe } from './fastglobe';
+import { fastFlat } from './fastflat';
 import { WATER_TOL, loadWaterLayer, waterInView, waterLayer } from './water';
 
 /* Weltkarte auf zwei Canvas-Ebenen: Globus (orthografisch) und flache Karte (Natural Earth).
@@ -106,6 +107,49 @@ const CAP_K = 4.4,
 let CAPS: { id: string; p: [number, number]; t: string }[] | null = null;
 // echte Zwergstaaten (unter etwa 4.000 km²: Vatikan, Monaco, Malta, Singapur, Karibik- und Pazifikinseln …)
 const microIds = new Set(features.filter((f) => INFO[f.id].area < 0.0001).map((f) => f.id));
+// Teilflächen eines Landes je Detailstufe (für den Auswahl-Umriss, ohne in jedem Bild alle Flächen zu durchsuchen)
+const selIndex = new WeakMap<Lod, Map<string, Poly[]>>();
+function polysForSel(lod: Lod, id: string) {
+	let m = selIndex.get(lod);
+	if (!m) {
+		m = new Map();
+		for (const pg of lod.polys) {
+			const a = m.get(pg.id);
+			if (a) a.push(pg);
+			else m.set(pg.id, [pg]);
+		}
+		selIndex.set(lod, m);
+	}
+	return m.get(id) || [];
+}
+// Umkreis einer Teilfläche auf der Kugel (Mittelrichtung + Kosinus des Radius): liegt sie ganz auf der Vorderseite?
+const caps = new WeakMap<Poly, [number, number, number, number]>();
+function capOf(pg: Poly) {
+	let cap = caps.get(pg);
+	if (cap) return cap;
+	const r = pg.g.coordinates[0],
+		v = r.map(([l, f]) => {
+			const a = l * (Math.PI / 180),
+				b = f * (Math.PI / 180);
+			return [Math.cos(b) * Math.cos(a), Math.cos(b) * Math.sin(a), Math.sin(b)];
+		});
+	let x = 0,
+		y = 0,
+		z = 0;
+	for (const q of v) {
+		x += q[0];
+		y += q[1];
+		z += q[2];
+	}
+	const n = Math.hypot(x, y, z) || 1;
+	x /= n;
+	y /= n;
+	z /= n;
+	let cr = 1;
+	for (const q of v) cr = Math.min(cr, q[0] * x + q[1] * y + q[2] * z);
+	caps.set(pg, (cap = [x, y, z, cr]));
+	return cap;
+}
 // Teilflächen je Land und Detailstufe (für Umrisse, ohne jedes Mal alle Flächen zu durchsuchen)
 const polyIndex = new WeakMap<Lod, Map<string, GeoJSON.Polygon[]>>();
 function polysFor(lod: Lod, id: string) {
@@ -563,8 +607,7 @@ export function createWorldMap(o: MapOptions) {
 		c.clearRect(0, 0, cw, ch);
 		// immer dieselbe Glättung: das Bild in Bewegung und in Ruhe ist damit gleich (kein Umspringen nach dem Loslassen)
 		const P = curProj(0.6),
-			path = geoPath(P, c),
-			pathQ = path;
+			path = geoPath(P, c);
 		const lod: Lod = getLod(pickLodName(moving)) || getLod('full')!;
 		const ci = cullInfo();
 		const visited = o.getVisited(),
@@ -595,13 +638,12 @@ export function createWorldMap(o: MapOptions) {
 			path({ type: 'Sphere' });
 			c.fill();
 		}
-		// Globus: Umrisse, Grenzen und Gitter über die schnelle Formel (siehe fastglobe.ts), die Flachkarte über d3
-		const fast: FastGlobe | null = globe ? fastGlobe(view.lon, view.lat, cx, cy, R, cw, ch) : null;
+		// Umrisse, Grenzen und Gitter über die schnelle Formel (Globus: fastglobe.ts, Karte: fastflat.ts), Sonderfälle über d3
+		const fast: FastGlobe = globe ? fastGlobe(view.lon, view.lat, cx, cy, R, cw, ch) : fastFlat(view.lon, view.lat, cx, cy, R, cw, ch, path);
 		c.strokeStyle = PAL.grat;
 		c.lineWidth = 0.6;
 		c.beginPath();
-		if (fast) fast.lines(c, GRAT);
-		else pathQ(GRAT);
+		fast.lines(c, GRAT);
 		c.stroke();
 
 		// Inseln unter ~0,6 Pixel weglassen (unsichtbar) – in Bewegung und in Ruhe gleich, damit nach dem Loslassen nichts auftaucht
@@ -624,14 +666,14 @@ export function createWorldMap(o: MapOptions) {
 			if (ok === undefined) ok = seenIds[pg.id] = inView(pg.id, ci);
 			if (!ok || pg.size < minDeg) continue;
 			const mi = microIds.has(pg.id);
-			if (fast?.ok(pg)) (visited.has(pg.id) ? (mi ? fMVis : fVis) : wish.has(pg.id) ? fWsh : mi ? fMBase : fBase).push(pg);
+			if (fast.ok(pg)) (visited.has(pg.id) ? (mi ? fMVis : fVis) : wish.has(pg.id) ? fWsh : mi ? fMBase : fBase).push(pg);
 			else (visited.has(pg.id) ? (mi ? mVis : vis) : wish.has(pg.id) ? wsh : mi ? mBase : base).push(pg.g);
 		}
 		const fillGroup = (arr: GeoJSON.Polygon[], fa: Poly[], ...fills: (string | CanvasPattern | null)[]) => {
 			if (!arr.length && !fa.length) return;
 			c.beginPath();
 			for (const g of arr) path(g);
-			for (const pg of fa) fast!.add(c, pg);
+			for (const pg of fa) fast.add(c, pg);
 			for (const f of fills) {
 				if (!f) continue;
 				c.fillStyle = f;
@@ -644,8 +686,7 @@ export function createWorldMap(o: MapOptions) {
 		fillGroup(mBase, fMBase, PAL.land);
 		fillGroup(mVis, fMVis, PAL.visited);
 		c.beginPath();
-		if (fast) fast.lines(c, lod.borders);
-		else pathQ(lod.borders);
+		fast.lines(c, lod.borders);
 		c.strokeStyle = PAL.border;
 		c.lineWidth = 0.7;
 		c.stroke();
@@ -673,15 +714,25 @@ export function createWorldMap(o: MapOptions) {
 			// Umriss nur außen an der Küste/Grenze (Linie innen abgeschnitten) und je nach Größe auf dem Bildschirm: große Teile
 			// kräftig, kleine Inseln dünn, winzige gar nicht – sonst verschmelzen bei Inselstaaten (Philippinen, Indonesien) die
 			// vielen Umrisse zu einem weißen Klotz. Dazu eine leichte Aufhellung der Fläche.
-			const big: GeoJSON.Polygon[] = [],
-				mid: GeoJSON.Polygon[] = [];
+			const big: Poly[] = [],
+				mid: Poly[] = [];
+			// Teile, die über den Rand des Globus reichen, über d3: nur d3 zeichnet den Umriss dort entlang des Rands
+			const l = view.lon * (Math.PI / 180),
+				f = view.lat * (Math.PI / 180),
+				ox = Math.cos(f) * Math.cos(l),
+				oy = Math.cos(f) * Math.sin(l),
+				oz = Math.sin(f);
+			const front = (pg: Poly) => {
+				const [x, y, z, cr] = capOf(pg);
+				return Math.acos(Math.min(1, x * ox + y * oy + z * oz)) + Math.acos(Math.max(-1, cr)) < Math.PI / 2 - 0.002;
+			};
+			const add = (pg: Poly) => (fast.ok(pg) && (!globe || front(pg)) ? fast.add(c, pg) : path(pg.g));
 			c.beginPath();
-			for (const pg of lod.polys) {
-				if (pg.id !== selected) continue;
-				path(pg.g);
+			for (const pg of polysForSel(lod, selected)) {
+				add(pg);
 				const px = pg.size * pxPerDeg;
-				if (px >= 14) big.push(pg.g);
-				else if (px >= 3) mid.push(pg.g);
+				if (px >= 14) big.push(pg);
+				else if (px >= 3) mid.push(pg);
 			}
 			c.fillStyle = 'rgba(255,255,255,.16)';
 			c.fill();
@@ -696,7 +747,7 @@ export function createWorldMap(o: MapOptions) {
 			] as const) {
 				if (!arr.length) continue;
 				c.beginPath();
-				for (const g of arr) path(g);
+				for (const pg of arr) add(pg);
 				c.lineWidth = w;
 				c.stroke();
 			}
@@ -1577,6 +1628,17 @@ export function createWorldMap(o: MapOptions) {
 			const p = curProj()(i.c),
 				r = cv.getBoundingClientRect();
 			return p ? { x: r.left + p[0], y: r.top + p[1] } : null;
+		},
+		/** Messen (Testseite): Ansicht setzen, Karte n-mal zeichnen, Zeit je Bild in ms */
+		bench(v: Partial<typeof view>, moving = false, n = 10) {
+			cancelMotion();
+			Object.assign(view, v);
+			const t0 = performance.now();
+			for (let i = 0; i < n; i++) drawBase(moving);
+			const tb = (performance.now() - t0) / n,
+				t1 = performance.now();
+			for (let i = 0; i < n; i++) drawTop();
+			return { base: +tb.toFixed(2), top: +((performance.now() - t1) / n).toFixed(2) };
 		},
 		markDirty,
 		resize,

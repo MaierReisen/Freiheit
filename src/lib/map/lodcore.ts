@@ -108,6 +108,17 @@ const VATICAN: GeoJSON.Polygon = {
 };
 export const patch = (f: CountryFeature): CountryFeature => (f.id === 'VA' ? { ...f, geometry: VATICAN } : f);
 
+/** Umlaufrichtung verkehrt (d3 sähe „alles außer der Fläche“, Fläche > Halbkugel)? Schnell über die ebene Fläche in Grad –
+    gleiches Ergebnis wie d3, solange der Ring klein, eindeutig und fern von Polen und Datumsgrenze ist; sonst rechnet d3. */
+export function flipped(g: GeoJSON.Polygon, w: number, mny: number, mxy: number) {
+	const r = g.coordinates[0];
+	if (g.coordinates.length === 1 && w < 90 && mny > -80 && mxy < 80) {
+		let a = 0;
+		for (let i = 0, n = r.length - 1; i < n; i++) a += r[i][0] * r[i + 1][1] - r[i + 1][0] * r[i][1];
+		if (Math.abs(a) > 2e-4) return a > 0;
+	}
+	return geoArea(g) > 2 * Math.PI;
+}
 /** Teilflächen mit Größe; `src` merkt sich je Teilfläche die Ringe in Original-Umlaufrichtung (zum Einpacken) */
 export function polysOf(feats: CountryFeature[], src?: Src): Poly[] {
 	const out: Poly[] = [];
@@ -128,7 +139,7 @@ export function polysOf(feats: CountryFeature[], src?: Src): Poly[] {
 			// Kippt bei einer Detailstufe die Umlaufrichtung (winzige/zusammengefallene Ringe), würde d3 „alles außer dem Land“ füllen
 			// – dann färbt sich der ganze Globus in der Farbe des Landes. Deshalb hier für jede Stufe umdrehen.
 			let g: GeoJSON.Polygon = { type: 'Polygon', coordinates: rings };
-			if (geoArea(g) > 2 * Math.PI) g = { type: 'Polygon', coordinates: rings.map((r) => [...r].reverse()) };
+			if (flipped(g, mxx - mnx, mny, mxy)) g = { type: 'Polygon', coordinates: rings.map((r) => [...r].reverse()) };
 			const pg = { id: f.id, g, size: Math.max(mxx - mnx, mxy - mny) };
 			src?.set(pg, rings as Ring[]);
 			out.push(pg);

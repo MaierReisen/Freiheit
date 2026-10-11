@@ -1,5 +1,7 @@
-import { geoArea, geoBounds, geoCentroid, geoDistance } from 'd3-geo';
+import { geoArea, geoCentroid, geoDistance } from 'd3-geo';
 import WORLD_JSON from '../data/world-50m.topo.json';
+import GEOINFO from '../data/geoinfo.json';
+import { TUVALU, baseFeatures, computeInfo, wrapLon, type Fc, type Info } from './geoinfo';
 import { compareNames, nameOf } from '../countries';
 import {
 	FINE_URL,
@@ -10,12 +12,10 @@ import {
 	fixFine,
 	makeLod as makeLodOf,
 	packTopo,
-	patch,
 	polysOf,
 	prepFineTopo,
 	presimplify,
 	simpLod as simpLodOf,
-	toFeatures,
 	unpackLod,
 	type CountryFeature,
 	type CountryGeometry,
@@ -33,72 +33,25 @@ type Ring = [number, number][];
 
 export const WORLD: Topology = WORLD_JSON;
 
-export const wrapLon = (l: number) => ((l + 540) % 360) - 180;
+export { wrapLon };
 
 assignIds(WORLD_JSON);
 
-// Tuvalu fehlt in den 50m-Kartendaten: als winzige Fläche um Funafuti ergänzen (wird wie andere Kleinstaaten als Punkt gezeichnet)
-const TUVALU: CountryFeature = {
-	type: 'Feature',
-	id: 'TV',
-	properties: { name: 'Tuvalu' },
-	geometry: { type: 'Polygon', coordinates: [[[179.17, -8.56], [179.17, -8.48], [179.23, -8.48], [179.23, -8.56], [179.17, -8.56]]] }
-};
+export const features = baseFeatures(WORLD);
 
-export const features = [...toFeatures(WORLD).filter((f) => f.id).map(patch), TUVALU];
-
-// Lage und Größe jedes Landes (größtes Teilgebiet, damit z. B. Frankreich nicht in Südamerika zentriert wird)
-function mainPoly(f: CountryFeature): GeoJSON.Feature | CountryFeature {
-	const g = f.geometry;
-	if (!g || g.type !== 'MultiPolygon') return f;
-	let best: GeoJSON.Polygon | null = null,
-		ba = -1;
-	for (const c of g.coordinates) {
-		const p: GeoJSON.Polygon = { type: 'Polygon', coordinates: c };
-		const a = geoArea(p);
-		if (a > ba) {
-			ba = a;
-			best = p;
-		}
-	}
-	return { type: 'Feature', properties: {}, geometry: best! };
-}
-
-/** INFO: Mittelpunkt/Größe für Tippen und Hinfliegen, FC: Begrenzungskreis zum Weglassen unsichtbarer Länder */
-export const INFO: Record<string, { c: [number, number]; size: number; area: number }> = {};
-export const FC: Record<string, { c: [number, number]; r: number; wLon: number; wLat: number; cLat: number }> = {};
-// Teile mit derselben ID zusammenfassen (Australien steht zweimal in den Daten: Festland und Ashmore-/Cartierinseln),
-// sonst überschreibt das kleine Teil Mittelpunkt, Größe und Sichtbarkeitsprüfung des Festlands
-const merged = new Map<string, CountryFeature>();
-for (const f of features) {
-	const prev = merged.get(f.id);
-	if (!prev) {
-		merged.set(f.id, f);
-		continue;
-	}
-	const parts = (g: CountryGeometry) => (g.type === 'MultiPolygon' ? g.coordinates : [g.coordinates]);
-	merged.set(f.id, { ...prev, geometry: { type: 'MultiPolygon', coordinates: [...parts(prev.geometry), ...parts(f.geometry)] } });
-}
-merged.forEach((f) => {
-	const m = mainPoly(f),
-		b = geoBounds(m);
-	let dl = b[1][0] - b[0][0];
-	if (dl < 0) dl += 360;
-	INFO[f.id] = { c: geoCentroid(m), size: Math.max(dl, b[1][1] - b[0][1]), area: geoArea(f) };
-	const B = geoBounds(f);
-	let w = B[1][0] - B[0][0];
-	if (w < 0) w += 360;
-	const c: [number, number] = [wrapLon(B[0][0] + w / 2), (B[0][1] + B[1][1]) / 2];
-	let r = 0;
-	for (const q of [
-		[B[0][0], B[0][1]],
-		[B[1][0], B[0][1]],
-		[B[0][0], B[1][1]],
-		[B[1][0], B[1][1]]
-	] as [number, number][])
-		r = Math.max(r, geoDistance(c, q));
-	FC[f.id] = { c, r, wLon: w / 2, wLat: (B[1][1] - B[0][1]) / 2, cLat: c[1] };
-});
+/** INFO: Mittelpunkt/Größe für Tippen und Hinfliegen, FC: Begrenzungskreis zum Weglassen unsichtbarer Länder.
+    Vorberechnet in data/geoinfo.json (node scripts/build-geoinfo.mjs) – das Ausrechnen kostet beim Start sonst spürbar Zeit. */
+export const INFO = GEOINFO.info as unknown as Info;
+export const FC = GEOINFO.fc as unknown as Fc;
+if (import.meta.env.DEV)
+	setTimeout(() => {
+		// Rundungen der Rechenumgebung (letzte Stellen) zählen nicht
+		const flat = (o: unknown): number[] => (typeof o === 'number' ? [o] : Object.values(o as object).flatMap(flat));
+		const a = flat(computeInfo(features)),
+			b = flat({ info: INFO, fc: FC });
+		if (a.length !== b.length || a.some((v, i) => Math.abs(v - b[i]) > 1e-5))
+			console.warn('geoinfo.json passt nicht mehr zu den Kartendaten: node scripts/build-geoinfo.mjs ausführen');
+	}, 3000);
 export const small = features.filter((f) => INFO[f.id].area < 0.0004);
 export const smallIds = new Set(small.map((f) => f.id));
 
@@ -177,7 +130,11 @@ export function getLod(name: string): Lod | null {
 		const feats = decimateFeatures(base.feats, step);
 		return (LODS[name] = { feats, polys: polysOf(feats), borders: bordersOf(decimateTopology(FINE_TOPO, step)) });
 	}
-	if (name === 'full') return (LODS.full = makeLod(WORLD));
+	// volle Stufe: dieselben Länderflächen wie `features` (ohne die ergänzte Tuvalu-Fläche) – spart beim Start das zweite Umwandeln
+	if (name === 'full') {
+		const feats = features.filter((f) => f !== TUVALU && FC[f.id]);
+		return (LODS.full = { feats, polys: polysOf(feats), borders: bordersOf(WORLD) });
+	}
 	if (name[0] === 's') {
 		const step = Number(name.slice(1));
 		const feats = decimateFeatures(getLod('full')!.feats, step);

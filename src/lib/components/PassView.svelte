@@ -144,6 +144,9 @@
 	let cur = $state(0);
 	let shown = $state(0); // Seitenzahl in der Leiste: springt schon beim Umblättern um, nicht erst wenn die Seite liegt
 	let near = $state<number[]>([0, 1]); // vorbereitete Seiten (aktuelle ± 1), wird nach dem Blättern im Leerlauf nachgezogen
+	let want = $state(-1); // Ziel eines Sprungs (Regler): wird sofort gefüllt
+	// Nur Seiten in Reichweite bekommen ihre Stempel (alle übrigen sind unsichtbar) – spart beim Öffnen viel Aufbau
+	const live = (pi: number) => Math.abs(pi - cur) <= 1 || near.includes(pi) || pi === want;
 	$effect(() => {
 		const c = cur;
 		const id = setTimeout(() => (near = [c - 1, c, c + 1]), 180);
@@ -245,6 +248,7 @@
 		i = Math.max(0, Math.min(pages.length - 1, i));
 		stopTurn();
 		if (i === cur) return;
+		want = i;
 		if (reduceMotion() || !book) return void (cur = shown = i);
 		const t: Turn = { from: cur, to: i, p: 0, v: 0.005, goal: 1, w: 0 };
 		turn = t;
@@ -544,10 +548,11 @@
 		await wait(350); // Ansicht gleitet erst herein
 		let first = true;
 		for (const code of codes) {
-			const slot = body?.querySelector<HTMLElement>(`[data-stamp="${code}"]`);
-			if (!slot || !ui.passOpen || skip) break;
+			if (!ui.passOpen || skip) break;
 			const pi = Math.floor(stamps.findIndex((s) => s.code === code) / PER_PAGE);
 			if (pi !== cur) { goPage(pi); await wait(350); }
+			const slot = body?.querySelector<HTMLElement>(`[data-stamp="${code}"]`);
+			if (!slot || !ui.passOpen || skip) break;
 			if (first || pi !== cur) slot.scrollIntoView({ behavior: 'smooth', block: 'center' });
 			first = false;
 			await wait(500 * k);
@@ -909,7 +914,7 @@
 						<div class="pp-page" class:on={pi === cur} class:nb={pi !== cur && near.includes(pi)} aria-hidden={pi !== cur} inert={pi !== cur} aria-label="Seite {pi + 1} von {pages.length}">
 							<div class="pp-page-h"><span>Stempel · Seite {pi + 1}</span><span>{pg.years}</span></div>
 							<div class="pp-grid">
-								{#each pg.slots as sl (sl.kind + (sl.kind === 'stamp' ? sl.st.code : sl.code))}
+								{#if live(pi)}{#each pg.slots as sl (sl.kind + (sl.kind === 'stamp' ? sl.st.code : sl.code))}
 									{#if sl.kind === 'stamp'}
 										<button
 											type="button"
@@ -926,7 +931,7 @@
 											><span class="pp-empty"><b>?</b>Wunschziel<br />{flag(sl.code)} {sl.name}</span></button
 										>
 									{/if}
-								{/each}
+								{/each}{/if}
 							</div>
 							<i class="pp-shade" aria-hidden="true"></i>
 						</div>
