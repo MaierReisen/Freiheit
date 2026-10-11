@@ -402,6 +402,7 @@ export function createWorldMap(o: MapOptions) {
 		}
 		return moving ? (fine && lodReady('f' + MOVE_STEPS[stepIdx]) ? 'f' + MOVE_STEPS[stepIdx] : 's' + MOVE_STEPS[stepIdx]) : fine ? 'fine' : 'full';
 	}
+	const idle = (f: () => void) => (window.requestIdleCallback ? window.requestIdleCallback(f, { timeout: 1200 }) : setTimeout(f, 60));
 	function scheduleRefine() {
 		clearTimeout(refineT);
 		refineT = setTimeout(() => {
