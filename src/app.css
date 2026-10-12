@@ -234,8 +234,9 @@ body.noscroll{overflow:hidden}
 [data-motion="reduce"] .tab.in-r,[data-motion="reduce"] .tab.in-l{animation:none}[data-motion="reduce"] .tabbar .ind{transition:none}
 
 /* Weltkarte: dunkle Bühne, zwei Canvas-Ebenen */
-/* Höhe: so, dass der Globus beim Öffnen über der Tab-Leiste endet (--map-top misst WorldMap), höchstens wie bisher */
-.map-box{position:relative;margin:16px -20px 0;height:clamp(260px,calc(100svh - var(--map-top,440px) - 96px - env(safe-area-inset-bottom,0px)),min(98vw,500px));background:radial-gradient(120% 90% at 50% 0%,#12374E 0%,#0A2030 52%,#07141F 100%);overflow:hidden;touch-action:auto;color:#fff;border-radius:0}
+/* Höhe: so, dass der Globus beim Öffnen über der Tab-Leiste endet (--map-top und --tab-h misst WorldMap), höchstens wie bisher;
+   erste Angabe für Browser ohne svh (iOS < 15.4) */
+.map-box{position:relative;margin:16px -20px 0;height:clamp(340px,98vw,500px);height:clamp(260px,calc(100svh - var(--map-top,440px) - var(--tab-h,96px) - 9px),min(98vw,500px));background:radial-gradient(120% 90% at 50% 0%,#12374E 0%,#0A2030 52%,#07141F 100%);overflow:hidden;touch-action:auto;color:#fff;border-radius:0}
 @media (min-width:600px){.map-box{margin:16px 0 0;border-radius:var(--r-lg)}}
 .map-box canvas{position:absolute;inset:0;width:100%;height:100%;display:block;outline:none;-webkit-tap-highlight-color:transparent}
 #mapCv{pointer-events:none}

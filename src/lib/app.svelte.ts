@@ -138,6 +138,33 @@ export function introProgress(now = performance.now()) {
 	return Math.max(0, Math.min(1, (now - it.start) / (it.end - it.start)));
 }
 
+/** Fortschritt der Start-Animation als Rune (Zähler, die gleichzeitig mit Globus und Flugkurve hochzählen).
+    Beim Aufbau einer Komponente aufrufen. */
+export function introClock() {
+	let t = $state(reduceMotion() ? 1 : 0);
+	$effect(() => {
+		const it = ui.intro;
+		if (!it.key) return;
+		let raf = 0;
+		const step = () => {
+			t = introProgress();
+			if (t < 1) raf = requestAnimationFrame(step);
+		};
+		step();
+		// Absicherung, falls keine Animationsbilder kommen (App im Hintergrund)
+		const done = setTimeout(() => (t = 1), Math.max(0, it.end - performance.now()) + 300);
+		return () => {
+			cancelAnimationFrame(raf);
+			clearTimeout(done);
+		};
+	});
+	return {
+		get t() {
+			return t;
+		}
+	};
+}
+
 /* ---------- Toast ---------- */
 let tt: ReturnType<typeof setTimeout> | undefined;
 export function toast(m: string) {

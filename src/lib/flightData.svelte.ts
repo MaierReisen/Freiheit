@@ -34,6 +34,12 @@ class FlightData {
 		}
 		return legs.length ? buildRoutes(legs) : null;
 	});
+	/** „jetzt“ nur weiterstellen, wenn dadurch ein geplanter Flug zum geflogenen wird – sonst würden Statistik und
+	    Strecken bei jedem Tabwechsel ohne Änderung neu berechnet */
+	tick() {
+		const t = Date.now();
+		if (!this.st || this.st.legs.some((l) => !l.done && !l.f.d.cx && l.dep <= t)) this.now = t;
+	}
 	private loading = false;
 	load() {
 		if (this.ap || this.loading) return;

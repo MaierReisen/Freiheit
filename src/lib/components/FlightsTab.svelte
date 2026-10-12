@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 	import { atlas } from '$lib/atlas.svelte';
 	import { openFlightsPage, ui } from '$lib/app.svelte';
 	import { flag, nameOf } from '$lib/countries';
@@ -13,15 +13,17 @@
 
 	$effect(() => {
 		if (ui.tab === 'flights') {
-			fd.load();
-			fd.now = Date.now();
+			untrack(() => {
+				fd.load();
+				fd.tick();
+			});
 		}
 	});
 	onMount(() => {
 		// im Leerlauf vorbereiten, damit der Tab sofort fertig ist
 		const t = setTimeout(() => (window.requestIdleCallback ?? ((f: () => void) => setTimeout(f, 1)))(() => fd.load()), 4000);
 		const onVis = () => {
-			if (!document.hidden && ui.tab === 'flights') fd.now = Date.now();
+			if (!document.hidden && ui.tab === 'flights') fd.tick();
 		};
 		document.addEventListener('visibilitychange', onVis);
 		return () => {

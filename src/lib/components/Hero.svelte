@@ -4,7 +4,7 @@
 	import { scopeTotal } from '$lib/scope';
 	import { CONT, CONT_NAMES, contOf } from '$lib/countries';
 	import { tourPlan } from '$lib/addTour';
-	import { reduceMotion, dom, easeOutCubic, hooks, introProgress, openPicker, openPlaces, ui } from '$lib/app.svelte';
+	import { reduceMotion, dom, easeOutCubic, hooks, introClock, openPicker, openPlaces, ui } from '$lib/app.svelte';
 	import { rankIndex, ranks } from '$lib/passport';
 	import { badges, tierName } from '$lib/badges';
 	import { loadFacts } from '$lib/facts';
@@ -25,28 +25,12 @@
 
 	// Start-Animation: Länderzahl und Kontinente zählen hoch (schnell, dann langsamer) und enden
 	// gleichzeitig mit Globus und Flugkurve. Nachgeladene Länder werden unterwegs mitgezählt.
-	let t = $state(reduceMotion() ? 1 : 0);
-	$effect(() => {
-		const it = ui.intro;
-		if (!it.key) return;
-		let raf = 0;
-		const step = () => {
-			t = introProgress();
-			if (t < 1) raf = requestAnimationFrame(step);
-		};
-		step();
-		// Absicherung, falls keine Animationsbilder kommen (App im Hintergrund)
-		const done = setTimeout(() => (t = 1), Math.max(0, it.end - performance.now()) + 300);
-		return () => {
-			cancelAnimationFrame(raf);
-			clearTimeout(done);
-		};
-	});
+	const intro = introClock();
 	// Mehrere Länder auf einmal: Zahl (und Kontinente) zählen im Takt der Globus-Tour hoch (Plan: addTour.ts)
 	let tourN = $state<number | null>(null),
 		tourCont = $state<number | null>(null);
-	const shownN = $derived(tourN ?? (t >= 1 ? n : Math.round(easeOutCubic(t) * n)));
-	const shownCont = $derived(tourCont ?? (t >= 1 ? continents : Math.round(easeOutCubic(t) * continents)));
+	const shownN = $derived(tourN ?? (intro.t >= 1 ? n : Math.round(easeOutCubic(intro.t) * n)));
+	const shownCont = $derived(tourCont ?? (intro.t >= 1 ? continents : Math.round(easeOutCubic(intro.t) * continents)));
 
 	// Selbst hinzugefügtes Land: geänderte Ziffern rollen wie ein Zählwerk (von rechts nach links versetzt),
 	// dahinter leuchtet die Sonne kurz auf. Nicht beim Laden/Sync. Danach Feier-Karten nacheinander (je 3,9 s, nie überlappend):
@@ -66,7 +50,7 @@
 				addedAll = [...atlas.lastAddedCodes];
 			prevN = now;
 			prevCont = cont;
-			if (before < 0 || now <= before || t < 1 || Date.now() - atlas.lastAddedAt > 2000) return;
+			if (before < 0 || now <= before || intro.t < 1 || Date.now() - atlas.lastAddedAt > 2000) return;
 			timers.forEach(clearTimeout);
 			timers = [];
 			const t0 = Date.now(),

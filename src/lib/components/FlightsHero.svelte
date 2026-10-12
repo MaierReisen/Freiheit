@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { atlas, putFlights } from '$lib/atlas.svelte';
-	import { easeOutCubic, introProgress, openFlightsPage, reduceMotion, toast, ui } from '$lib/app.svelte';
+	import { easeOutCubic, introClock, openFlightsPage, toast, ui } from '$lib/app.svelte';
 	import { fd } from '$lib/flightData.svelte';
 	import { MOON_KM, fmtDuration, fmtInt, parseFlighty } from '$lib/flights';
 	import HeroFlight from './HeroFlight.svelte';
@@ -12,23 +12,16 @@
 	const n = $derived(st ? st.n : atlas.flights.length);
 
 	// Start-Animation wie auf der Startseite: Zahl zählt hoch und endet mit Globus und Flugkurve
-	let t = $state(reduceMotion() ? 1 : 0);
-	$effect(() => {
-		const it = ui.intro;
-		if (!it.key) return;
-		let raf = 0;
-		const step = () => {
-			t = introProgress();
-			if (t < 1) raf = requestAnimationFrame(step);
-		};
-		step();
-		const done = setTimeout(() => (t = 1), Math.max(0, it.end - performance.now()) + 300);
-		return () => {
-			cancelAnimationFrame(raf);
-			clearTimeout(done);
-		};
+	const intro = introClock();
+	// Strecke im Vergleich zum Mond; wer weiter geflogen ist: zum Mond und zurück (bzw. mehrmals), damit der Wert weiter wächst
+	const moon = $derived.by(() => {
+		const km = st?.km ?? 0;
+		let goal = MOON_KM;
+		while (km > goal) goal *= 2;
+		const k = goal / (2 * MOON_KM);
+		return { p: km / goal, label: goal === MOON_KM ? 'zum Mond' : k === 1 ? 'zum Mond und zurück' : `${k}× zum Mond und zurück` };
 	});
-	const shownN = $derived(t >= 1 ? n : Math.round(easeOutCubic(t) * n));
+	const shownN = $derived(intro.t >= 1 ? n : Math.round(easeOutCubic(intro.t) * n));
 
 	function pickYear(y: number | null) {
 		fd.year = y;
@@ -73,7 +66,7 @@
 		>
 	</div>
 	<input type="file" accept=".csv,text/csv" hidden bind:this={fileInput} onchange={onFile} />
-	<HeroFlight progress={st ? st.km / MOON_KM : 0} label="zum Mond" />
+	<HeroFlight progress={moon.p} label={moon.label} />
 </section>
 <div class="continents" id="flightYears">
 	<button type="button" class="cont" aria-pressed={fd.year === null} onclick={() => pickYear(null)}><b>Alle</b>{n} {n === 1 ? 'Flug' : 'Flüge'}</button>

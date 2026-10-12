@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 	import { atlas, isCounted, visitedSet } from '$lib/atlas.svelte';
 	import { reduceMotion, closeSheet, hooks, openCountry, openPicker, setFull, ui } from '$lib/app.svelte';
 	import { CONT, CONT_VIEW } from '$lib/countries';
@@ -73,6 +73,11 @@
 		if (top === lastTop || top <= 0) return;
 		lastTop = top;
 		box.style.setProperty('--map-top', top + 'px');
+	}
+	/** Höhe der Tab-Leiste (inkl. Abstand unten und Sicherheitsrand) für die Globus-Höhe */
+	function fitTabbar() {
+		const h = document.querySelector<HTMLElement>('.tabbar')?.offsetHeight;
+		if (h) box?.style.setProperty('--tab-h', h + 'px');
 	}
 
 	/** Seite so rollen, dass der Globus mittig im freien Bereich über der kompakten Länderseite steht */
@@ -155,6 +160,10 @@
 		const heads = [...(box.parentElement?.children ?? [])].slice(0, [...(box.parentElement?.children ?? [])].indexOf(box));
 		const ro = new ResizeObserver(fitTop);
 		heads.forEach((h) => ro.observe(h));
+		const tb = document.querySelector('.tabbar');
+		const roTab = new ResizeObserver(fitTabbar);
+		if (tb) roTab.observe(tb);
+		fitTabbar();
 		fitTop();
 		document.addEventListener('pointerdown', onOutside, true);
 		document.addEventListener('wheel', onOutside, { capture: true, passive: true });
@@ -167,6 +176,7 @@
 		};
 		return () => {
 			ro.disconnect();
+			roTab.disconnect();
 			stopTour();
 			clearTimeout(coachTimer);
 			box.removeEventListener('pointerdown', onTouchMap, true);
@@ -192,6 +202,8 @@
 		if (!it.key || !map || it.resume) return; // bei Rückkehr in die App kein Sprung in die Ausgangslage
 		const now = performance.now();
 		scheduleCoach(Math.max(0, it.end - now) + 900);
+		// App startet im Tab „Flüge“: statt Einflug auf die Startregion die Strecken ins Bild holen
+		if (untrack(() => ui.tab) === 'flights') return routesIn(1100);
 		map.intro(Math.max(0, it.start - now), Math.max(200, it.end - Math.max(now, it.start)));
 	});
 	let tourT: ReturnType<typeof setTimeout>[] = [];
@@ -244,6 +256,15 @@
 		void s.mode;
 		hideCoach(false);
 	});
+	/** Strecken wachsen lassen und ins Bild holen; sind sie noch nicht berechnet (Flughafenliste lädt), sobald sie da sind */
+	let wantFit = 0;
+	function routesIn(grow: number) {
+		if (!map) return;
+		if (fd.routes) {
+			wantFit = 0;
+			map.showRoutes({ grow, fit: true });
+		} else wantFit = grow;
+	}
 	// Tab „Flüge“: Strecken wachsen vom Start zum Ziel, Globus holt alle ins Bild; zurück auf „Welt“: wieder zum Kontinent
 	let shownTab = ui.tab;
 	$effect(() => {
@@ -251,8 +272,9 @@
 		if (!map || t === shownTab) return;
 		const from = shownTab;
 		shownTab = t;
-		if (t === 'flights') map.showRoutes({ grow: 1100, fit: true });
+		if (t === 'flights') routesIn(1100);
 		else {
+			wantFit = 0;
 			map.showRoutes();
 			const k = ui.focusContinent || atlas.settings.homeContinent;
 			if (from === 'flights' && k && CONT_VIEW[k as keyof typeof CONT_VIEW]) {
@@ -264,12 +286,17 @@
 	// Jahr gewählt bzw. neue Flüge eingelesen: Strecken neu aufbauen und ins Bild holen
 	$effect(() => {
 		const k = ui.flightsFit;
-		if (k && map && ui.tab === 'flights') map.showRoutes({ grow: 800, fit: true });
+		if (k && untrack(() => ui.tab) === 'flights') untrack(() => routesIn(800));
 	});
-	// Strecken geändert (Flughafenliste geladen, Flüge gelöscht …): neu zeichnen
+	// Strecken geändert (Flughafenliste geladen, Flüge gelöscht …): neu zeichnen – nur im Tab „Flüge“ (sonst wird nichts
+	// berechnet); wartet ein Ins-Bild-Holen auf die Strecken (erster Import, Start im Tab), jetzt ausführen
 	$effect(() => {
-		void fd.routes;
-		map?.markDirty(false);
+		if (ui.tab !== 'flights') return;
+		const r = fd.routes;
+		untrack(() => {
+			if (r && wantFit) routesIn(wantFit);
+			else map?.markDirty(false);
+		});
 	});
 	// Vollbild an/aus: Größe neu bestimmen
 	$effect(() => {

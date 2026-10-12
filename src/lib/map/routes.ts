@@ -5,11 +5,20 @@ import type { GeoProjection } from 'd3-geo';
    umgerechnet – ein paar tausend Punkte, unter 1 ms. Auf dem Globus endet ein Bogen am Horizont (Rückseite bleibt leer),
    auf der Karte wird er an der Datumsgrenze geteilt. */
 
+interface Arc {
+	/** Längen-/Breitengrade (lon, lat, lon, lat …) und Einheitsvektoren (x, y, z …) der Stützpunkte */
+	ll: Float64Array;
+	u: Float64Array;
+	n: number;
+	planned: boolean;
+}
 export interface RouteSet {
-	/** Bögen: Längen-/Breitengrade (lon, lat, lon, lat …) und Einheitsvektoren (x, y, z …) der Stützpunkte */
-	arcs: { ll: Float64Array; u: Float64Array; n: number; planned: boolean }[];
-	/** Flughäfen (lon, lat) mit Anzahl Besuche */
-	airports: { c: [number, number]; n: number }[];
+	arcs: Arc[];
+	/** zum Zeichnen vorsortiert: geplante, geflogene nach Linienstärke (häufige Strecken kräftiger) */
+	planned: Arc[];
+	flown: { w: number; arcs: Arc[] }[];
+	/** Flughäfen (lon, lat, Einheitsvektor) mit Anzahl Besuche */
+	airports: { c: [number, number]; u: [number, number, number]; n: number }[];
 	/** Mittelpunkt und Streuung (Grad) für den Übersichts-Flug */
 	fit: { c: [number, number]; spread: number } | null;
 }
@@ -72,14 +81,24 @@ export function buildRoutes(legs: { a: [number, number]; b: [number, number]; pl
 	}
 	// selten geflogene zuerst zeichnen, häufige liegen obenauf
 	arcs.sort((a, b) => Number(b.planned) - Number(a.planned) || a.n - b.n);
-	const airports = [...ports.values()];
+	const airports = [...ports.values()].map((p) => ({ ...p, u: unit(p.c[0], p.c[1]) }));
+	const flown = arcs.filter((a) => !a.planned);
+	const buckets = (
+		[
+			[1, 1, 1.3],
+			[2, 3, 1.9],
+			[4, Infinity, 2.6]
+		] as const
+	)
+		.map(([min, max, w]) => ({ w, arcs: flown.filter((a) => a.n >= min && a.n <= max) }))
+		.filter((b) => b.arcs.length);
 	let fit: RouteSet['fit'] = null;
 	if (airports.length) {
 		let x = 0,
 			y = 0,
 			z = 0;
 		for (const p of airports) {
-			const v = unit(p.c[0], p.c[1]);
+			const v = p.u;
 			x += v[0];
 			y += v[1];
 			z += v[2];
@@ -95,24 +114,24 @@ export function buildRoutes(legs: { a: [number, number]; b: [number, number]; pl
 			}
 		fit = { c, spread };
 	}
-	return { arcs, airports, fit };
+	return { arcs, planned: arcs.filter((a) => a.planned), flown: buckets, airports, fit };
 }
 
 export const ROUTE_COLOR = '#F6C445';
 
 /**
  * Bögen und Flughäfen zeichnen. globe: Blickrichtung als Einheitsvektor (Punkte dahinter werden ausgelassen);
+ * lon0: Kartenmitte (flache Karte: Schnitt bei lon0 + 180°);
  * t: Anteil des Aufbaus (0–1, jeder Bogen wächst vom Start zum Ziel), 1 = fertig.
  */
-export function drawRoutes(c: CanvasRenderingContext2D, P: GeoProjection, rs: RouteSet, view: { globe: [number, number, number] | null; cw: number }, t = 1) {
+export function drawRoutes(c: CanvasRenderingContext2D, P: GeoProjection, rs: RouteSet, view: { globe: [number, number, number] | null; lon0: number }, t = 1) {
 	const front = view.globe;
 	// Horizont minimal nach innen, damit der Bogen nicht über den Kugelrand hinaus gezeichnet wird
 	const H = 0.02;
-	const jump = view.cw * 0.5;
-	const trace = (a: RouteSet['arcs'][number]) => {
+	const trace = (a: Arc) => {
 		const last = Math.max(1, Math.round((a.ll.length / 2 - 1) * Math.min(1, t)));
 		let pen = false,
-			px = 0;
+			pr = 0;
 		for (let i = 0; i <= last; i++) {
 			if (front && a.u[i * 3] * front[0] + a.u[i * 3 + 1] * front[1] + a.u[i * 3 + 2] * front[2] < H) {
 				pen = false;
@@ -123,22 +142,22 @@ export function drawRoutes(c: CanvasRenderingContext2D, P: GeoProjection, rs: Ro
 				pen = false;
 				continue;
 			}
-			// flache Karte: über die Datumsgrenze springen = neu ansetzen
-			if (pen && !front && Math.abs(p[0] - px) > jump) pen = false;
+			// flache Karte: über den Kartenrand (gegenüber der Kartenmitte) springen = neu ansetzen
+			const r = (((a.ll[i * 2] - view.lon0) % 360) + 540) % 360 - 180;
+			if (pen && !front && Math.abs(r - pr) > 180) pen = false;
 			if (pen) c.lineTo(p[0], p[1]);
 			else c.moveTo(p[0], p[1]);
 			pen = true;
-			px = p[0];
+			pr = r;
 		}
 	};
 	c.save();
 	c.lineCap = 'round';
 	c.lineJoin = 'round';
 	// geplante Flüge: gestrichelt, dünn
-	const planned = rs.arcs.filter((a) => a.planned);
-	if (planned.length) {
+	if (rs.planned.length) {
 		c.beginPath();
-		for (const a of planned) trace(a);
+		for (const a of rs.planned) trace(a);
 		c.setLineDash([3, 4]);
 		c.lineWidth = 1.2;
 		c.strokeStyle = 'rgba(255,244,214,.7)';
@@ -146,16 +165,9 @@ export function drawRoutes(c: CanvasRenderingContext2D, P: GeoProjection, rs: Ro
 		c.setLineDash([]);
 	}
 	// geflogene: weicher Schein, darüber die Linie (häufige Strecken kräftiger)
-	const flown = rs.arcs.filter((a) => !a.planned);
-	for (const [min, max, w] of [
-		[1, 1, 1.3],
-		[2, 3, 1.9],
-		[4, Infinity, 2.6]
-	] as const) {
-		const list = flown.filter((a) => a.n >= min && a.n <= max);
-		if (!list.length) continue;
+	for (const { w, arcs } of rs.flown) {
 		c.beginPath();
-		for (const a of list) trace(a);
+		for (const a of arcs) trace(a);
 		c.lineWidth = w + 3;
 		c.strokeStyle = 'rgba(246,196,69,.22)';
 		c.stroke();
@@ -166,10 +178,7 @@ export function drawRoutes(c: CanvasRenderingContext2D, P: GeoProjection, rs: Ro
 	// Flughäfen: kleiner heller Punkt mit dunklem Rand (erst wenn der Aufbau dort angekommen ist: am Ende sichtbar)
 	if (t >= 1) {
 		for (const ap of rs.airports) {
-			if (front) {
-				const v = unit(ap.c[0], ap.c[1]);
-				if (v[0] * front[0] + v[1] * front[1] + v[2] * front[2] < H) continue;
-			}
+			if (front && ap.u[0] * front[0] + ap.u[1] * front[1] + ap.u[2] * front[2] < H) continue;
 			const p = P(ap.c);
 			if (!p) continue;
 			const r = ap.n >= 10 ? 3.6 : ap.n >= 3 ? 3 : 2.4;

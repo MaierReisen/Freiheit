@@ -1138,7 +1138,7 @@ export function createWorldMap(o: MapOptions) {
 			const a = view.lon * (Math.PI / 180),
 				b = view.lat * (Math.PI / 180);
 			const front: [number, number, number] | null = view.mode === 'globe' ? [Math.cos(b) * Math.cos(a), Math.cos(b) * Math.sin(a), Math.sin(b)] : null;
-			drawRoutes(c, P, routes, { globe: front, cw }, 1 - Math.pow(1 - k, 3));
+			drawRoutes(c, P, routes, { globe: front, lon0: view.lon }, 1 - Math.pow(1 - k, 3));
 		}
 		const visited = o.getVisited(),
 			wish = o.getWish(),
