@@ -108,8 +108,9 @@ export interface FastGlobe {
 	lines(c: PathSink, mls: GeoJSON.MultiLineString): void;
 }
 
-/** Blickpunkt (Länge/Breite in Grad), Mittelpunkt des Bildes, Kugelradius und Bildgröße in Pixeln */
-export function fastGlobe(lon0: number, lat0: number, mx: number, my: number, R: number, W: number, H: number): FastGlobe {
+/** Blickpunkt (Länge/Breite in Grad), Mittelpunkt des Bildes, Kugelradius und Bildgröße in Pixeln;
+    `smooth = false`: Kanten gerade, ohne dem Großkreis zu folgen (wie d3 mit precision 0, für die Seen) */
+export function fastGlobe(lon0: number, lat0: number, mx: number, my: number, R: number, W: number, H: number, smooth = true): FastGlobe {
 	const l = lon0 * D2R,
 		f = lat0 * D2R,
 		sl = Math.sin(l),
@@ -181,7 +182,7 @@ export function fastGlobe(lon0: number, lat0: number, mx: number, my: number, R:
 	/** Kante a → b bis einschließlich b (der Anfangspunkt ist schon gezeichnet); buf: in den Zwischenspeicher statt auf den Kontext */
 	function edge(c: PathSink, buf: boolean, px: number, py: number, pz: number, qx: number, qy: number, qz: number) {
 		const d = px * qx + py * qy + pz * qz;
-		if (d < cosStep) {
+		if (smooth && d < cosStep) {
 			const th = Math.acos(Math.max(-1, d)),
 				s = Math.sin(th),
 				m = Math.ceil(th / step);

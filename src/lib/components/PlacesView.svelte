@@ -55,6 +55,21 @@
 			.sort((a, b) => b.list.length - a.list.length || compareNames(a.name, b.name));
 	});
 	const others = $derived(atlas.data.countries.filter((c) => !isCounted(c.code) && match(c)).sort(byName));
+	// Beim Öffnen erst die ersten Zeilen, der Rest ein Bild später: zu sehen ist anfangs ohnehin nur rund ein Dutzend,
+	// so gleitet die Seite auch bei vielen Ländern ohne Stocken herein
+	const FIRST = 40;
+	let full = $state(false);
+	$effect(() => {
+		if (!ui.placesOpen) return void (full = false);
+		let id = requestAnimationFrame(() => (id = requestAnimationFrame(() => (full = true))));
+		return () => cancelAnimationFrame(id);
+	});
+	const lim = $derived(full ? Infinity : FIRST);
+	const groupsShown = $derived.by(() => {
+		if (!Number.isFinite(lim)) return groups;
+		let left = lim;
+		return groups.flatMap((g) => (left <= 0 ? [] : [{ ...g, list: g.list.slice(0, (left -= g.list.length) + g.list.length) }]));
+	});
 	// Umsortieren nur in der Nr.-Ansicht, ohne Suche und ohne Auswahlmodus
 	const canDrag = $derived(ui.placesOpen && sort === 'nr' && !filter.trim() && !selecting && numbered.length > 1);
 	// alles, was gerade auswählbar ist (nur sichtbare, vorhandene Länder)
@@ -238,15 +253,15 @@
 			{#if canDrag}<p class="note lv-hint">Tipp: Zeile gedrückt halten und ziehen, um die Reihenfolge zu ändern.</p>{/if}
 
 			{#if sort === 'cont'}
-				{#each groups as g (g.name)}
-					<h3 class="list-sub">{g.name} <span class="h-count">{g.list.length}</span></h3>
+				{#each groupsShown as g, gi (g.name)}
+					<h3 class="list-sub">{g.name} <span class="h-count">{groups[gi].list.length}</span></h3>
 					<ul class="list">
 						{#each g.list as c (c.code)}{@render row(c)}{/each}
 					</ul>
 				{/each}
 			{:else}
 				<ul class="list" id="list" use:reorder={{ enabled: canDrag, onreorder: reorderCountries }}>
-					{#each items as c (c.code)}{@render row(c)}{/each}
+					{#each Number.isFinite(lim) ? items.slice(0, lim) : items as c (c.code)}{@render row(c)}{/each}
 				</ul>
 			{/if}
 			{#if !items.length}
@@ -262,7 +277,7 @@
 					<p class="note">Haben einen Stempel im Pass, zählen bei „{scopeLabel} ({total})“ aber nicht als Land. Die Länderliste stellst du in den Einstellungen ein.</p>
 				{/if}
 				<ul class="list" id="otherList">
-					{#each others as c (c.code)}{@render row(c)}{/each}
+					{#each Number.isFinite(lim) ? others.slice(0, Math.max(0, lim - items.length)) : others as c (c.code)}{@render row(c)}{/each}
 				</ul>
 			{/if}
 		</div>

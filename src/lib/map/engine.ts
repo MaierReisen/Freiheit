@@ -107,6 +107,13 @@ const CAP_K = 4.4,
 let CAPS: { id: string; p: [number, number]; t: string }[] | null = null;
 // echte Zwergstaaten (unter etwa 4.000 km²: Vatikan, Monaco, Malta, Singapur, Karibik- und Pazifikinseln …)
 const microIds = new Set(features.filter((f) => INFO[f.id].area < 0.0001).map((f) => f.id));
+// Seen als Teilflächen (für den schnellen Weg und seine Zwischenspeicher)
+const lakePolys = new WeakMap<GeoJSON.Polygon, Poly>();
+function lakePoly(g: GeoJSON.Polygon) {
+	let pg = lakePolys.get(g);
+	if (!pg) lakePolys.set(g, (pg = { id: '', g, size: 0 }));
+	return pg;
+}
 // Teilflächen eines Landes je Detailstufe (für den Auswahl-Umriss, ohne in jedem Bild alle Flächen zu durchsuchen)
 const selIndex = new WeakMap<Lod, Map<string, Poly[]>>();
 function polysForSel(lod: Lod, id: string) {
@@ -639,7 +646,7 @@ export function createWorldMap(o: MapOptions) {
 			c.fill();
 		}
 		// Umrisse, Grenzen und Gitter über die schnelle Formel (Globus: fastglobe.ts, Karte: fastflat.ts), Sonderfälle über d3
-		const fast: FastGlobe = globe ? fastGlobe(view.lon, view.lat, cx, cy, R, cw, ch) : fastFlat(view.lon, view.lat, cx, cy, R, cw, ch, path);
+		const fast: FastGlobe = globe ? fastGlobe(view.lon, view.lat, cx, cy, R, cw, ch) : fastFlat(view.lon, view.lat, cx, cy, R, cw, ch);
 		c.strokeStyle = PAL.grat;
 		c.lineWidth = 0.6;
 		c.beginPath();
@@ -717,15 +724,7 @@ export function createWorldMap(o: MapOptions) {
 			const big: Poly[] = [],
 				mid: Poly[] = [];
 			// Teile, die über den Rand des Globus reichen, über d3: nur d3 zeichnet den Umriss dort entlang des Rands
-			const l = view.lon * (Math.PI / 180),
-				f = view.lat * (Math.PI / 180),
-				ox = Math.cos(f) * Math.cos(l),
-				oy = Math.cos(f) * Math.sin(l),
-				oz = Math.sin(f);
-			const front = (pg: Poly) => {
-				const [x, y, z, cr] = capOf(pg);
-				return Math.acos(Math.min(1, x * ox + y * oy + z * oz)) + Math.acos(Math.max(-1, cr)) < Math.PI / 2 - 0.002;
-			};
+			const front = frontTest();
 			const add = (pg: Poly) => (fast.ok(pg) && (!globe || front(pg)) ? fast.add(c, pg) : path(pg.g));
 			c.beginPath();
 			for (const pg of polysForSel(lod, selected)) {
@@ -755,6 +754,18 @@ export function createWorldMap(o: MapOptions) {
 		}
 	}
 
+	/** Prüfung „Teil liegt ganz auf der Vorderseite des Globus“ für die aktuelle Ansicht */
+	function frontTest() {
+		const l = view.lon * (Math.PI / 180),
+			f = view.lat * (Math.PI / 180),
+			ox = Math.cos(f) * Math.cos(l),
+			oy = Math.cos(f) * Math.sin(l),
+			oz = Math.sin(f);
+		return (pg: Poly) => {
+			const [x, y, z, cr] = capOf(pg);
+			return Math.acos(Math.min(1, x * ox + y * oy + z * oz)) + Math.acos(Math.max(-1, cr)) < Math.PI / 2 - 0.002;
+		};
+	}
 	/** Große Seen wie Meer auf die Landflächen: nur Sichtbares, Detailstufe nach Maßstab */
 	function drawLakes(c: CanvasRenderingContext2D, moving: boolean, ci: Cull) {
 		const wl = waterLayer();
@@ -771,14 +782,23 @@ export function createWorldMap(o: MapOptions) {
 				break;
 			}
 		if (moving && stepIdx > 0) li = Math.max(0, li - 1);
-		// ohne Nachglätten (precision 0): die Ufer sind schon fein genug, das spart Rechenzeit
-		const path = geoPath(makeProj(0), c);
+		// ohne Nachglätten (precision 0): die Ufer sind schon fein genug, das spart Rechenzeit. Schneller Weg wie bei den
+		// Ländern; Seen am Globusrand über d3 (dort folgt d3 dem Rand in groben Schritten)
+		const path = geoPath(makeProj(0), c),
+			globe = view.mode === 'globe',
+			S = baseScale() * view.k,
+			fast = globe ? fastGlobe(view.lon, view.lat, cw / 2, ch / 2, S, cw, ch, false) : fastFlat(view.lon, view.lat, cw / 2, ch / 2, S, cw, ch, 0),
+			front = globe ? frontTest() : null;
 		let any = false;
 		c.beginPath();
 		for (const w of wl.lakes) {
 			if (w.r >= LAKE_K.length) break; // nach Rang sortiert
 			if (kG < LAKE_K[w.r] || 2 * w.sz * R < LAKE_PX || !waterInView(w, ci, view.lon, view.lat)) continue;
-			for (const g of w.lv[li]) path(g);
+			for (const g of w.lv[li]) {
+				const pg = lakePoly(g);
+				if (fast.ok(pg) && (!front || front(pg))) fast.add(c, pg);
+				else path(g);
+			}
 			any = true;
 		}
 		if (!any) return;
