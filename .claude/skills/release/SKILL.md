@@ -12,4 +12,4 @@ Veröffentlicht die fertigen Änderungen dieser Sitzung auf `main`. Antworten au
 5. Wurde `scripts/build-entry.py` geändert: nach dem Push zusätzlich `gh workflow run deploy.yml`.
 6. Commit-Nachricht im Stil der bisherigen: `Version X.Y.Z (kurze deutsche Beschreibung, was sich für Patrick ändert)`; Dateien einzeln mit Namen hinzufügen.
 7. `git push`, dann einmal `gh run watch <id> --exit-status` (nicht pollen; id per `gh run list --limit 1`).
-8. Melden: „Jetzt live (Version X.Y.Z), du kannst am Handy testen“ – oder bei Fehler Ursache nennen. Scheitert nur der deploy-Job mit Timeout/„Deployment cancelled“: `gh workflow run deploy.yml --ref main`.
+8. Melden: „Jetzt live (Version X.Y.Z), du kannst am Handy testen“ – oder bei Fehler Ursache nennen. Zusätzlich eine Handy-Meldung per Werkzeug `PushNotification` (status `proactive`, eine Zeile, z. B. „Freiheit 1.41.0 ist live – am Handy testen“ bzw. „Deployment fehlgeschlagen: <Ursache>“); ist Patrick gerade im Fenster, wird sie automatisch übersprungen. Scheitert nur der deploy-Job mit Timeout/„Deployment cancelled“: `gh workflow run deploy.yml --ref main`.
