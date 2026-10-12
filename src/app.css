@@ -202,7 +202,7 @@ body.noscroll{overflow:hidden}
   .tabbar-in button{text-shadow:0 1px 6px color-mix(in srgb,var(--surface) 60%,transparent)}
 }
 .tabbar .ind{position:absolute;left:4px;top:4px;bottom:4px;width:calc((100% - 8px)/2);border-radius:22px;background:var(--chip);transition:transform .34s cubic-bezier(.3,.9,.3,1)}
-.tabbar button{position:relative;z-index:1;flex:none;width:84px;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 2px 5px;background:none;border:0;color:var(--muted);font-size:11px;font-weight:600;transition:color .2s}
+.tabbar button{position:relative;z-index:1;flex:none;width:84px;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 2px 5px;background:none;border:0;color:var(--muted);font-size:11px;font-weight:600;transition:color .2s,width .3s cubic-bezier(.3,.9,.3,1),padding .3s,opacity .2s}
 .tabbar button svg{width:22px;height:22px;fill:none;stroke:none;overflow:visible}
 .tabbar .f,.tabbar .d{stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;transition:fill .2s,stroke .2s}
 .tabbar .f{fill:none}
@@ -210,6 +210,12 @@ body.noscroll{overflow:hidden}
 .tabbar button[aria-current="page"]{color:var(--primary)}
 .tabbar button[aria-current="page"] .f{fill:currentColor}
 .tabbar button[aria-current="page"] .d{stroke:var(--surface)}
+/* kleiner Knopf beim Runterscrollen: nur der aktive Tab als Symbol */
+.tabbar button span{display:block;max-height:16px;overflow:hidden;transition:max-height .3s,opacity .2s}
+.tabbar.mini button{width:0;padding-left:0;padding-right:0;opacity:0;overflow:hidden}
+.tabbar.mini button[aria-current="page"]{width:52px;opacity:1}
+.tabbar.mini button span{max-height:0;opacity:0}
+.tabbar.mini .ind{opacity:0}
 .tab.in-r{animation:tabInR .3s cubic-bezier(.2,.8,.2,1)}
 .tab.in-l{animation:tabInL .3s cubic-bezier(.2,.8,.2,1)}
 @keyframes tabInR{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:none}}

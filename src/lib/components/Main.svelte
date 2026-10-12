@@ -89,6 +89,12 @@
 			el.style.transition = tr;
 			el.style.transform = `translate3d(${x + s.side * w}px,0,0)`;
 		}
+		// Markierung in der Tab-Leiste gleitet im selben Takt mit
+		const ind = document.getElementById('tabInd');
+		if (ind) {
+			ind.style.transition = tr;
+			ind.style.transform = `translateX(${(TABS.indexOf(ui.tab) - x / w) * 100}%)`;
+		}
 	}
 	function onTouchStart(e: TouchEvent) {
 		if (swipe || settling) return;
@@ -154,7 +160,11 @@
 			if (go && next) {
 				goTab(next, true, 0); // Nachbar steht schon an seinem Platz: ohne eigene Einblendung (Sichtbarkeit regelt jetzt der Tab)
 				s.nb.forEach((el) => el.removeAttribute('style'));
-			} else hideNeighbor(s);
+			} else {
+				hideNeighbor(s);
+				const ind = document.getElementById('tabInd');
+				if (ind) ind.style.transition = ''; // Lage stimmt schon (zurück an den alten Platz)
+			}
 			s.cur.forEach((el) => el.removeAttribute('style'));
 		};
 		if (ms) settling = setTimeout(finish, ms);

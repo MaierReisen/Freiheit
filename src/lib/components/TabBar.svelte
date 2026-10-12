@@ -1,12 +1,47 @@
 <script lang="ts">
-	import { TABS, TAB_LABEL, goTab, ui } from '$lib/app.svelte';
+	import { onMount } from 'svelte';
+	import { TABS, TAB_LABEL, goTab, reduceMotion, ui } from '$lib/app.svelte';
+
+	// Beim Start erst nach der Globus-Animation hereingleiten (der erste Eindruck gehört dem Globus)
+	let waiting = $state(!reduceMotion());
+	$effect(() => {
+		const it = ui.intro;
+		if (!waiting) return;
+		if (!it.key || it.resume) {
+			const t = setTimeout(() => (waiting = false), 3000); // Absicherung, falls keine Start-Animation kommt
+			return () => clearTimeout(t);
+		}
+		const t = setTimeout(() => (waiting = false), Math.max(0, it.end - performance.now()) + 150);
+		return () => clearTimeout(t);
+	});
+
+	// Beim Runterscrollen zu einem kleinen Knopf (nur der aktive Tab), beim Hochscrollen wieder ganz da
+	let mini = $state(false);
+	onMount(() => {
+		let last = window.scrollY;
+		const onScroll = () => {
+			const y = window.scrollY,
+				d = y - last;
+			if (y < 40) mini = false;
+			else if (d > 8) mini = true;
+			else if (d < -8) mini = false;
+			else return; // kleine Bewegungen sammeln
+			last = y;
+		};
+		window.addEventListener('scroll', onScroll, { passive: true });
+		return () => window.removeEventListener('scroll', onScroll);
+	});
+	function tap(t: (typeof TABS)[number]) {
+		if (mini) mini = false; // kleiner Knopf: erst wieder aufklappen
+		else goTab(t);
+	}
 </script>
 
-<nav class="tabbar" class:away={ui.mapActive && !ui.full} id="tabbar" aria-label="Hauptnavigation">
+<nav class="tabbar" class:away={(ui.mapActive && !ui.full) || waiting} class:mini id="tabbar" aria-label="Hauptnavigation">
 	<div class="tabbar-in">
 		<span class="ind" id="tabInd" aria-hidden="true" style="transform:translateX({TABS.indexOf(ui.tab) * 100}%);width:calc((100% - 8px)/{TABS.length})"></span>
 		{#each TABS as t}
-			<button type="button" data-tab={t} aria-current={ui.tab === t ? 'page' : undefined} onclick={() => goTab(t)}>
+			<button type="button" data-tab={t} aria-current={ui.tab === t ? 'page' : undefined} onclick={() => tap(t)}>
 				<svg viewBox="0 0 24 24" aria-hidden="true">
 					{#if t === 'home'}
 						<circle class="f" cx="12" cy="12" r="9" /><path class="d" d="M12 3c-2.6 2.5-4.1 5.5-4.1 9s1.5 6.5 4.1 9c2.6-2.5 4.1-5.5 4.1-9S14.6 5.5 12 3z" /><path
