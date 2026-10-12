@@ -6,6 +6,7 @@ description: Fertig machen und veröffentlichen – prüfen, Version hochzählen
 Veröffentlicht die fertigen Änderungen dieser Sitzung auf `main`. Antworten auf Deutsch, kurz.
 
 1. `git status` ansehen. Nur Dateien, die DIESE Sitzung geändert hat, kommen in den Commit (fremde Änderungen paralleler Sitzungen nie anfassen, nie `git add -A`/`commit -a`). Unklar, wem eine Datei gehört → Patrick kurz fragen.
+1b. Betrifft die Änderung Karte/Globus, Pass/Stempel, Anmeldung/Datenbank, Daten-Skripte, Performance oder ist sie groß (viele Dateien)? Dann Patrick in einem Satz auf `/code-review` hinweisen und vor dem Push kurz fragen, ob er das will. Bei kleinen Text-/Daten-/Optikänderungen nicht nachfragen.
 2. `npm run check` (0 Fehler nötig) und `npm run build` – beides muss laufen, sonst stoppen und Fehler melden.
 3. Version in `package.json` hochzählen: PATCH = Fehlerkorrektur/Daten/Texte, MINOR = neue Funktion (PATCH 0), MAJOR = Umbau. Letzte Version aus `git log` beachten.
 4. Wurden Stempel, Bilder, Chancen, Ränge oder Abzeichen geändert: `node scripts/build-stempel-doc.mjs` und `node scripts/build-stempel-galerie.mjs`, Ergebnis (`docs/`) mit committen.
