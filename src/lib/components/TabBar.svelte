@@ -2,7 +2,7 @@
 	import { TABS, TAB_LABEL, goTab, ui } from '$lib/app.svelte';
 </script>
 
-<nav class="tabbar" id="tabbar" aria-label="Hauptnavigation">
+<nav class="tabbar" class:away={ui.mapActive && !ui.full} id="tabbar" aria-label="Hauptnavigation">
 	<div class="tabbar-in">
 		<span class="ind" id="tabInd" aria-hidden="true" style="transform:translateX({TABS.indexOf(ui.tab) * 100}%);width:calc((100% - 8px)/{TABS.length})"></span>
 		{#each TABS as t}

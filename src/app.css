@@ -189,14 +189,17 @@ body.noscroll{overflow:hidden}
 .sheet{z-index:50}
 .toast{bottom:calc(90px + env(safe-area-inset-bottom,0px));z-index:60}
 
-/* Tab-Leiste: schwebend, 2 Tabs, gleitende Markierung; schlank und tief (im Sicherheitsrand unten), damit sie wenig vom Globus verdeckt */
-.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:20;padding:0 14px max(8px,calc(env(safe-area-inset-bottom,0px) - 20px));background:none;border:0;pointer-events:none}
-.tabbar-in{position:relative;display:flex;max-width:480px;margin:0 auto;padding:4px;border-radius:26px;background:var(--surface);border:1px solid var(--line);box-shadow:0 12px 32px rgba(13,43,58,.22);pointer-events:auto}
+/* Tab-Leiste: schwebende kleine Pille in der Mitte (84 px je Tab), gleitende Markierung; schlank und tief (im Sicherheitsrand unten), damit sie wenig vom Globus verdeckt */
+.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:20;padding:0 14px max(8px,calc(env(safe-area-inset-bottom,0px) - 20px));background:none;border:0;pointer-events:none;transition:transform .3s cubic-bezier(.3,.9,.3,1),opacity .2s}
+/* aktiver Globus: Leiste gleitet nach unten weg, damit nichts das Drehen stört */
+.tabbar.away{transform:translateY(calc(100% + 12px));opacity:0}
+.tabbar.away .tabbar-in{pointer-events:none}
+.tabbar-in{position:relative;display:flex;width:max-content;max-width:100%;margin:0 auto;padding:4px;border-radius:26px;background:var(--surface);border:1px solid var(--line);box-shadow:0 12px 32px rgba(13,43,58,.22);pointer-events:auto}
 @supports ((backdrop-filter:blur(2px)) or (-webkit-backdrop-filter:blur(2px))) and (background:color-mix(in srgb,red 50%,blue)){
   .tabbar-in{background:color-mix(in srgb,var(--surface) 80%,transparent);-webkit-backdrop-filter:blur(18px) saturate(1.7);backdrop-filter:blur(18px) saturate(1.7)}
 }
 .tabbar .ind{position:absolute;left:4px;top:4px;bottom:4px;width:calc((100% - 8px)/2);border-radius:22px;background:var(--chip);transition:transform .34s cubic-bezier(.3,.9,.3,1)}
-.tabbar button{position:relative;z-index:1;flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 2px 5px;background:none;border:0;color:var(--muted);font-size:11px;font-weight:600;transition:color .2s}
+.tabbar button{position:relative;z-index:1;flex:0 0 84px;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 2px 5px;background:none;border:0;color:var(--muted);font-size:11px;font-weight:600;transition:color .2s}
 .tabbar button svg{width:22px;height:22px;fill:none;stroke:none;overflow:visible}
 .tabbar .f,.tabbar .d{stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;transition:fill .2s,stroke .2s}
 .tabbar .f{fill:none}
