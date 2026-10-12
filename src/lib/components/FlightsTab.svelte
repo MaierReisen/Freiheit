@@ -16,21 +16,37 @@
 	function load() {
 		if (ap || loading) return;
 		loading = true;
-		Promise.all([loadAirports(), loadAirlines()]).then(([a, b]) => {
-			ap = a;
-			al = b;
-		});
+		Promise.all([loadAirports(), loadAirlines()])
+			.then(([a, b]) => {
+				ap = a;
+				al = b;
+			})
+			.catch(() => {
+				loading = false; // z. B. offline: beim nächsten Öffnen des Tabs erneut versuchen
+			});
 	}
+	// „jetzt“ für geplante Flüge: beim Öffnen des Tabs und bei Rückkehr in die App neu (geplante werden so zu geflogenen)
+	let now = $state(Date.now());
 	$effect(() => {
-		if (ui.tab === 'flights') load();
+		if (ui.tab === 'flights') {
+			load();
+			now = Date.now();
+		}
 	});
 	onMount(() => {
 		// im Leerlauf vorbereiten, damit der Tab sofort fertig ist
 		const t = setTimeout(() => (window.requestIdleCallback ?? ((f: () => void) => setTimeout(f, 1)))(load), 4000);
-		return () => clearTimeout(t);
+		const onVis = () => {
+			if (!document.hidden && ui.tab === 'flights') now = Date.now();
+		};
+		document.addEventListener('visibilitychange', onVis);
+		return () => {
+			clearTimeout(t);
+			document.removeEventListener('visibilitychange', onVis);
+		};
 	});
 
-	const st = $derived(ap ? flightStats(atlas.flights, ap) : null);
+	const st = $derived(ap ? flightStats(atlas.flights, ap, now) : null);
 	const n = $derived(st ? st.n : atlas.flights.length);
 	const city = (code: string) => ap?.[code]?.[0] || code;
 	const route = (l: Leg) => `${city(l.f.from)} → ${city(l.to)}`;
@@ -48,9 +64,14 @@
 		try {
 			const list = parseFlighty(await f.text());
 			if (!list.length) throw new Error('leer');
-			const before = atlas.flights.length;
-			const fresh = putFlights(list);
-			toast(fresh ? `${fresh} ${fresh === 1 ? 'Flug' : 'Flüge'} eingelesen` : before ? 'Alle Flüge waren schon da' : `${list.length} Flüge eingelesen`);
+			const r = putFlights(list);
+			toast(
+				r.fresh
+					? `${r.fresh} ${r.fresh === 1 ? 'Flug' : 'Flüge'} neu eingelesen`
+					: r.changed
+						? `${r.changed} ${r.changed === 1 ? 'Flug' : 'Flüge'} aktualisiert`
+						: 'Alle Flüge waren schon da'
+			);
 			load();
 		} catch {
 			toast('Datei nicht lesbar. Erwartet wird der Export aus Flighty.');
@@ -61,7 +82,7 @@
 <main class="tab" id="tab-flights" hidden={ui.tab !== 'flights'}>
 	<section class="hero fl-hero">
 		<div class="hero-row">
-			<button type="button" class="count-btn" aria-label="{n} Flüge. Zur Liste" onclick={() => n && openFlightsPage('flights')}>
+			<button type="button" class="count-btn" aria-label="{n} Flüge. Zur Liste" onclick={() => st && n && openFlightsPage('flights')}>
 				<span class="count" class:d3={n >= 100}>{n}</span>
 				<span class="count-meta">
 					<span class="count-label">{n === 1 ? 'Flug' : 'Flüge'}</span>

@@ -3,7 +3,7 @@ import { toast } from './app.svelte';
 import { DEFAULT_SCOPE, countsForContinent, inScope, isScope, type CountryScope } from './scope';
 import { supabase } from './supabase';
 import { isWonder } from './wonders';
-import type { Flight } from './flights';
+import { flightMatch, flightSig, hasFlightyId, type Flight } from './flights';
 
 /* Daten der App: lokal zwischengespeichert (offline nutzbar) und mit Supabase synchronisiert.
    Jede Änderung wirkt sofort lokal und landet als Auftrag in einer Warteschlange, die an Supabase gesendet wird. */
@@ -416,7 +416,9 @@ function syncFlights(user: string, r: { data: FlightRow[] | null; error: { code?
 			return;
 		}
 	}
-	if (JSON.stringify(remote) !== JSON.stringify(atlas.flights)) atlas.flights = remote;
+	// gleicher Stand (Reihenfolge und Feld-Reihenfolge egal): nichts ersetzen, sonst rechnet der Tab alles neu
+	const sig = (l: Flight[]) => l.map(flightSig).sort().join('\n');
+	if (sig(remote) !== sig(atlas.flights)) atlas.flights = remote;
 	writeJson(flightsKey(user), atlas.flights);
 }
 
@@ -603,29 +605,47 @@ export function resetAccountData() {
 	atlas.settings = { ...atlas.settings, wonders: [] };
 	atlas.lastAddedAt = 0;
 	atlas.lastAddedCodes = [];
-	if (uid) writeJson(settingsKey(uid), atlas.settings);
+	const flightIds = atlas.flights.map((f) => f.id);
+	atlas.flights = [];
+	if (uid) {
+		writeJson(settingsKey(uid), atlas.settings);
+		writeJson(flightsKey(uid), []);
+	}
 	persist();
-	enqueue({ t: 'replaceAll', data: d }, { t: 'settings', s: { ...atlas.settings } });
+	enqueue({ t: 'replaceAll', data: d }, { t: 'settings', s: { ...atlas.settings } }, ...(flightIds.length ? [{ t: 'removeFlights', ids: flightIds } as Op] : []));
 }
 
 /* ---------- Flüge ---------- */
-/** Flüge einlesen (z. B. aus Flighty): gleiche Kennung = aktualisieren, sonst neu. Gibt die Anzahl neuer Flüge zurück. */
-export function putFlights(list: Flight[]): number {
-	if (!list.length) return 0;
+/** Flüge einlesen (z. B. aus Flighty): gleiche Kennung = aktualisieren, sonst neu. Bekommt ein Flug erst jetzt eine Flighty-ID,
+    ersetzt er den bisherigen Eintrag ohne ID (gleiches Datum, Strecke, Abflug) statt doppelt zu zählen.
+    Gibt zurück, wie viele neu sind und wie viele sich geändert haben. */
+export function putFlights(list: Flight[]): { fresh: number; changed: number } {
 	const byId = new Map(atlas.flights.map((f) => [f.id, f]));
+	// bisherige Einträge ohne Flighty-ID je Datum/Strecke/Abflug; mehrere möglich (z. B. gleiche Strecke, ohne Uhrzeit nachgetragen)
+	const noId = new Map<string, string[]>();
+	for (const f of atlas.flights) if (!hasFlightyId(f)) noId.set(flightMatch(f), [...(noId.get(flightMatch(f)) ?? []), f.id]);
 	let fresh = 0;
-	const changed: Flight[] = [];
+	const changed: Flight[] = [],
+		gone: string[] = [];
 	for (const f of list) {
-		const old = byId.get(f.id);
+		let old = byId.get(f.id);
+		if (!old && hasFlightyId(f)) {
+			const prevId = noId.get(flightMatch(f))?.shift();
+			if (prevId && byId.has(prevId)) {
+				old = byId.get(prevId);
+				byId.delete(prevId);
+				gone.push(prevId);
+			}
+		}
 		if (!old) fresh++;
-		if (!old || JSON.stringify(old) !== JSON.stringify(f)) changed.push(f);
+		if (!old || flightSig(old) !== flightSig(f)) changed.push(f);
 		byId.set(f.id, f);
 	}
-	if (!changed.length) return 0;
+	if (!changed.length) return { fresh: 0, changed: 0 };
 	atlas.flights = [...byId.values()];
 	if (uid) writeJson(flightsKey(uid), atlas.flights);
-	enqueue({ t: 'putFlights', flights: changed });
-	return fresh;
+	enqueue(...(gone.length ? [{ t: 'removeFlights', ids: gone } as Op] : []), { t: 'putFlights', flights: changed });
+	return { fresh, changed: changed.length };
 }
 export function removeFlights(ids: string[]) {
 	const del = new Set(ids);

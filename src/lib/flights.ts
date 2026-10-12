@@ -60,8 +60,24 @@ export type Airlines = Record<string, [string, string]>;
 let apP: Promise<Airports> | null = null;
 let alP: Promise<Airlines> | null = null;
 /** Flughäfen (~6000, nachgeladen) */
-export const loadAirports = () => (apP ??= import('./data/airports.json').then((m) => m.default as unknown as Airports));
-export const loadAirlines = () => (alP ??= import('./data/airlines.json').then((m) => m.default as unknown as Airlines));
+// bei Fehler (z. B. offline) nicht merken, damit der nächste Versuch neu lädt
+export const loadAirports = () =>
+	(apP ??= import('./data/airports.json').then((m) => m.default as unknown as Airports).catch((e) => ((apP = null), Promise.reject(e))));
+export const loadAirlines = () =>
+	(alP ??= import('./data/airlines.json').then((m) => m.default as unknown as Airlines).catch((e) => ((alP = null), Promise.reject(e))));
+
+/** Vergleichbare Textform eines Flugs (Felder sortiert): Postgres (jsonb) liefert die Felder in anderer Reihenfolge zurück */
+export function flightSig(f: Flight): string {
+	const d = f.d as Record<string, unknown>;
+	const det = Object.keys(d)
+		.sort()
+		.map((k) => [k, d[k]]);
+	return JSON.stringify([f.id, f.date, f.from, f.to, f.airline ?? '', f.no ?? '', det]);
+}
+/** Gleicher Flug auch ohne gleiche Kennung (Flighty vergibt manchen Flügen erst später eine ID): Datum, Strecke, geplanter Abflug */
+export const flightMatch = (f: Flight) => `${f.date}|${f.d.gds ?? ''}|${f.from}|${f.to}`;
+/** Kennung stammt von Flighty (sonst selbst gebildet: beginnt mit dem Datum) */
+export const hasFlightyId = (f: Flight) => !/^\d{4}-\d{2}-\d{2}/.test(f.id);
 
 /* ---------- Flighty-Datei einlesen ---------- */
 
@@ -296,8 +312,9 @@ export function flightStats(flights: Flight[], ap: Airports, now = Date.now()): 
 		tally(visits, l.f.from);
 		tally(visits, l.to);
 		// Umsteigen (< 8 h am selben Flughafen, nicht zurück zum Ausgangspunkt): Ankunft und Abflug sind zusammen ein Besuch
+		// (nur mit bekannter Zeitzone beider Flüge, sonst stimmt die Bodenzeit nicht)
 		const prev = done[i - 1];
-		if (prev && prev.to === l.f.from && l.to !== prev.f.from && l.dep - prev.arr < CONNECT_MS && l.dep - prev.arr > -3600000) tally(visits, l.f.from, -1);
+		if (prev && ap[prev.f.from] && ap[l.f.from] && ap[l.to] && prev.to === l.f.from && l.to !== prev.f.from && l.dep - prev.arr < CONNECT_MS && l.dep - prev.arr > -3600000) tally(visits, l.f.from, -1);
 		if (l.f.airline) tally(airlines, l.f.airline);
 		if (l.f.d.ac) tally(aircraft, l.f.d.ac);
 		tally(routes, [l.f.from, l.to].sort().join('-'));
