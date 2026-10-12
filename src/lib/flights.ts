@@ -1,11 +1,12 @@
-/* Tab „Flüge“: Datentyp, Einlesen der Flighty-Datei (CSV) und alle Zahlen (Strecke, Zeit in der Luft, Flughafen-Besuche …).
+/* Tab „Flüge“: Datentyp, Einlesen der Flighty-Datei (CSV) und alle Zahlen (Strecke, Flugzeit, Flughafen-Besuche …).
    Gezählt wird nach den Regeln von Flighty (Hilfe-Seite „Connections and layovers“):
    - Umsteigen: Ankunft und Weiterflug am selben Flughafen, 0–8 h dazwischen (planmäßig) → 1 Besuch
    - Aufenthalt 8–24 h (oder länger) → 2 Besuche (Ankunft + Abflug)
    - Hin und zurück (Weiterflug zurück zum Abflughafen des ersten Flugs) → am Wendepunkt 2 Besuche
    - Ankunft an einem, Abflug von einem anderen Flughafen → je 1 Besuch
    Gestrichene Flüge und Flüge in der Zukunft zählen nicht; umgeleitete Flüge zählen zum tatsächlichen Ziel.
-   Strecke = kürzester Weg über die Erdkugel (Großkreis). Zeit in der Luft = Start bis Landung, sonst geschätzt. */
+   Strecke = kürzester Weg über die Erdkugel (Großkreis). Flugzeit wie Flighty = Gate bis Gate (tatsächlich, sonst geplant), ohne Zeiten aus der Strecke geschätzt
+   (an Patricks Flighty-Werten abgeglichen: QR 59 DOH–MUC 6:10 = echte Gate-Zeiten, MUC–SSH ohne Zeiten 4:07, Summe 10 T 13 Std). */
 
 export interface FlightDetail {
 	/** Zeiten als Ortszeit „JJJJ-MM-TTTHH:MM“: Gate ab (gds/gda), Start (ofs/ofa), Landung (ons/ona), Gate an (gas/gaa); s = geplant, a = tatsächlich */
@@ -206,17 +207,17 @@ export function gcKm(a: Airport, b: Airport): number {
 	const h = Math.sin(dLat / 2) ** 2 + Math.cos(a[3] * toR) * Math.cos(b[3] * toR) * Math.sin(dLon / 2) ** 2;
 	return 2 * R * Math.asin(Math.min(1, Math.sqrt(h)));
 }
-/** geschätzte Zeit in der Luft (Start bis Landung) in Minuten aus der Strecke, wenn die Datei keine Zeiten hat */
-export const estAirMin = (km: number) => Math.round(14 + km / 13.6);
+/** geschätzte Flugzeit (Gate bis Gate) in Minuten aus der Strecke, wenn die Datei keine Zeiten hat – wie Flighty: rund 730 km/h im Schnitt */
+export const estFlightMin = (km: number) => Math.round(1.5 + km / 12.15);
 /** geschätzte Rollzeit (Gate ↔ Start/Landung) zusammen, Minuten */
-const TAXI = 25;
+const TAXI = 22; // Rollzeit Gate ↔ Start/Landung zusammen (Mittel der Flüge mit allen Zeiten)
 
 export interface Leg {
 	f: Flight;
 	/** tatsächlicher Zielflughafen (bei Umleitung) */
 	to: string;
 	km: number;
-	/** Zeit in der Luft in Minuten */
+	/** Flugzeit (Gate bis Gate) in Minuten */
 	min: number;
 	/** Zeit geschätzt (keine Start-/Landezeiten in der Datei) */
 	est: boolean;
@@ -237,17 +238,17 @@ export function legOf(f: Flight, ap: Airports, now = Date.now()): Leg {
 		tb = B?.[5];
 	const km = A && B ? gcKm(A, B) : 0;
 	const d = f.d;
-	// Zeit in der Luft: tatsächlich, sonst geplant, sonst Gate-Zeiten minus Rollzeit, sonst geschätzt
-	let min = diffMin(d.ofa, d.ona, ta, tb);
-	if (!(min > 0)) min = diffMin(d.ofs, d.ons, ta, tb);
-	if (!(min > 0)) min = diffMin(d.gda, d.gaa, ta, tb) - TAXI;
-	if (!(min > 0)) min = diffMin(d.gds, d.gas, ta, tb) - TAXI;
+	// Flugzeit wie Flighty: Gate bis Gate tatsächlich, sonst geplant, sonst Start bis Landung plus Rollzeit, sonst geschätzt
+	let min = diffMin(d.gda, d.gaa, ta, tb);
+	if (!(min > 0)) min = diffMin(d.gds, d.gas, ta, tb);
+	if (!(min > 0)) min = diffMin(d.ofa, d.ona, ta, tb) + TAXI;
+	if (!(min > 0)) min = diffMin(d.ofs, d.ons, ta, tb) + TAXI;
 	const est = !(min > 0);
-	if (est) min = km ? estAirMin(km) : 0;
+	if (est) min = km ? estFlightMin(km) : 0;
 	const depLocal = d.gds || d.ofs || d.gda || d.ofa || f.date + 'T12:00';
 	const dep = localToUtc(depLocal, ta);
 	const arrLocal = d.gas || d.ons;
-	const arr = arrLocal ? localToUtc(arrLocal, tb) : dep + (min + TAXI) * 60000;
+	const arr = arrLocal ? localToUtc(arrLocal, tb) : dep + min * 60000;
 	return { f, to, km, min, est, dep, arr, done: !d.cx && dep <= now };
 }
 
@@ -312,9 +313,9 @@ export function flightStats(flights: Flight[], ap: Airports, now = Date.now()): 
 		tally(visits, l.f.from);
 		tally(visits, l.to);
 		// Umsteigen (< 8 h am selben Flughafen, nicht zurück zum Ausgangspunkt): Ankunft und Abflug sind zusammen ein Besuch
-		// (nur mit bekannter Zeitzone beider Flüge, sonst stimmt die Bodenzeit nicht)
+		// (wie Flighty: 0–8 h Bodenzeit; nur mit bekannter Zeitzone, sonst stimmt die Bodenzeit nicht)
 		const prev = done[i - 1];
-		if (prev && ap[prev.f.from] && ap[l.f.from] && ap[l.to] && prev.to === l.f.from && l.to !== prev.f.from && l.dep - prev.arr < CONNECT_MS && l.dep - prev.arr > -3600000) tally(visits, l.f.from, -1);
+		if (prev && ap[prev.f.from] && ap[l.f.from] && ap[l.to] && prev.to === l.f.from && l.to !== prev.f.from && l.dep - prev.arr < CONNECT_MS && l.dep - prev.arr >= 0) tally(visits, l.f.from, -1);
 		if (l.f.airline) tally(airlines, l.f.airline);
 		if (l.f.d.ac) tally(aircraft, l.f.d.ac);
 		tally(routes, [l.f.from, l.to].sort().join('-'));

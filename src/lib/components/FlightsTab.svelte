@@ -6,7 +6,7 @@
 	import { EARTH_KM, MOON_KM, flightStats, fmtDuration, fmtInt, loadAirlines, loadAirports, parseFlighty, type Airlines, type Airports, type Leg } from '$lib/flights';
 	import FlightsView from './FlightsView.svelte';
 
-	/* Tab „Flüge“: große Zahl, Werte wie im Flighty-Pass (Strecke, Zeit in der Luft, Flughäfen, Länder, Airlines),
+	/* Tab „Flüge“: große Zahl, Werte wie im Flighty-Pass (Strecke, Flugzeit, Flughäfen, Länder, Airlines),
 	   darunter Zeilen zu den Listen (Vollbild) und Rekorde. Flüge kommen per Flighty-Datei (CSV) herein.
 	   Flughafen- und Airline-Liste werden erst nachgeladen (beim Öffnen des Tabs bzw. im Leerlauf). */
 
@@ -86,7 +86,7 @@
 				<span class="count" class:d3={n >= 100}>{n}</span>
 				<span class="count-meta">
 					<span class="count-label">{n === 1 ? 'Flug' : 'Flüge'}</span>
-					<span class="count-sub">{st && n ? `${fmtInt(st.km)} km · ${fmtDuration(st.min)} in der Luft` : 'aus Flighty'}</span>
+					<span class="count-sub">{st && n ? `${fmtInt(st.km)} km · ${fmtDuration(st.min)} Flugzeit` : 'aus Flighty'}</span>
 				</span>
 			</button>
 			<button type="button" class="hero-add" aria-label="Flighty-Datei einlesen" onclick={() => fileInput.click()}
@@ -113,9 +113,9 @@
 				<span class="fl-s">{dec1(st.km / EARTH_KM)}× um die Erde · {Math.round((st.km / MOON_KM) * 100)} % zum Mond</span>
 			</div>
 			<div class="fl-stat">
-				<span class="fl-k">In der Luft</span>
+				<span class="fl-k">Flugzeit</span>
 				<b>{fmtDuration(st.min)}</b>
-				<span class="fl-s">{st.estimated ? `${st.estimated} von ${st.n} Flugzeiten geschätzt` : 'Start bis Landung'}</span>
+				<span class="fl-s">{st.estimated ? `${st.estimated} von ${st.n} Flugzeiten geschätzt` : 'Gate bis Gate'}</span>
 			</div>
 			<div class="fl-stat">
 				<span class="fl-k">Flughäfen</span>
