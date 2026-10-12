@@ -4,11 +4,12 @@
 	import { closeSheet, openAddFlight, openCountry, setSheetDetent, toast, ui } from '$lib/app.svelte';
 	import { flag, nameOf } from '$lib/countries';
 	import { fd } from '$lib/flightData.svelte';
+	import SwipeRow from './SwipeRow.svelte';
 	import { EARTH_KM, flightNo, fmtDuration, fmtInt, routeKey, type Leg } from '$lib/flights';
 
 	/* Seite zu einer Flugstrecke (Bogen auf dem Globus angetippt oder Flug in der Liste): Aufbau wie die Länderseite.
 	   Oben die kompakte Karte (Städte, Anzahl, „+ Flug“, drei Schnellwerte) – auch die „peek“-Stufe über dem Globus.
-	   Darunter alle Flüge dieser Strecke (beide Richtungen, neueste zuerst; je „Entfernen“) und die beiden Flughäfen. */
+	   Darunter alle Flüge dieser Strecke (beide Richtungen, neueste zuerst; Wischen nach links = Entfernen, wie in „Meine Länder“; bei nur einem Flug zusätzlich „Entfernen“ oben wie auf der Länderseite) und die beiden Flughäfen. */
 
 	let { key, id }: { key: string; id?: string } = $props();
 
@@ -26,7 +27,7 @@
 		return list.length ? list.reduce((s, l) => s + l.min, 0) / list.length : 0;
 	});
 	const est = $derived((done.length ? done : legs).every((l) => l.est));
-	const longDay = (d: string) => new Date(d + 'T12:00:00Z').toLocaleDateString('de-DE', { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+	const day = (d: string) => new Date(d + 'T12:00:00Z').toLocaleDateString('de-DE', { day: 'numeric', month: 'short', timeZone: 'UTC' });
 	const shortDay = (d: string) => new Date(d + 'T12:00:00Z').toLocaleDateString('de-DE', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
 	/** Abflug- und Ankunftszeit (Ortszeit, tatsächlich vor geplant); „+1“, wenn die Ankunft auf einen späteren Tag fällt */
 	function times(l: Leg) {
@@ -133,23 +134,26 @@
 <div class="cs-body">
 	{#if legs.length}
 		<h4 class="cs-h">Flüge <span>{legs.length}</span></h4>
-		<div class="rs-list">
+		<ul class="list fl-list rs-list">
 			{#each legs as l (l.f.id)}
-				<div class="cs-tile wide rs-flight" class:del={legs.length > 1} class:on={l.f.id === id} class:off={!l.done} data-flight={l.f.id}>
-					<span class="lbl">{longDay(l.f.date)}</span>
-					<b>{l.f.from} → {l.to}{#if flightNo(l.f, al)}<small>{flightNo(l.f, al)}</small>{/if}</b>
-					<span class="sub"
-						>{[l.f.airline && (al?.[l.f.airline]?.[0] ?? l.f.airline), times(l), l.min ? `${l.est ? '≈ ' : ''}${fmtDuration(l.min)}` : ''].filter(Boolean).join(' · ')}</span
-					>
-					{#if extras(l)}<span class="sub">{extras(l)}</span>{/if}
-					{#if l.f.d.note}<span class="sub">„{l.f.d.note}“</span>{/if}
-					{#if status(l)}<span class="sub warn">{status(l)}</span>{/if}
-					{#if legs.length > 1}<button type="button" class="cs-badge cs-del rs-del" onclick={() => remove(l)}
-							><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17" /></svg>Entfernen</button
-						>{/if}
-				</div>
+				<SwipeRow ondelete={() => remove(l)} label="Entfernen">
+					<button type="button" tabindex="-1" class:on={l.f.id === id} class:off={!l.done} data-flight={l.f.id}>
+						<span class="fl-day">{day(l.f.date)}<small>{l.f.date.slice(0, 4)}</small></span>
+						<span class="fl-route">
+							<b>{l.f.from} → {l.to}{#if flightNo(l.f, al)}<small>{flightNo(l.f, al)}</small>{/if}</b>
+							{#if l.f.airline || times(l)}<span>{[l.f.airline && (al?.[l.f.airline]?.[0] ?? l.f.airline), times(l)].filter(Boolean).join(' · ')}</span>{/if}
+							{#if extras(l)}<span>{extras(l)}</span>{/if}
+							{#if l.f.d.note}<span>„{l.f.d.note}“</span>{/if}
+						</span>
+						<span class="fl-meta">
+							<span>{l.min ? `${l.est ? '≈ ' : ''}${fmtDuration(l.min)}` : ''}</span>
+							{#if status(l)}<span class="rs-st">{status(l)}</span>{/if}
+						</span>
+					</button>
+				</SwipeRow>
 			{/each}
-		</div>
+		</ul>
+		{#if legs.length > 1}<p class="note rs-hint">Zum Entfernen einen Flug nach links wischen.</p>{/if}
 
 		<h4 class="cs-h">Flughäfen</h4>
 		<div class="cs-grid">

@@ -1002,39 +1002,62 @@ button.pp-tile:active{transform:scale(.98)}
 .rs-ico svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .rs-ico{color:#F6C445}}
 :root[data-theme="dark"] .rs-ico{color:#F6C445}
-.rs-list{display:flex;flex-direction:column;gap:10px}
-.rs-flight.del{padding-right:110px}
-.rs-flight.on{box-shadow:inset 0 0 0 2px var(--primary)}
-.rs-flight.off b{opacity:.7}
-.rs-flight b small{font-size:13px;font-weight:600;color:var(--muted);margin-left:8px}
-.rs-flight .rs-del{position:absolute;top:12px;right:12px;padding:4px 11px;font-size:12px}
+.rs-list{margin-top:0}
+.sheet .swipe-fg{background:var(--surface)}
+.rs-list li button{align-items:flex-start;cursor:default}
+.rs-list li button.on .fl-day,.rs-list li button.on b{color:var(--primary)}
+.rs-list .fl-day{display:flex;flex-direction:column;padding-top:2px;color:var(--ink);font-weight:600}
+.rs-list .fl-day small{font-size:12px;font-weight:500;color:var(--muted)}
+.rs-list .fl-route span{white-space:normal}
+.rs-list .rs-st{color:#C2410C;font-weight:600}
+.rs-hint{margin-top:8px}
 .rs-land{align-self:flex-start;margin-top:6px;padding:6px 11px;font-size:13px}
 
-/* Flug hinzufügen */
-.fa-body{flex:1;min-height:0;display:flex;flex-direction:column;overflow-y:auto;margin-top:14px}
-.fa-route{position:relative;display:flex;flex-direction:column;gap:8px}
-.fa-ap{display:flex;align-items:baseline;gap:10px;padding:13px 56px 13px 15px;border:1.5px solid var(--line);border-radius:var(--r-md);background:var(--surface);text-align:left;color:var(--ink);min-width:0}
-.fa-ap.on{border-color:var(--primary);box-shadow:0 0 0 3px color-mix(in srgb,var(--primary) 18%,transparent)}
-.fa-ap b{font:800 19px var(--display);letter-spacing:.02em}
+/* Flug hinzufügen: Karte mit Zeilen (Bezeichnung links, Wert rechts), wie Einstellungen in iOS */
+.fa-body{flex:1;min-height:0;display:flex;flex-direction:column;overflow-y:auto;margin:14px -22px 0;padding:0 22px 4px}
+.sheet:not(.kb) .fa-body{min-height:min(60vh,540px)}
+.fa-card{position:relative;flex:none;border-radius:var(--r-md);background:var(--chip);overflow:hidden}
+.fa-card + .fa-card,.fa-preview + .fa-card{margin-top:12px}
+.fa-row{display:flex;align-items:center;gap:12px;width:100%;min-height:54px;padding:8px 16px;border:0;background:none;color:var(--ink);text-align:left;font-size:16px;cursor:pointer}
+.fa-row + .fa-row{border-top:1px solid var(--line)}
+.fa-k{flex:none;width:72px;font-size:15px;font-weight:600;color:var(--muted)}
+.fa-v{flex:1;min-width:0;display:flex;align-items:baseline;gap:8px}
+.fa-v b{font:800 18px var(--display);letter-spacing:.02em}
 .fa-city{font-size:15px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
-.fa-ph{font-size:16px;color:var(--muted)}
-.fa-k{flex:none;width:44px;font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
-.fa-k i{font-style:normal;font-weight:600;text-transform:none;letter-spacing:0;margin-left:4px;opacity:.8}
-.fa-swap{position:absolute;right:10px;top:50%;transform:translateY(-50%);width:38px;height:38px;border:1px solid var(--line);border-radius:50%;background:var(--surface);color:var(--ink);display:grid;place-items:center}
-.fa-swap svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
-.fa-swap:disabled{opacity:.4}
-.fa-list{min-height:160px}
-.fa-res{display:flex;flex-direction:column;min-width:0}
+.fa-ph{color:var(--primary);font-weight:600}
+.fa-ap{padding-right:60px}
+.fa-ap.on{background:color-mix(in srgb,var(--primary) 12%,transparent)}
+.fa-ap.on .fa-k{color:var(--primary)}
+.fa-swap{position:absolute;right:12px;top:50%;transform:translateY(-50%);width:36px;height:36px;border:1px solid var(--line);border-radius:50%;background:var(--surface);color:var(--ink);display:grid;place-items:center;box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.fa-swap svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.fa-swap:disabled{opacity:.35;box-shadow:none}
+.fa-swap:not(:disabled):active{transform:translateY(-50%) scale(.92)}
+/* Eingaben ohne eigenen Rahmen, rechtsbündig in der Zeile (auch die Datums-/Zeitauswahl von iOS) */
+.fa-in{flex:1;min-width:0;width:100%;height:38px;padding:0;border:0;background:none;color:var(--ink);font:600 16px var(--text);text-align:right;-webkit-appearance:none;appearance:none;outline:none}
+.fa-in::placeholder{color:var(--muted);font-weight:500}
+.fa-in::-webkit-date-and-time-value{text-align:right}
+.fa-in::-webkit-calendar-picker-indicator{opacity:.55;margin-left:6px;cursor:pointer}
+.fa-row:focus-within{background:color-mix(in srgb,var(--primary) 7%,transparent)}
+.fa-col{flex-direction:column;align-items:flex-end;gap:0}
+.fa-col small{font-size:12.5px;font-weight:600;color:var(--muted);margin-top:-2px}
+.fa-col small.ok{color:var(--primary)}
+.fa-no input{text-transform:uppercase}
+.fa-no input::placeholder{text-transform:none}
+.fa-plus{flex:none;padding:2px 8px;border-radius:999px;background:var(--surface);font-size:12px;font-weight:700;color:var(--primary)}
+.fa-preview{display:flex;align-items:center;gap:8px;margin:12px 2px 0;font-size:14px;font-weight:600;color:var(--muted)}
+.fa-preview svg{width:20px;height:20px;fill:none;stroke:var(--primary);stroke-width:1.9;stroke-linecap:round}
+.fa-note{margin:12px 2px 0}
+.fa-search{display:flex;align-items:center;gap:10px;margin-top:12px}
+.fa-search .search{flex:1;min-width:0}
+.fa-cancel{flex:none;border:0;background:none;color:var(--primary);font-weight:700;font-size:16px;padding:8px 2px}
+.fa-list{min-height:160px;margin-top:6px}
+.fa-list button{gap:12px}
+.fa-flag{font-size:22px;width:28px;text-align:center}
+.fa-res{flex:1;display:flex;flex-direction:column;min-width:0}
 .fa-res b{font-weight:600}
 .fa-res small{font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.fa-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
-.fa-field{display:flex;flex-direction:column;gap:6px;min-width:0}
-.fa-field.wide{grid-column:1/-1}
-.fa-field .fa-k{width:auto}
-.fa-field input{width:100%;min-width:0;padding:11px 13px;border-radius:var(--r-md);border:1.5px solid var(--line);background:var(--surface);color:var(--ink);font-size:16px;-webkit-appearance:none;appearance:none;min-height:46px}
-.fa-hint{font-size:13px;font-weight:600;color:var(--primary)}
+.fa-code{flex:none;font:800 14px var(--display);letter-spacing:.04em;color:var(--muted)}
+.pick-bar .fa-go{flex:1}
 .sheet .cs-title h3.rs-title{hyphens:none;-webkit-hyphens:none;overflow-wrap:normal;display:block}
 .rs-add{border:0;background:color-mix(in srgb,var(--primary) 16%,transparent);color:var(--primary)}
 .rs-add:active{transform:scale(.96)}
-.sheet:not(.kb) .fa-body{min-height:min(60vh,540px)}
-.pick-bar .lv-bar-n{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
