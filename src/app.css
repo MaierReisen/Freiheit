@@ -190,7 +190,7 @@ body.noscroll{overflow:hidden}
 .toast{bottom:calc(90px + env(safe-area-inset-bottom,0px));z-index:60}
 
 /* Tab-Leiste: schwebend, 2 Tabs, gleitende Markierung; schlank und tief (im Sicherheitsrand unten), damit sie wenig vom Globus verdeckt */
-.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:20;padding:0 14px max(10px,calc(env(safe-area-inset-bottom,0px) - 8px));background:none;border:0;pointer-events:none}
+.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:20;padding:0 14px max(8px,calc(env(safe-area-inset-bottom,0px) - 20px));background:none;border:0;pointer-events:none}
 .tabbar-in{position:relative;display:flex;max-width:480px;margin:0 auto;padding:4px;border-radius:26px;background:var(--surface);border:1px solid var(--line);box-shadow:0 12px 32px rgba(13,43,58,.22);pointer-events:auto}
 @supports ((backdrop-filter:blur(2px)) or (-webkit-backdrop-filter:blur(2px))) and (background:color-mix(in srgb,red 50%,blue)){
   .tabbar-in{background:color-mix(in srgb,var(--surface) 80%,transparent);-webkit-backdrop-filter:blur(18px) saturate(1.7);backdrop-filter:blur(18px) saturate(1.7)}
@@ -210,7 +210,9 @@ body.noscroll{overflow:hidden}
 @keyframes tabInL{from{opacity:0;transform:translateX(-40px)}to{opacity:1;transform:none}}
 
 /* Startseite: Zähler als Button + Hinzufügen */
-.hero{overflow:visible;border-bottom:2px solid var(--ink)}
+.hero{overflow:visible;border-bottom:2px solid var(--ink);margin-top:8px}
+#appMain{position:relative}
+html.swiping{overflow-x:hidden}
 .hero-row{position:relative;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:14px 12px}
 .count-btn{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:4px 8px 4px 0;margin:0;background:none;border:0;color:inherit;text-align:left;cursor:pointer;border-radius:22px;-webkit-tap-highlight-color:transparent;transition:transform .15s}
 .count-btn:active{transform:scale(.96)}
@@ -954,7 +956,7 @@ button.pp-tile:active{transform:scale(.98)}
 .btn.primary:disabled{background:var(--chip);border-color:var(--chip);color:var(--muted)}
 .cs-head .tag,
 /* ---------- Tab „Flüge“ ---------- */
-.fl-hero{margin-top:26px}
+.fl-hero{margin-top:8px}
 .fl-empty{margin-top:22px}
 .fl-empty h2{font:800 18px/1.2 var(--display);margin:0 0 10px}
 .fl-empty ol{margin:0;padding-left:20px;line-height:1.5}

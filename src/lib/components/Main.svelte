@@ -45,32 +45,60 @@
 		closeSheet();
 	}
 
-	/* Wischen zwischen den Tabs: Kopf und Inhalt folgen dem Finger (der Globus dazwischen bleibt stehen), nur zum
+	/* Wischen zwischen den Tabs wie eine Bildleiste: Kopf und Inhalt des aktuellen Tabs folgen dem Finger, der
+	   Nachbar-Tab liegt direkt daneben und gleitet mit herein (der Globus dazwischen bleibt stehen). Nur zum
 	   Nachbar-Tab, schreibt keinen Verlauf (siehe goTab). Geht auch auf dem ruhenden Globus; ist er aktiv, dreht er sich. */
-	type Swipe = { x: number; y: number; lock: boolean; panes: HTMLElement[]; lx: number; lt: number; v: number };
+	type Swipe = { x: number; y: number; lock: boolean; cur: HTMLElement[]; nb: HTMLElement[]; side: number; lx: number; lt: number; v: number };
 	let swipe: Swipe | null = null;
+	let settling: ReturnType<typeof setTimeout> | undefined;
 	const neighbor = (dx: number) => {
 		const n = TABS.indexOf(ui.tab) + (dx < 0 ? 1 : -1);
 		return n >= 0 && n < TABS.length ? TABS[n] : null;
 	};
-	function setPanes(s: Swipe, x: number, ms = 0) {
+	const panesOf = (t: string) => [...document.querySelectorAll<HTMLElement>(`#appMain .tab[data-pane="${t}"]`)];
+	/** Nachbar-Tab einblenden: jeder Teil (Kopf, Inhalt) liegt genau neben dem entsprechenden Teil des aktuellen Tabs */
+	function showNeighbor(s: Swipe, side: number) {
+		hideNeighbor(s);
+		const t = neighbor(-side);
+		if (!t) return;
+		s.side = side;
+		s.nb = panesOf(t);
+		s.nb.forEach((el, i) => {
+			const ref = s.cur[Math.min(i, s.cur.length - 1)];
+			el.classList.remove('in-r', 'in-l');
+			el.hidden = false;
+			Object.assign(el.style, { position: 'absolute', left: ref.offsetLeft + 'px', top: ref.offsetTop + 'px', width: ref.offsetWidth + 'px', pointerEvents: 'none' });
+		});
+	}
+	function hideNeighbor(s: Swipe) {
+		s.nb.forEach((el) => {
+			el.hidden = true;
+			el.removeAttribute('style');
+		});
+		s.nb = [];
+		s.side = 0;
+	}
+	function place(s: Swipe, x: number, ms = 0) {
 		const w = window.innerWidth;
-		for (const el of s.panes) {
-			el.style.transition = ms ? `transform ${ms}ms cubic-bezier(.2,.8,.2,1),opacity ${ms}ms` : 'none';
-			el.style.transform = x ? `translateX(${x}px)` : '';
-			el.style.opacity = x ? String(1 - Math.min(1, Math.abs(x) / w) * 0.7) : '';
+		const tr = ms ? `transform ${ms}ms cubic-bezier(.25,.8,.3,1)` : 'none';
+		for (const el of s.cur) {
+			el.style.transition = tr;
+			el.style.transform = x ? `translate3d(${x}px,0,0)` : '';
+		}
+		for (const el of s.nb) {
+			el.style.transition = tr;
+			el.style.transform = `translate3d(${x + s.side * w}px,0,0)`;
 		}
 	}
-	const clearPanes = (els: HTMLElement[]) => els.forEach((el) => (el.style.transition = el.style.transform = el.style.opacity = ''));
 	function onTouchStart(e: TouchEvent) {
-		swipe = null;
+		if (swipe || settling) return;
 		if (TABS.length < 2 || e.touches.length !== 1 || ui.full || ui.flightsPage || ui.placesOpen || ui.continentsOpen || ui.sheetOpen || ui.settingsOpen || ui.passOpen) return;
 		const target = e.target as Element | null;
 		if (!target?.closest?.('#appMain') || target.closest('input,textarea,select,.continents,.chips,.sheet')) return;
 		if (ui.mapActive && target.closest('#mapBox')) return;
 		const t = e.touches[0];
 		if (t.clientX < 28 || t.clientX > window.innerWidth - 28) return; // Rand frei lassen: Zurück-Geste von iOS
-		swipe = { x: t.clientX, y: t.clientY, lock: false, panes: [], lx: t.clientX, lt: e.timeStamp, v: 0 };
+		swipe = { x: t.clientX, y: t.clientY, lock: false, cur: [], nb: [], side: 0, lx: t.clientX, lt: e.timeStamp, v: 0 };
 	}
 	function onTouchMove(e: TouchEvent) {
 		const s = swipe;
@@ -85,43 +113,52 @@
 				return;
 			}
 			s.lock = true;
-			s.panes = [...document.querySelectorAll<HTMLElement>(`#appMain .tab[data-pane="${ui.tab}"]`)];
-			s.panes.forEach((el) => el.classList.remove('in-r', 'in-l'));
+			s.x = t.clientX; // ab hier 1:1 mit dem Finger, ohne Sprung
+			s.cur = panesOf(ui.tab);
+			s.cur.forEach((el) => el.classList.remove('in-r', 'in-l'));
+			document.documentElement.classList.add('swiping');
 		}
 		if (e.cancelable) e.preventDefault(); // Seite scrollt währenddessen nicht
+		const x = t.clientX - s.x;
 		const dt = e.timeStamp - s.lt;
 		if (dt > 0) s.v = 0.6 * ((t.clientX - s.lx) / dt) + 0.4 * s.v;
 		s.lx = t.clientX;
 		s.lt = e.timeStamp;
-		setPanes(s, neighbor(dx) ? dx : dx * 0.25); // ohne Nachbar-Tab nur federnd
+		const side = x < 0 ? 1 : -1;
+		if (x && neighbor(x)) {
+			if (s.side !== side) showNeighbor(s, side);
+			place(s, x);
+		} else {
+			if (s.nb.length) hideNeighbor(s);
+			place(s, x * 0.25); // ohne Nachbar-Tab nur federnd
+		}
 	}
 	function onTouchEnd(e: TouchEvent) {
 		const s = swipe;
 		swipe = null;
 		if (!s?.lock) return;
 		if (e.cancelable) e.preventDefault(); // kein Klick auf den Knopf unter dem Finger
-		const dx = (e.changedTouches[0]?.clientX ?? s.lx) - s.x,
+		const x = s.lx - s.x,
 			w = window.innerWidth,
-			next = e.type === 'touchend' ? neighbor(dx) : null;
-		const fling = Math.abs(s.v) > 0.4 && Math.sign(s.v) === Math.sign(dx) && Math.abs(dx) > 30;
-		const els = s.panes;
-		if (next && (Math.abs(dx) > w * 0.25 || fling)) {
-			const dir = dx < 0 ? 1 : -1;
-			if (reduceMotion()) {
-				clearPanes(els);
-				goTab(next, true, dir);
-				return;
-			}
-			// alter Tab gleitet weiter hinaus, dann gleitet der neue von der anderen Seite herein
-			setPanes(s, -dir * w * 0.45, 130);
-			setTimeout(() => {
-				goTab(next, true, dir);
-				clearPanes(els);
-			}, 120);
-		} else {
-			setPanes(s, 0, reduceMotion() ? 0 : 220);
-			setTimeout(() => clearPanes(els), 240);
-		}
+			next = e.type === 'touchend' && s.nb.length ? neighbor(x) : null;
+		const fling = Math.abs(s.v) > 0.3 && Math.sign(s.v) === Math.sign(x);
+		const go = !!next && (Math.abs(x) > w * 0.3 || fling) && !(Math.abs(s.v) > 0.3 && Math.sign(s.v) !== Math.sign(x));
+		const target = go ? -s.side * w : 0;
+		// Dauer nach Restweg und Fingertempo: ein schneller Wisch läuft schnell aus
+		const rest = Math.abs(target - (s.nb.length || !x ? x : x * 0.25));
+		const ms = reduceMotion() ? 0 : Math.round(Math.max(180, Math.min(380, rest / Math.max(Math.abs(s.v), 1.1))));
+		place(s, target, ms);
+		const finish = () => {
+			settling = undefined;
+			document.documentElement.classList.remove('swiping');
+			if (go && next) {
+				goTab(next, true, 0); // Nachbar steht schon an seinem Platz: ohne eigene Einblendung (Sichtbarkeit regelt jetzt der Tab)
+				s.nb.forEach((el) => el.removeAttribute('style'));
+			} else hideNeighbor(s);
+			s.cur.forEach((el) => el.removeAttribute('style'));
+		};
+		if (ms) settling = setTimeout(finish, ms);
+		else finish();
 	}
 
 	onMount(() => {
