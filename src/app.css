@@ -183,21 +183,21 @@ h2{font-family:var(--display);font-size:19px;font-weight:700;margin:40px 0 14px;
 
 
 /* ---------- v4: Weltkarte, Tab-Leiste, Wischen, Startseite, Länder-Übersicht ---------- */
-.wrap{padding-bottom:calc(132px + env(safe-area-inset-bottom,0px))}
+.wrap{padding-bottom:calc(110px + env(safe-area-inset-bottom,0px))}
 body.noscroll{overflow:hidden}
 .scrim{z-index:45}
 .sheet{z-index:50}
-.toast{bottom:calc(104px + env(safe-area-inset-bottom,0px));z-index:60}
+.toast{bottom:calc(90px + env(safe-area-inset-bottom,0px));z-index:60}
 
-/* Tab-Leiste: schwebend, 2 Tabs, gleitende Markierung */
-.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:20;padding:0 14px calc(10px + env(safe-area-inset-bottom,0px));background:none;border:0;pointer-events:none}
-.tabbar-in{position:relative;display:flex;max-width:480px;margin:0 auto;padding:6px;border-radius:30px;background:var(--surface);border:1px solid var(--line);box-shadow:0 12px 32px rgba(13,43,58,.22);pointer-events:auto}
+/* Tab-Leiste: schwebend, 2 Tabs, gleitende Markierung; schlank und tief (im Sicherheitsrand unten), damit sie wenig vom Globus verdeckt */
+.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:20;padding:0 14px max(10px,calc(env(safe-area-inset-bottom,0px) - 8px));background:none;border:0;pointer-events:none}
+.tabbar-in{position:relative;display:flex;max-width:480px;margin:0 auto;padding:4px;border-radius:26px;background:var(--surface);border:1px solid var(--line);box-shadow:0 12px 32px rgba(13,43,58,.22);pointer-events:auto}
 @supports ((backdrop-filter:blur(2px)) or (-webkit-backdrop-filter:blur(2px))) and (background:color-mix(in srgb,red 50%,blue)){
   .tabbar-in{background:color-mix(in srgb,var(--surface) 80%,transparent);-webkit-backdrop-filter:blur(18px) saturate(1.7);backdrop-filter:blur(18px) saturate(1.7)}
 }
-.tabbar .ind{position:absolute;left:6px;top:6px;bottom:6px;width:calc((100% - 12px)/2);border-radius:24px;background:var(--chip);transition:transform .34s cubic-bezier(.3,.9,.3,1)}
-.tabbar button{position:relative;z-index:1;flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 2px 8px;background:none;border:0;color:var(--muted);font-size:12px;font-weight:600;transition:color .2s}
-.tabbar button svg{width:25px;height:25px;fill:none;stroke:none;overflow:visible}
+.tabbar .ind{position:absolute;left:4px;top:4px;bottom:4px;width:calc((100% - 8px)/2);border-radius:22px;background:var(--chip);transition:transform .34s cubic-bezier(.3,.9,.3,1)}
+.tabbar button{position:relative;z-index:1;flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 2px 5px;background:none;border:0;color:var(--muted);font-size:11px;font-weight:600;transition:color .2s}
+.tabbar button svg{width:22px;height:22px;fill:none;stroke:none;overflow:visible}
 .tabbar .f,.tabbar .d{stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;transition:fill .2s,stroke .2s}
 .tabbar .f{fill:none}
 .tabbar .d{fill:none}
@@ -234,9 +234,7 @@ body.noscroll{overflow:hidden}
 [data-motion="reduce"] .tab.in-r,[data-motion="reduce"] .tab.in-l{animation:none}[data-motion="reduce"] .tabbar .ind{transition:none}
 
 /* Weltkarte: dunkle Bühne, zwei Canvas-Ebenen */
-/* Höhe: so, dass der Globus beim Öffnen über der Tab-Leiste endet (--map-top und --tab-h misst WorldMap), höchstens wie bisher;
-   erste Angabe für Browser ohne svh (iOS < 15.4) */
-.map-box{position:relative;margin:16px -20px 0;height:clamp(340px,98vw,500px);height:clamp(260px,calc(100svh - var(--map-top,440px) - var(--tab-h,96px) - 9px),min(98vw,500px));background:radial-gradient(120% 90% at 50% 0%,#12374E 0%,#0A2030 52%,#07141F 100%);overflow:hidden;touch-action:auto;color:#fff;border-radius:0}
+.map-box{position:relative;margin:16px -20px 0;height:clamp(340px,98vw,500px);background:radial-gradient(120% 90% at 50% 0%,#12374E 0%,#0A2030 52%,#07141F 100%);overflow:hidden;touch-action:auto;color:#fff;border-radius:0}
 @media (min-width:600px){.map-box{margin:16px 0 0;border-radius:var(--r-lg)}}
 .map-box canvas{position:absolute;inset:0;width:100%;height:100%;display:block;outline:none;-webkit-tap-highlight-color:transparent}
 #mapCv{pointer-events:none}

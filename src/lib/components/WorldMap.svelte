@@ -66,20 +66,6 @@
 		}, delay);
 	}
 
-	let lastTop = -1;
-	function fitTop() {
-		if (ui.full || !box) return;
-		const top = Math.round(box.getBoundingClientRect().top + window.scrollY);
-		if (top === lastTop || top <= 0) return;
-		lastTop = top;
-		box.style.setProperty('--map-top', top + 'px');
-	}
-	/** Höhe der Tab-Leiste (inkl. Abstand unten und Sicherheitsrand) für die Globus-Höhe */
-	function fitTabbar() {
-		const h = document.querySelector<HTMLElement>('.tabbar')?.offsetHeight;
-		if (h) box?.style.setProperty('--tab-h', h + 'px');
-	}
-
 	/** Seite so rollen, dass der Globus mittig im freien Bereich über der kompakten Länderseite steht */
 	function keepMapVisible() {
 		if (ui.full || !ui.sheetOpen || ui.sheetDetent !== 'peek') return;
@@ -155,16 +141,6 @@
 			stopTour(); // Berührung bricht die Tour über neue Länder ab
 		};
 		box.addEventListener('pointerdown', onTouchMap, true);
-		// Höhe: Globus endet beim Öffnen über der Tab-Leiste (CSS rechnet mit --map-top = Abstand vom Seitenanfang).
-		// Neu gemessen, wenn sich der Kopf darüber ändert (Tabwechsel, Schrift geladen, Drehen)
-		const heads = [...(box.parentElement?.children ?? [])].slice(0, [...(box.parentElement?.children ?? [])].indexOf(box));
-		const ro = new ResizeObserver(fitTop);
-		heads.forEach((h) => ro.observe(h));
-		const tb = document.querySelector('.tabbar');
-		const roTab = new ResizeObserver(fitTabbar);
-		if (tb) roTab.observe(tb);
-		fitTabbar();
-		fitTop();
 		document.addEventListener('pointerdown', onOutside, true);
 		document.addEventListener('wheel', onOutside, { capture: true, passive: true });
 		hooks.map = {
@@ -175,8 +151,6 @@
 			scrollIntoView: () => box.scrollIntoView?.({ behavior: reduceMotion() ? 'auto' : 'smooth', block: 'center' })
 		};
 		return () => {
-			ro.disconnect();
-			roTab.disconnect();
 			stopTour();
 			clearTimeout(coachTimer);
 			box.removeEventListener('pointerdown', onTouchMap, true);

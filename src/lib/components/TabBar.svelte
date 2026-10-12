@@ -4,7 +4,7 @@
 
 <nav class="tabbar" id="tabbar" aria-label="Hauptnavigation">
 	<div class="tabbar-in">
-		<span class="ind" id="tabInd" aria-hidden="true" style="transform:translateX({TABS.indexOf(ui.tab) * 100}%);width:calc((100% - 12px)/{TABS.length})"></span>
+		<span class="ind" id="tabInd" aria-hidden="true" style="transform:translateX({TABS.indexOf(ui.tab) * 100}%);width:calc((100% - 8px)/{TABS.length})"></span>
 		{#each TABS as t}
 			<button type="button" data-tab={t} aria-current={ui.tab === t ? 'page' : undefined} onclick={() => goTab(t)}>
 				<svg viewBox="0 0 24 24" aria-hidden="true">
