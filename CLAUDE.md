@@ -7,6 +7,7 @@ Live: https://maierreisen.github.io/Freiheit/ · Repo: MaierReisen/Freiheit · n
 - Nutzer (Patrick) ist Deutsch, kein Entwickler: Antworten auf Deutsch, kurz, ohne Fachjargon; Schritte mit genauen Menüpfaden.
 - Supabase-Dashboard-Änderungen macht der Nutzer selbst. Nie Secret-/service_role-Key oder DB-Passwort in den Chat; Nutzer soll keine Tokens einfügen.
 - Keine Konten anlegen, keine Zugangsdaten eingeben. E-Mail des Nutzers nie an externe Dienste; für Datenabrufe User-Agent `Freiheit-App-Datenaufbereitung/1.0`.
+- Parallele Sitzungen: Läuft schon eine andere Sitzung im Ordner (`git status` zeigt fremde Änderungen) und die Arbeit ist größer, in einem eigenen Worktree arbeiten (`EnterWorktree`, eigener Zweig unter `.claude/worktrees/`), damit sich nichts überschneidet; fertig → Zweig mit `main` abgleichen (`sync_with_base_branch`) und über `/release` veröffentlichen. Alte, nicht mehr gebrauchte Worktrees nur nach Rückfrage entfernen.
 - Commits/Pushes auf `main` sind erwünscht, wenn ein Feature fertig und geprüft ist (Push = Veröffentlichung).
 
 ## Technik
@@ -14,7 +15,7 @@ Live: https://maierreisen.github.io/Freiheit/ · Repo: MaierReisen/Freiheit · n
 - Backend Supabase (Auth per Magic Link + OTP, Schema in `supabase/schema.sql`).
 - Deploy: GitHub Actions (`.github/workflows/deploy.yml`) bei Push auf `main` und täglich per Cron (Einreisedaten werden nur nachts bzw. bei Start von Hand aktualisiert, nicht bei Push; nach Änderung an `build-entry.py`: `gh workflow run deploy.yml`). Verfolgen mit `gh run watch`.
 - Lokal ist Node 24 installiert (`/usr/local/bin`), passt (Startkonfiguration `dev-5175` in `.claude/launch.json`). `gh` liegt in `~/.local/bin`.
-- Prüfen: `npm run check` (muss 0 Fehler haben) und `npm run build`. Kein Prettier über ganze Dateien laufen lassen (formatiert sonst alles um).
+- Prüfen: `npm run check` (muss 0 Fehler haben) und `npm run build`. Schnelltest der Kernseiten (Konsolenfehler, Inhalte): `node tests/smoke.mjs` (startet die App selbst, nutzt Brave/Chrome; einmalig `cd tests && npm i`). Zeigt auch, wenn die Startseite wegen halbfertiger Arbeit anderer Sitzungen nicht lädt. Kein Prettier über ganze Dateien laufen lassen (formatiert sonst alles um).
 
 ## Navigation (Konzept, seit v1.37.2)
 - **Tabs** = gleichrangige Bereiche in der Leiste unten (`TABS`/`TAB_LABEL` in `app.svelte.ts`, Icon in `TabBar.svelte`). Erster Tab heißt in der App **„Welt“** (interne ID `home`; Globus + Blöcke „Deine Welt“). Geplant: Flüge, Reisen o. ä.; der Globus ist kein Tab-Name, sondern ein Element, das auch dort vorkommen darf. Bis zum zweiten Tab bleibt die Leiste ausgeblendet. Höchstens 4–5 Tabs; Weiteres (Einstellungen) hinter ein Symbol oben.
