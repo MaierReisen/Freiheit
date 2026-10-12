@@ -3,6 +3,7 @@ import { toast } from './app.svelte';
 import { DEFAULT_SCOPE, countsForContinent, inScope, isScope, type CountryScope } from './scope';
 import { supabase } from './supabase';
 import { isWonder } from './wonders';
+import type { Flight } from './flights';
 
 /* Daten der App: lokal zwischengespeichert (offline nutzbar) und mit Supabase synchronisiert.
    Jede Änderung wirkt sofort lokal und landet als Auftrag in einer Warteschlange, die an Supabase gesendet wird. */
@@ -67,7 +68,9 @@ type Op =
 	| { t: 'addWish'; code: string; name: string }
 	| { t: 'removeWish'; code: string }
 	| { t: 'replaceAll'; data: AtlasData }
-	| { t: 'settings'; s: Settings };
+	| { t: 'settings'; s: Settings }
+	| { t: 'putFlights'; flights: Flight[] }
+	| { t: 'removeFlights'; ids: string[] };
 
 // Daten der Version ohne Konto: werden beim ersten Login in das Konto übernommen
 const LEGACY_KEY = 'freiheit-state-v2';
@@ -76,6 +79,9 @@ const LEGACY_JUNK = ['freiheit-gh', 'freiheit-dirty', 'freiheit-run'];
 const cacheKey = (uid: string) => `freiheit-data:${uid}`;
 const queueKey = (uid: string) => `freiheit-queue:${uid}`;
 const settingsKey = (uid: string) => `freiheit-settings:${uid}`;
+const flightsKey = (uid: string) => `freiheit-flights:${uid}`;
+// Flüge liegen nur auf dem Gerät, weil die Spalten im Konto fehlten (Migration 008): beim nächsten Abgleich hochladen
+const flightsLocalKey = (uid: string) => `freiheit-flights-local:${uid}`;
 
 export const emptyAtlas = (): AtlasData => ({ schemaVersion: 1, countries: [], milestones: [], wishlist: [] });
 
@@ -127,8 +133,18 @@ const removeKey = (key: string) => {
 
 LEGACY_JUNK.forEach(removeKey);
 
-export const atlas = $state<{ data: AtlasData; sync: SyncStatus; settings: Settings; lastAddedAt: number; lastAddedCode: string; lastAddedCodes: string[] }>({
+export const atlas = $state<{
+	data: AtlasData;
+	sync: SyncStatus;
+	settings: Settings;
+	flights: Flight[];
+	lastAddedAt: number;
+	lastAddedCode: string;
+	lastAddedCodes: string[];
+}>({
 	data: emptyAtlas(),
+	/** Flüge (Tab „Flüge“), Reihenfolge egal (die Anzeige sortiert) */
+	flights: [],
 	sync: 'idle',
 	settings: defaultSettings(),
 	/** Zeitpunkt, zu dem zuletzt selbst ein Land hinzugefügt wurde (für die Feier auf der Startseite) */
@@ -212,6 +228,33 @@ async function runOp(op: Op, user: string) {
 			if (r.error && r.error.code !== 'PGRST205' && r.error.code !== 'PGRST204') throw r.error;
 			return;
 		}
+		case 'putFlights': {
+			for (let i = 0; i < op.flights.length; i += 200) {
+				const rows = op.flights.slice(i, i + 200).map((f) => ({
+					user_id: user,
+					ext_id: f.id,
+					flight_date: f.date,
+					from_airport: f.from,
+					to_airport: f.to,
+					airline: f.airline ?? null,
+					flight_number: f.no ?? null,
+					detail: f.d
+				}));
+				const r = await supabase.from('flights').upsert(rows, { onConflict: 'user_id,ext_id' });
+				// Tabelle/Spalten fehlen (Migration 008): Flüge bleiben auf dem Gerät und werden später hochgeladen
+				if (r.error && (noColumn(r.error) || r.error.code === 'PGRST205' || r.error.code === '42P10')) {
+					writeJson(flightsLocalKey(user), true);
+					return;
+				}
+				ok(r);
+			}
+			return;
+		}
+		case 'removeFlights': {
+			const r = await supabase.from('flights').delete().eq('user_id', user).in('ext_id', op.ids);
+			if (r.error && !noColumn(r.error) && r.error.code !== 'PGRST205') throw r.error;
+			return;
+		}
 		case 'replaceAll': {
 			const d = op.data;
 			for (const t of ['visited_countries', 'wishlist', 'milestones']) ok(await supabase.from(t).delete().eq('user_id', user));
@@ -266,12 +309,14 @@ async function pull() {
 	const user = uid;
 	if (!user || !(await flush())) return;
 	const countriesQuery = (cols: string) => supabase.from('visited_countries').select(cols).order('position').order('created_at');
-	const [c0, w, m, st] = await Promise.all([
+	const [c0, w, m, st, fl] = await Promise.all([
 		countriesQuery('code,name,position,created_at,entered,special'),
 		supabase.from('wishlist').select('code,name').order('created_at'),
 		supabase.from('milestones').select('year,count').order('year'),
-		supabase.from('user_settings').select('*').maybeSingle()
+		supabase.from('user_settings').select('*').maybeSingle(),
+		supabase.from('flights').select('ext_id,flight_date,from_airport,to_airport,airline,flight_number,detail')
 	]);
+	if (uid === user) syncFlights(user, fl as unknown as { data: FlightRow[] | null; error: { code?: string } | null });
 	if (!st.error && st.data && uid === user && !queue.some((o) => o.t === 'settings')) {
 		const remote = wonderList(st.data.wonders);
 		const next = {
@@ -344,6 +389,37 @@ async function pull() {
 	persist();
 }
 
+type FlightRow = { ext_id: string | null; flight_date: string | null; from_airport: string; to_airport: string; airline: string | null; flight_number: string | null; detail: Flight['d'] | null };
+/** Flüge aus dem Konto übernehmen; fehlt die Tabelle/Spalte (Migration 008), bleiben sie auf dem Gerät */
+function syncFlights(user: string, r: { data: FlightRow[] | null; error: { code?: string } | null }) {
+	if (r.error || !r.data || queue.some((o) => o.t === 'putFlights' || o.t === 'removeFlights')) return;
+	const remote: Flight[] = r.data
+		.filter((x) => x.ext_id)
+		.map((x) => ({
+			id: x.ext_id as string,
+			date: x.flight_date ?? '',
+			from: x.from_airport,
+			to: x.to_airport,
+			...(x.airline ? { airline: x.airline } : {}),
+			...(x.flight_number ? { no: x.flight_number } : {}),
+			d: x.detail ?? {}
+		}));
+	if (readJson(flightsLocalKey(user))) {
+		// vorher nur auf dem Gerät gespeichert, jetzt geht es: alles hochladen
+		removeKey(flightsLocalKey(user));
+		const ids = new Set(remote.map((f) => f.id));
+		const missing = atlas.flights.filter((f) => !ids.has(f.id));
+		if (missing.length) {
+			atlas.flights = [...remote, ...missing];
+			writeJson(flightsKey(user), atlas.flights);
+			enqueue({ t: 'putFlights', flights: missing });
+			return;
+		}
+	}
+	if (JSON.stringify(remote) !== JSON.stringify(atlas.flights)) atlas.flights = remote;
+	writeJson(flightsKey(user), atlas.flights);
+}
+
 /** Zwischengespeicherte Daten und Einstellungen eines Kontos sofort laden (synchron, vor dem ersten Zeichnen) */
 export function loadCache(userId: string) {
 	if (uid === userId) return;
@@ -356,6 +432,8 @@ export function loadCache(userId: string) {
 		...(st && isScope(st.countryScope) ? { countryScope: st.countryScope } : {}),
 		wonders: wonderList(st?.wonders) ?? []
 	};
+	const fl = readJson(flightsKey(userId));
+	atlas.flights = Array.isArray(fl) ? (fl as Flight[]) : [];
 	const q = readJson(queueKey(userId));
 	queue = Array.isArray(q) ? (q as Op[]) : [];
 	atlas.sync = 'idle';
@@ -376,6 +454,8 @@ export function endSession() {
 		removeKey(cacheKey(uid));
 		removeKey(queueKey(uid));
 		removeKey(settingsKey(uid));
+		removeKey(flightsKey(uid));
+		removeKey(flightsLocalKey(uid));
 	}
 	uid = null;
 	pulledFor = null;
@@ -383,6 +463,7 @@ export function endSession() {
 	clearTimeout(retryT);
 	atlas.data = emptyAtlas();
 	atlas.settings = defaultSettings();
+	atlas.flights = [];
 	atlas.sync = 'idle';
 }
 export const pendingChanges = () => queue.length;
@@ -525,6 +606,33 @@ export function resetAccountData() {
 	if (uid) writeJson(settingsKey(uid), atlas.settings);
 	persist();
 	enqueue({ t: 'replaceAll', data: d }, { t: 'settings', s: { ...atlas.settings } });
+}
+
+/* ---------- Flüge ---------- */
+/** Flüge einlesen (z. B. aus Flighty): gleiche Kennung = aktualisieren, sonst neu. Gibt die Anzahl neuer Flüge zurück. */
+export function putFlights(list: Flight[]): number {
+	if (!list.length) return 0;
+	const byId = new Map(atlas.flights.map((f) => [f.id, f]));
+	let fresh = 0;
+	const changed: Flight[] = [];
+	for (const f of list) {
+		const old = byId.get(f.id);
+		if (!old) fresh++;
+		if (!old || JSON.stringify(old) !== JSON.stringify(f)) changed.push(f);
+		byId.set(f.id, f);
+	}
+	if (!changed.length) return 0;
+	atlas.flights = [...byId.values()];
+	if (uid) writeJson(flightsKey(uid), atlas.flights);
+	enqueue({ t: 'putFlights', flights: changed });
+	return fresh;
+}
+export function removeFlights(ids: string[]) {
+	const del = new Set(ids);
+	if (!atlas.flights.some((f) => del.has(f.id))) return;
+	atlas.flights = atlas.flights.filter((f) => !del.has(f.id));
+	if (uid) writeJson(flightsKey(uid), atlas.flights);
+	enqueue({ t: 'removeFlights', ids });
 }
 
 /* ---------- Export / Import ---------- */

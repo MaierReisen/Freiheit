@@ -1,0 +1,344 @@
+/* Tab „Flüge“: Datentyp, Einlesen der Flighty-Datei (CSV) und alle Zahlen (Strecke, Zeit in der Luft, Flughafen-Besuche …).
+   Gezählt wird nach den Regeln von Flighty (Hilfe-Seite „Connections and layovers“):
+   - Umsteigen: Ankunft und Weiterflug am selben Flughafen, 0–8 h dazwischen (planmäßig) → 1 Besuch
+   - Aufenthalt 8–24 h (oder länger) → 2 Besuche (Ankunft + Abflug)
+   - Hin und zurück (Weiterflug zurück zum Abflughafen des ersten Flugs) → am Wendepunkt 2 Besuche
+   - Ankunft an einem, Abflug von einem anderen Flughafen → je 1 Besuch
+   Gestrichene Flüge und Flüge in der Zukunft zählen nicht; umgeleitete Flüge zählen zum tatsächlichen Ziel.
+   Strecke = kürzester Weg über die Erdkugel (Großkreis). Zeit in der Luft = Start bis Landung, sonst geschätzt. */
+
+export interface FlightDetail {
+	/** Zeiten als Ortszeit „JJJJ-MM-TTTHH:MM“: Gate ab (gds/gda), Start (ofs/ofa), Landung (ons/ona), Gate an (gas/gaa); s = geplant, a = tatsächlich */
+	gds?: string;
+	gda?: string;
+	ofs?: string;
+	ofa?: string;
+	ons?: string;
+	ona?: string;
+	gas?: string;
+	gaa?: string;
+	/** umgeleitet nach (IATA) */
+	div?: string;
+	/** gestrichen */
+	cx?: boolean;
+	/** Flugzeugtyp, Kennzeichen */
+	ac?: string;
+	tail?: string;
+	seat?: string;
+	/** Sitzart (Fenster/Gang …), Klasse, Reisegrund, Notiz */
+	st?: string;
+	cab?: string;
+	why?: string;
+	note?: string;
+	/** Terminal und Gate ab/an */
+	dt?: string;
+	dg?: string;
+	at?: string;
+	ag?: string;
+}
+
+export interface Flight {
+	/** eigene Kennung: Flighty-ID bzw. Datum + Strecke + Abflugzeit (verhindert Doppelte beim erneuten Einlesen) */
+	id: string;
+	/** Abflugdatum „JJJJ-MM-TT“ (Ortszeit) */
+	date: string;
+	from: string;
+	to: string;
+	/** Airline als ICAO-Code (z. B. DLH), wie in Flighty */
+	airline?: string;
+	/** Flugnummer ohne Airline-Kürzel (z. B. 2827) */
+	no?: string;
+	d: FlightDetail;
+}
+
+/** [Stadt, Name ('' = wie die Stadt), Land (ISO), Breite, Länge, Zeitzone] */
+export type Airport = [string, string, string, number, number, string];
+export type Airports = Record<string, Airport>;
+/** [Name, IATA-Kürzel] */
+export type Airlines = Record<string, [string, string]>;
+
+let apP: Promise<Airports> | null = null;
+let alP: Promise<Airlines> | null = null;
+/** Flughäfen (~6000, nachgeladen) */
+export const loadAirports = () => (apP ??= import('./data/airports.json').then((m) => m.default as unknown as Airports));
+export const loadAirlines = () => (alP ??= import('./data/airlines.json').then((m) => m.default as unknown as Airlines));
+
+/* ---------- Flighty-Datei einlesen ---------- */
+
+/** CSV nach RFC 4180 (Anführungszeichen, Kommas und Zeilenumbrüche in Feldern) */
+function parseCsv(text: string): string[][] {
+	const rows: string[][] = [];
+	let row: string[] = [],
+		f = '',
+		q = false;
+	for (let i = 0; i < text.length; i++) {
+		const c = text[i];
+		if (q) {
+			if (c === '"') {
+				if (text[i + 1] === '"') {
+					f += '"';
+					i++;
+				} else q = false;
+			} else f += c;
+		} else if (c === '"') q = true;
+		else if (c === ',') {
+			row.push(f);
+			f = '';
+		} else if (c === '\n' || c === '\r') {
+			if (c === '\r' && text[i + 1] === '\n') i++;
+			row.push(f);
+			rows.push(row);
+			row = [];
+			f = '';
+		} else f += c;
+	}
+	if (f || row.length) {
+		row.push(f);
+		rows.push(row);
+	}
+	return rows.filter((r) => r.some((x) => x.trim()));
+}
+
+const TIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/;
+const iata = (s: string) => (/^[A-Z]{3}$/.test(s.trim().toUpperCase()) ? s.trim().toUpperCase() : '');
+
+/** Liest den Export aus Flighty (Einstellungen → Flüge exportieren). Buchungscode (PNR) wird bewusst nicht übernommen. */
+export function parseFlighty(text: string): Flight[] {
+	const rows = parseCsv(text.replace(/^﻿/, ''));
+	if (rows.length < 1) return [];
+	const head = rows[0].map((h) => h.trim());
+	const col = (name: string) => head.indexOf(name);
+	const need = ['Date', 'From', 'To'].map(col);
+	if (need.some((i) => i < 0)) throw new Error('format');
+	const I = {
+		date: col('Date'), airline: col('Airline'), flight: col('Flight'), from: col('From'), to: col('To'),
+		dt: col('Dep Terminal'), dg: col('Dep Gate'), at: col('Arr Terminal'), ag: col('Arr Gate'),
+		cx: col('Canceled'), div: col('Diverted To'),
+		gds: col('Gate Departure (Scheduled)'), gda: col('Gate Departure (Actual)'),
+		ofs: col('Take off (Scheduled)'), ofa: col('Take off (Actual)'),
+		ons: col('Landing (Scheduled)'), ona: col('Landing (Actual)'),
+		gas: col('Gate Arrival (Scheduled)'), gaa: col('Gate Arrival (Actual)'),
+		ac: col('Aircraft Type Name'), tail: col('Tail Number'), seat: col('Seat'), st: col('Seat Type'),
+		cab: col('Cabin Class'), why: col('Flight Reason'), note: col('Notes'), fid: col('Flight Flighty ID')
+	};
+	const out: Flight[] = [];
+	const seen = new Set<string>();
+	for (const r of rows.slice(1)) {
+		const v = (i: number) => (i >= 0 ? (r[i] ?? '').trim() : '');
+		const date = v(I.date).slice(0, 10);
+		const from = iata(v(I.from)),
+			to = iata(v(I.to));
+		if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !from || !to) continue;
+		const d: FlightDetail = {};
+		for (const k of ['gds', 'gda', 'ofs', 'ofa', 'ons', 'ona', 'gas', 'gaa'] as const) {
+			const t = v(I[k]);
+			if (TIME.test(t)) d[k] = t.slice(0, 16);
+		}
+		for (const k of ['dt', 'dg', 'at', 'ag', 'ac', 'tail', 'seat', 'st', 'cab', 'why', 'note'] as const) {
+			const t = v(I[k]);
+			if (t) d[k] = t;
+		}
+		const div = iata(v(I.div));
+		if (div) d.div = div;
+		if (/^(true|yes|1)$/i.test(v(I.cx))) d.cx = true;
+		const airline = v(I.airline).toUpperCase();
+		const no = v(I.flight);
+		let id = v(I.fid) || `${date}${d.gds ? d.gds.slice(10) : ''}-${from}-${to}-${airline}${no}`;
+		while (seen.has(id)) id += '+';
+		seen.add(id);
+		out.push({ id, date, from, to, ...(airline ? { airline } : {}), ...(no ? { no } : {}), d });
+	}
+	return out;
+}
+
+/* ---------- Zeit ---------- */
+
+const fmts = new Map<string, Intl.DateTimeFormat>();
+/** Abstand der Zeitzone zu UTC in Minuten zum Zeitpunkt ms */
+function tzOffset(tz: string, ms: number): number {
+	let f = fmts.get(tz);
+	if (!f) {
+		try {
+			f = new Intl.DateTimeFormat('en-US', { timeZone: tz, hourCycle: 'h23', year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric' });
+		} catch {
+			f = new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', hourCycle: 'h23', year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric' });
+		}
+		fmts.set(tz, f);
+	}
+	const p: Record<string, number> = {};
+	for (const x of f.formatToParts(ms)) if (x.type !== 'literal') p[x.type] = +x.value;
+	return (Date.UTC(p.year, p.month - 1, p.day, p.hour % 24, p.minute) - Math.floor(ms / 60000) * 60000) / 60000;
+}
+/** Ortszeit „JJJJ-MM-TTTHH:MM“ in der Zeitzone tz → Zeitpunkt (ms, UTC) */
+export function localToUtc(local: string, tz: string | undefined): number {
+	const [y, mo, d, h, mi] = local.split(/[-T:]/).map(Number);
+	const guess = Date.UTC(y, mo - 1, d, h || 0, mi || 0);
+	if (!tz) return guess;
+	const u = guess - tzOffset(tz, guess) * 60000;
+	return guess - tzOffset(tz, u) * 60000;
+}
+
+/* ---------- Strecke und Dauer ---------- */
+
+const R = 6371; // Erdradius in km
+export const EARTH_KM = 40075;
+export const MOON_KM = 384400;
+export function gcKm(a: Airport, b: Airport): number {
+	const toR = Math.PI / 180;
+	const dLat = (b[3] - a[3]) * toR,
+		dLon = (b[4] - a[4]) * toR;
+	const h = Math.sin(dLat / 2) ** 2 + Math.cos(a[3] * toR) * Math.cos(b[3] * toR) * Math.sin(dLon / 2) ** 2;
+	return 2 * R * Math.asin(Math.min(1, Math.sqrt(h)));
+}
+/** geschätzte Zeit in der Luft (Start bis Landung) in Minuten aus der Strecke, wenn die Datei keine Zeiten hat */
+export const estAirMin = (km: number) => Math.round(14 + km / 13.6);
+/** geschätzte Rollzeit (Gate ↔ Start/Landung) zusammen, Minuten */
+const TAXI = 25;
+
+export interface Leg {
+	f: Flight;
+	/** tatsächlicher Zielflughafen (bei Umleitung) */
+	to: string;
+	km: number;
+	/** Zeit in der Luft in Minuten */
+	min: number;
+	/** Zeit geschätzt (keine Start-/Landezeiten in der Datei) */
+	est: boolean;
+	/** Abflug und Ankunft (planmäßig, ms UTC) für die Umsteige-Regel */
+	dep: number;
+	arr: number;
+	done: boolean;
+}
+
+const diffMin = (a?: string, b?: string, ta?: string, tb?: string) => (a && b ? Math.round((localToUtc(b, tb) - localToUtc(a, ta)) / 60000) : NaN);
+
+/** Strecke, Dauer und Zeiten je Flug (Flughafen unbekannt: Strecke 0) */
+export function legOf(f: Flight, ap: Airports, now = Date.now()): Leg {
+	const to = f.d.div || f.to;
+	const A = ap[f.from],
+		B = ap[to];
+	const ta = A?.[5],
+		tb = B?.[5];
+	const km = A && B ? gcKm(A, B) : 0;
+	const d = f.d;
+	// Zeit in der Luft: tatsächlich, sonst geplant, sonst Gate-Zeiten minus Rollzeit, sonst geschätzt
+	let min = diffMin(d.ofa, d.ona, ta, tb);
+	if (!(min > 0)) min = diffMin(d.ofs, d.ons, ta, tb);
+	if (!(min > 0)) min = diffMin(d.gda, d.gaa, ta, tb) - TAXI;
+	if (!(min > 0)) min = diffMin(d.gds, d.gas, ta, tb) - TAXI;
+	const est = !(min > 0);
+	if (est) min = km ? estAirMin(km) : 0;
+	const depLocal = d.gds || d.ofs || d.gda || d.ofa || f.date + 'T12:00';
+	const dep = localToUtc(depLocal, ta);
+	const arrLocal = d.gas || d.ons;
+	const arr = arrLocal ? localToUtc(arrLocal, tb) : dep + (min + TAXI) * 60000;
+	return { f, to, km, min, est, dep, arr, done: !d.cx && dep <= now };
+}
+
+/* ---------- Statistik ---------- */
+
+export interface Count {
+	code: string;
+	n: number;
+}
+export interface FlightStats {
+	/** alle Flüge mit Strecke/Dauer, neueste zuerst (auch geplante und gestrichene) */
+	legs: Leg[];
+	/** zählende Flüge (stattgefunden, nicht gestrichen) */
+	n: number;
+	upcoming: number;
+	km: number;
+	min: number;
+	/** wie viele Flugzeiten geschätzt sind */
+	estimated: number;
+	/** Flughäfen mit Anzahl Besuche (meistbesuchte zuerst) */
+	airports: Count[];
+	/** Länder der Flughäfen in Reihenfolge des ersten Besuchs */
+	countries: string[];
+	airlines: Count[];
+	/** Flugzeugtypen (Name) */
+	aircraft: Count[];
+	/** Strecken unabhängig von der Richtung („MUC-LIS“, alphabetisch) */
+	routes: Count[];
+	longest: Leg | null;
+	shortest: Leg | null;
+	/** Flughafen-Codes, die in der Liste fehlen (ohne Strecke) */
+	unknown: string[];
+}
+
+const CONNECT_MS = 8 * 3600000;
+const tally = (m: Map<string, number>, k: string, by = 1) => m.set(k, (m.get(k) ?? 0) + by);
+const sorted = (m: Map<string, number>): Count[] => [...m].map(([code, n]) => ({ code, n })).sort((a, b) => b.n - a.n || a.code.localeCompare(b.code));
+
+export function flightStats(flights: Flight[], ap: Airports, now = Date.now()): FlightStats {
+	const legs = flights.map((f) => legOf(f, ap, now)).sort((a, b) => b.dep - a.dep);
+	const done = legs.filter((l) => l.done).reverse(); // älteste zuerst
+	const visits = new Map<string, number>(),
+		airlines = new Map<string, number>(),
+		aircraft = new Map<string, number>(),
+		routes = new Map<string, number>();
+	const countries: string[] = [];
+	const unknown = new Set<string>();
+	let km = 0,
+		min = 0,
+		estimated = 0;
+	const seeCountry = (code: string) => {
+		const a = ap[code];
+		if (!a) unknown.add(code);
+		else if (a[2] && !countries.includes(a[2])) countries.push(a[2]);
+	};
+	done.forEach((l, i) => {
+		km += l.km;
+		min += l.min;
+		if (l.est) estimated++;
+		seeCountry(l.f.from);
+		seeCountry(l.to);
+		tally(visits, l.f.from);
+		tally(visits, l.to);
+		// Umsteigen (< 8 h am selben Flughafen, nicht zurück zum Ausgangspunkt): Ankunft und Abflug sind zusammen ein Besuch
+		const prev = done[i - 1];
+		if (prev && prev.to === l.f.from && l.to !== prev.f.from && l.dep - prev.arr < CONNECT_MS && l.dep - prev.arr > -3600000) tally(visits, l.f.from, -1);
+		if (l.f.airline) tally(airlines, l.f.airline);
+		if (l.f.d.ac) tally(aircraft, l.f.d.ac);
+		tally(routes, [l.f.from, l.to].sort().join('-'));
+	});
+	const withKm = done.filter((l) => l.km > 0);
+	const longest = withKm.reduce<Leg | null>((m, l) => (!m || l.km > m.km ? l : m), null);
+	const shortest = withKm.reduce<Leg | null>((m, l) => (!m || l.km < m.km ? l : m), null);
+	return {
+		legs,
+		n: done.length,
+		upcoming: legs.filter((l) => !l.done && !l.f.d.cx).length,
+		km,
+		min,
+		estimated,
+		airports: sorted(visits),
+		countries,
+		airlines: sorted(airlines),
+		aircraft: sorted(aircraft),
+		routes: sorted(routes),
+		longest,
+		shortest,
+		unknown: [...unknown]
+	};
+}
+
+/* ---------- Anzeige ---------- */
+
+export const fmtInt = (n: number) => Math.round(n).toLocaleString('de-DE');
+/** „3 T 4 Std“ bzw. „12 Std 5 Min“ */
+export function fmtDuration(min: number): string {
+	const m = Math.round(min);
+	const d = Math.floor(m / 1440),
+		h = Math.floor((m % 1440) / 60),
+		mm = m % 60;
+	if (d) return `${d} T ${h} Std`;
+	if (h) return `${h} Std ${mm} Min`;
+	return `${mm} Min`;
+}
+/** Flugnummer wie auf der Bordkarte: „LH 1234“ (IATA-Kürzel der Airline), sonst ICAO-Code */
+export function flightNo(f: Flight, al: Airlines | null): string {
+	if (!f.no) return '';
+	const code = (f.airline && al?.[f.airline]?.[1]) || f.airline || '';
+	return `${code} ${f.no}`.trim();
+}

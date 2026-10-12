@@ -6,9 +6,11 @@ import { CONT, CONT_VIEW } from './countries';
 
 // Weitere Tabs (z. B. Flüge, Reisen) hier und in TAB_LABEL ergänzen (Icon in TabBar.svelte); mit nur einem Tab wird die Tab-Leiste ausgeblendet.
 // Tabs sind gleichrangige Bereiche: kein Wischen dazwischen, Wechsel schreibt keinen Verlauf. Der Tab „home“ heißt in der App „Welt“.
-export const TABS = ['home'] as const;
+export const TABS = ['home', 'flights'] as const;
 export type Tab = (typeof TABS)[number];
-export const TAB_LABEL: Record<Tab, string> = { home: 'Welt' };
+export const TAB_LABEL: Record<Tab, string> = { home: 'Welt', flights: 'Flüge' };
+/** Vollbild-Seite im Tab „Flüge“: Liste der Flüge, Flughäfen oder Airlines */
+export type FlightsPage = 'flights' | 'airports' | 'airlines';
 // Wunschliste vorerst ausgeblendet (Daten bleiben erhalten)
 export type PickerMode = 'visited' | 'fly';
 export type SheetView = { kind: 'country'; code: string } | { kind: 'picker'; mode: PickerMode };
@@ -86,6 +88,8 @@ export const ui = $state({
 	settingsOpen: false,
 	/** Reisepass (Vollbild, über die Kachel in der Länderliste) */
 	passOpen: false,
+	/** Seite im Tab „Flüge“ (Vollbild, '' = zu) */
+	flightsPage: '' as FlightsPage | '',
 	/** Globus auf der Startseite per Tipp aktiviert (Touch): dann drehen, kippen, zoomen statt Seite scrollen */
 	mapActive: false,
 	/** Kontinent, auf dem die Karte gerade steht (per Chip oder Ziehen; null = Startregion, '' = mehrere Kontinente im Bild); nur Ansicht */
@@ -190,6 +194,7 @@ export function openSettings(fromHash = false) {
 	if (ui.placesOpen) closePlaces(true);
 	if (ui.continentsOpen) closeContinents(true);
 	if (ui.passOpen) closePass(true);
+	closeFlightsPage();
 	settingsReturnFocus = document.activeElement;
 	ui.settingsOpen = true;
 	document.body.classList.add('noscroll');
@@ -269,6 +274,22 @@ export function closePass(fromHash = false) {
 	if (passReturnFocus instanceof HTMLElement) passReturnFocus.focus({ preventScroll: true });
 }
 
+/* ---------- Flüge: Listen (Vollbild, wie „Meine Länder“) ---------- */
+let flightsReturnFocus: Element | null = null;
+export function openFlightsPage(p: FlightsPage) {
+	if (ui.sheetOpen) closeSheet();
+	if (!ui.flightsPage) flightsReturnFocus = document.activeElement;
+	ui.flightsPage = p;
+	document.body.classList.add('noscroll');
+	tick().then(() => document.getElementById('flvClose')?.focus({ preventScroll: true }));
+}
+export function closeFlightsPage() {
+	if (!ui.flightsPage) return;
+	ui.flightsPage = '';
+	if (!ui.settingsOpen && !ui.passOpen && !ui.placesOpen && !ui.continentsOpen) document.body.classList.remove('noscroll');
+	if (flightsReturnFocus instanceof HTMLElement) flightsReturnFocus.focus({ preventScroll: true });
+}
+
 /* ---------- Tabs ---------- */
 function showTab(t: Tab, dir: number) {
 	ui.tab = t;
@@ -291,6 +312,7 @@ export function goTab(tab: string, push = true, dir?: number) {
 	if (ui.continentsOpen) closeContinents(true);
 	if (ui.settingsOpen) closeSettings(true);
 	if (ui.passOpen) closePass(true);
+	closeFlightsPage();
 	if (dir === undefined) dir = Math.sign(TABS.indexOf(t) - TABS.indexOf(ui.tab));
 	const same = t === ui.tab;
 	showTab(t, dir);

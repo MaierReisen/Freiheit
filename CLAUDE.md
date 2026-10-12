@@ -18,7 +18,7 @@ Live: https://maierreisen.github.io/Freiheit/ · Repo: MaierReisen/Freiheit · n
 - Prüfen: `npm run check` (muss 0 Fehler haben) und `npm run build`. Schnelltest der Kernseiten (Konsolenfehler, Inhalte): `node tests/smoke.mjs` (startet die App selbst, nutzt Brave/Chrome; einmalig `cd tests && npm i`). Zeigt auch, wenn die Startseite wegen halbfertiger Arbeit anderer Sitzungen nicht lädt. Kein Prettier über ganze Dateien laufen lassen (formatiert sonst alles um).
 
 ## Navigation (Konzept, seit v1.37.2)
-- **Tabs** = gleichrangige Bereiche in der Leiste unten (`TABS`/`TAB_LABEL` in `app.svelte.ts`, Icon in `TabBar.svelte`). Erster Tab heißt in der App **„Welt“** (interne ID `home`; Globus + Blöcke „Deine Welt“). Geplant: Flüge, Reisen o. ä.; der Globus ist kein Tab-Name, sondern ein Element, das auch dort vorkommen darf. Bis zum zweiten Tab bleibt die Leiste ausgeblendet. Höchstens 4–5 Tabs; Weiteres (Einstellungen) hinter ein Symbol oben.
+- **Tabs** = gleichrangige Bereiche in der Leiste unten (`TABS`/`TAB_LABEL` in `app.svelte.ts`, Icon in `TabBar.svelte`). Erster Tab heißt in der App **„Welt“** (interne ID `home`; Globus + Blöcke „Deine Welt“), zweiter seit v1.41.0 **„Flüge“** (ID `flights`, Details in `docs/AUFBAU.md`). Geplant: Reisen o. ä.; der Globus ist kein Tab-Name, sondern ein Element, das auch dort vorkommen darf. Höchstens 4–5 Tabs; Weiteres (Einstellungen) hinter ein Symbol oben.
 - **Wischen zwischen Tabs** (waagerecht, nur zum Nachbar-Tab, in `Main.svelte`; nicht auf Globus/Karte, Rand frei) ist erwünscht. Tabwechsel schreibt keinen Verlauf (`replaceState`), also kein Blättern durch besuchte Seiten.
 - **Ebenen** über einem Tab: Blatt von unten = Detail zu einer Sache (Land, Rang); Vollbild-Seite = Bereich (Pass, Länder, Kontinente, Einstellungen, Vollbild-Karte). Ebenen schreiben **keinen Verlaufseintrag**: die iOS-Zurück-Geste vom Rand schließt nichts und blättert nie. Geschlossen wird einheitlich per **Wischen nach unten** (`swipeClose.ts`, Pass hat eigene Logik, weil dort waagerecht geblättert wird) oder Schließen-Knopf; kein Wischen zur Seite zum Schließen.
 
@@ -33,6 +33,7 @@ Ausführliche Beschreibung aller Bauteile (Karte, Länderseite, Pass, Stempel, A
   - Kartendaten, `map/geoinfo.ts` oder `map/lodcore.ts` → `node scripts/build-geoinfo.mjs`.
   - `scripts/build-entry.py` → nach dem Push `gh workflow run deploy.yml`.
   - Alphabetisch immer über `compareNames()` in `countries.ts`; Ländernamen über `nameOf()`.
+  - Flüge: alle Zahlen wie in Flighty (Regeln in `docs/AUFBAU.md`). Flighty-Export (`FlightyExport-*.csv`) nie committen (ist in `.gitignore`).
   - `highlights.json` nur von Hand: max. 5 je Land, nur zeitgebundene Must-sees (Details in `docs/AUFBAU.md`).
 
 ## Stil

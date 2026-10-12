@@ -9,3 +9,5 @@ node_modules
 vite.config.*.timestamp-*
 /.claude/launch.json
 .climate-cache/
+FlightyExport*.csv
+.airport-cache/

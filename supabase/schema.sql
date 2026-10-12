@@ -68,8 +68,11 @@ create table if not exists public.flights (
   flight_number text,
   price         numeric(10,2) check (price is null or price >= 0),
   currency      text not null default 'EUR' check (currency ~ '^[A-Z]{3}$'),
+  ext_id        text,                                  -- Kennung (Flighty-ID bzw. Datum+Strecke), gegen Doppelte
+  detail        jsonb not null default '{}',           -- Zeiten (Ortszeit), Gate, Flugzeug, Sitz … (Migration 008)
   created_at    timestamptz not null default now()
 );
+create unique index if not exists flights_user_ext on public.flights (user_id, ext_id);
 
 create table if not exists public.expenses (
   id         uuid primary key default gen_random_uuid(),
