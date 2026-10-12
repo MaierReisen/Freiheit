@@ -75,6 +75,8 @@ export function flightSig(f: Flight): string {
 		.map((k) => [k, d[k]]);
 	return JSON.stringify([f.id, f.date, f.from, f.to, f.airline ?? '', f.no ?? '', det]);
 }
+/** Strecke unabhängig von der Richtung („FRA-JFK“, alphabetisch) */
+export const routeKey = (a: string, b: string) => [a, b].sort().join('-');
 /** Gleicher Flug auch ohne gleiche Kennung (Flighty vergibt manchen Flügen erst später eine ID): Datum, Strecke, geplanter Abflug */
 export const flightMatch = (f: Flight) => `${f.date}|${f.d.gds ?? ''}|${f.from}|${f.to}`;
 /** Kennung stammt von Flighty (sonst selbst gebildet: beginnt mit dem Datum) */
@@ -318,7 +320,7 @@ export function flightStats(flights: Flight[], ap: Airports, now = Date.now()): 
 		if (prev && ap[prev.f.from] && ap[l.f.from] && ap[l.to] && prev.to === l.f.from && l.to !== prev.f.from && l.dep - prev.arr < CONNECT_MS && l.dep - prev.arr >= 0) tally(visits, l.f.from, -1);
 		if (l.f.airline) tally(airlines, l.f.airline);
 		if (l.f.d.ac) tally(aircraft, l.f.d.ac);
-		tally(routes, [l.f.from, l.to].sort().join('-'));
+		tally(routes, routeKey(l.f.from, l.to));
 	});
 	const withKm = done.filter((l) => l.km > 0);
 	const longest = withKm.reduce<Leg | null>((m, l) => (!m || l.km > m.km ? l : m), null);

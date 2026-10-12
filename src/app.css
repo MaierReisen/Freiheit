@@ -995,3 +995,46 @@ button.pp-tile:active{transform:scale(.98)}
 .fl-meta{flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:1px;font-size:13px;color:var(--muted);text-align:right;font-variant-numeric:tabular-nums}
 .fl-meta span:first-child{color:var(--ink);font-weight:600}
 .fl-n{flex:none;font:800 16px var(--display);font-variant-numeric:tabular-nums}
+.fl-list li button.fl-tap{cursor:pointer}
+
+/* Seite zu einer Flugstrecke (wie die Länderseite) */
+.rs-ico{flex:none;display:grid;place-items:center;width:44px;height:44px;border-radius:50%;background:color-mix(in srgb,#F6C445 22%,transparent);color:#B7860B}
+.rs-ico svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .rs-ico{color:#F6C445}}
+:root[data-theme="dark"] .rs-ico{color:#F6C445}
+.rs-list{display:flex;flex-direction:column;gap:10px}
+.rs-flight.del{padding-right:110px}
+.rs-flight.on{box-shadow:inset 0 0 0 2px var(--primary)}
+.rs-flight.off b{opacity:.7}
+.rs-flight b small{font-size:13px;font-weight:600;color:var(--muted);margin-left:8px}
+.rs-flight .rs-del{position:absolute;top:12px;right:12px;padding:4px 11px;font-size:12px}
+.rs-land{align-self:flex-start;margin-top:6px;padding:6px 11px;font-size:13px}
+
+/* Flug hinzufügen */
+.fa-body{flex:1;min-height:0;display:flex;flex-direction:column;overflow-y:auto;margin-top:14px}
+.fa-route{position:relative;display:flex;flex-direction:column;gap:8px}
+.fa-ap{display:flex;align-items:baseline;gap:10px;padding:13px 56px 13px 15px;border:1.5px solid var(--line);border-radius:var(--r-md);background:var(--surface);text-align:left;color:var(--ink);min-width:0}
+.fa-ap.on{border-color:var(--primary);box-shadow:0 0 0 3px color-mix(in srgb,var(--primary) 18%,transparent)}
+.fa-ap b{font:800 19px var(--display);letter-spacing:.02em}
+.fa-city{font-size:15px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.fa-ph{font-size:16px;color:var(--muted)}
+.fa-k{flex:none;width:44px;font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.fa-k i{font-style:normal;font-weight:600;text-transform:none;letter-spacing:0;margin-left:4px;opacity:.8}
+.fa-swap{position:absolute;right:10px;top:50%;transform:translateY(-50%);width:38px;height:38px;border:1px solid var(--line);border-radius:50%;background:var(--surface);color:var(--ink);display:grid;place-items:center}
+.fa-swap svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.fa-swap:disabled{opacity:.4}
+.fa-list{min-height:160px}
+.fa-res{display:flex;flex-direction:column;min-width:0}
+.fa-res b{font-weight:600}
+.fa-res small{font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fa-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+.fa-field{display:flex;flex-direction:column;gap:6px;min-width:0}
+.fa-field.wide{grid-column:1/-1}
+.fa-field .fa-k{width:auto}
+.fa-field input{width:100%;min-width:0;padding:11px 13px;border-radius:var(--r-md);border:1.5px solid var(--line);background:var(--surface);color:var(--ink);font-size:16px;-webkit-appearance:none;appearance:none;min-height:46px}
+.fa-hint{font-size:13px;font-weight:600;color:var(--primary)}
+.sheet .cs-title h3.rs-title{hyphens:none;-webkit-hyphens:none;overflow-wrap:normal;display:block}
+.rs-add{border:0;background:color-mix(in srgb,var(--primary) 16%,transparent);color:var(--primary)}
+.rs-add:active{transform:scale(.96)}
+.sheet:not(.kb) .fa-body{min-height:min(60vh,540px)}
+.pick-bar .lv-bar-n{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}

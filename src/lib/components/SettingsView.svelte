@@ -1,5 +1,7 @@
 <script lang="ts">
-	import { atlas, exportJson, importJson, resetAccountData, setCountryScope, setHomeContinent } from '$lib/atlas.svelte';
+	import { atlas, exportJson, importJson, putFlights, resetAccountData, setCountryScope, setHomeContinent } from '$lib/atlas.svelte';
+	import { parseFlighty } from '$lib/flights';
+	import { fd } from '$lib/flightData.svelte';
 	import { SCOPES, scopeTotal, type CountryScope } from '$lib/scope';
 	import { auth, signOut } from '$lib/auth.svelte';
 	import { resetSpecials } from '$lib/special.svelte';
@@ -8,7 +10,7 @@
 	import { swipeClose } from '$lib/swipeClose';
 	import { closeSettings, hooks, prefs, setMotionPref, setThemePref, toast, ui, type MotionPref, type ThemePref } from '$lib/app.svelte';
 
-	/* Einstellungen: Darstellung (Design, Animationen – nur dieses Gerät), Karte (Startregion), Statistik (Was zählt als Land?), Konto (E-Mail, Sync, Abmelden), Daten (Export/Import) */
+	/* Einstellungen: Darstellung (Design, Animationen – nur dieses Gerät), Karte (Startregion), Statistik (Was zählt als Land?), Konto (E-Mail, Sync, Abmelden), Flüge (Import aus Flighty), Daten (Export/Import) */
 
 	let view: HTMLElement;
 	const continents = Object.keys(CONT_VIEW) as ContinentCode[];
@@ -53,6 +55,30 @@
 		}
 		await importJson(f);
 		input.value = '';
+	}
+
+	// Flüge aus Flighty einlesen (Export-Datei, CSV): erneutes Einlesen legt nichts doppelt an
+	let flightFile: HTMLInputElement;
+	async function onFlightFile() {
+		const f = flightFile.files?.[0];
+		flightFile.value = '';
+		if (!f) return;
+		try {
+			const list = parseFlighty(await f.text());
+			if (!list.length) throw new Error('leer');
+			const r = putFlights(list);
+			toast(
+				r.fresh
+					? `${r.fresh} ${r.fresh === 1 ? 'Flug' : 'Flüge'} neu eingelesen`
+					: r.changed
+						? `${r.changed} ${r.changed === 1 ? 'Flug' : 'Flüge'} aktualisiert`
+						: 'Alle Flüge waren schon da'
+			);
+			fd.load();
+			if (r.fresh) ui.flightsFit++;
+		} catch {
+			toast('Datei nicht lesbar. Erwartet wird der Export aus Flighty.');
+		}
 	}
 
 	// Nur für Tests: alles löschen, was zum Konto gehört (Länder, Stempel, Abzeichen, Weltwunder). Das Konto selbst bleibt.
@@ -142,6 +168,13 @@
 		<div class="data-row" style="margin-top:14px">
 			<button class="btn" id="logoutBtn" disabled={busy} onclick={logout}>Abmelden</button>
 		</div>
+
+		<h2>Flüge</h2>
+		<div class="data-row">
+			<button class="btn" id="flightImportBtn" onclick={() => flightFile.click()}>Aus Flighty importieren</button>
+			<input type="file" accept=".csv,text/csv" hidden bind:this={flightFile} onchange={onFlightFile} />
+		</div>
+		<p class="note">In Flighty unter Einstellungen die Flüge exportieren (CSV-Datei) und hier wählen. Erneutes Einlesen legt nichts doppelt an, neue Flüge kommen dazu. Der Buchungscode wird nicht übernommen. Einzelne Flüge trägst du im Tab „Flüge“ mit „+ Flug“ ein.</p>
 
 		<h2>Daten</h2>
 		<div class="data-row">

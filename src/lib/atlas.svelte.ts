@@ -623,15 +623,30 @@ export function putFlights(list: Flight[]): { fresh: number; changed: number } {
 	const byId = new Map(atlas.flights.map((f) => [f.id, f]));
 	// bisherige Einträge ohne Flighty-ID je Datum/Strecke/Abflug; mehrere möglich (z. B. gleiche Strecke, ohne Uhrzeit nachgetragen)
 	const noId = new Map<string, string[]>();
-	for (const f of atlas.flights) if (!hasFlightyId(f)) noId.set(flightMatch(f), [...(noId.get(flightMatch(f)) ?? []), f.id]);
+	// zusätzlich nur Datum + Strecke: von Hand eingetragene Flüge haben oft keine oder eine andere Uhrzeit als Flighty
+	const loose = new Map<string, string[]>();
+	const looseKey = (f: Flight) => `${f.date}|${f.from}|${f.to}`;
+	for (const f of atlas.flights)
+		if (!hasFlightyId(f)) {
+			noId.set(flightMatch(f), [...(noId.get(flightMatch(f)) ?? []), f.id]);
+			loose.set(looseKey(f), [...(loose.get(looseKey(f)) ?? []), f.id]);
+		}
+	const takeFrom = (m: Map<string, string[]>, k: string) => {
+		const list = m.get(k) ?? [];
+		while (list.length) {
+			const prevId = list.shift()!;
+			if (byId.has(prevId)) return prevId; // noch nicht von einem anderen Flug übernommen
+		}
+		return undefined;
+	};
 	let fresh = 0;
 	const changed: Flight[] = [],
 		gone: string[] = [];
 	for (const f of list) {
 		let old = byId.get(f.id);
 		if (!old && hasFlightyId(f)) {
-			const prevId = noId.get(flightMatch(f))?.shift();
-			if (prevId && byId.has(prevId)) {
+			const prevId = takeFrom(noId, flightMatch(f)) ?? takeFrom(loose, looseKey(f));
+			if (prevId) {
 				old = byId.get(prevId);
 				byId.delete(prevId);
 				gone.push(prevId);

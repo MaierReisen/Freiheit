@@ -13,7 +13,12 @@ export const TAB_LABEL: Record<Tab, string> = { home: 'Welt', flights: 'Flüge' 
 export type FlightsPage = 'flights' | 'airports' | 'airlines';
 // Wunschliste vorerst ausgeblendet (Daten bleiben erhalten)
 export type PickerMode = 'visited' | 'fly';
-export type SheetView = { kind: 'country'; code: string } | { kind: 'picker'; mode: PickerMode };
+/** Sheet: Länderseite, Länderauswahl, Seite zu einer Flugstrecke (key „FRA-JFK“, id = angetippter Flug) und „Flug hinzufügen“ (from/to vorbelegt) */
+export type SheetView =
+	| { kind: 'country'; code: string }
+	| { kind: 'picker'; mode: PickerMode }
+	| { kind: 'route'; key: string; id?: string }
+	| { kind: 'addFlight'; from?: string; to?: string };
 
 /* ---------- Darstellung: Design und Animationen (gelten nur auf diesem Gerät) ---------- */
 export type ThemePref = 'system' | 'light' | 'dark';
@@ -115,6 +120,8 @@ export interface MapHooks {
 	/** Länder kurz aufleuchten lassen (delay/dur in ms) */
 	highlight(codes: string | string[], delay?: number, dur?: number, opts?: { rings?: boolean; at?: number[]; wave?: number }): void;
 	scrollIntoView(): void;
+	/** Tab „Flüge“: Strecke wachsen lassen und ins Bild holen */
+	focusRoute(key: string): void;
 }
 export const hooks: { map: MapHooks | null } = { map: null };
 /** Zähler auf der Startseite: Ausgangspunkt der Öffnen-/Schließen-Animation der Übersicht */
@@ -194,6 +201,18 @@ export function openCountry(code: string, opts: { peek?: boolean } = {}) {
 	if (opts.peek && CONT[code] && CONT_VIEW[CONT[code]]) ui.focusContinent = CONT[code];
 	openSheet({ kind: 'country', code });
 }
+/** Seite zu einer Flugstrecke; peek: vom Globus aus (kompakt, Globus bleibt sichtbar) */
+export function openRoute(key: string, opts: { peek?: boolean; id?: string } = {}) {
+	const already = ui.sheetOpen && ui.sheetView?.kind === 'route';
+	ui.sheetDetent = already ? ui.sheetDetent : opts.peek ? 'peek' : 'full';
+	ui.selected = null;
+	openSheet({ kind: 'route', key, id: opts.id });
+}
+export function openAddFlight(from?: string, to?: string) {
+	openSheet({ kind: 'addFlight', from, to });
+}
+/** ausgewählte Strecke auf dem Globus (Seite zur Strecke offen) */
+export const selectedRoute = () => (ui.sheetOpen && ui.sheetView?.kind === 'route' ? ui.sheetView.key : null);
 export function setSheetDetent(d: 'peek' | 'full') {
 	ui.sheetDetent = d;
 }

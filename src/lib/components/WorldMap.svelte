@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount, untrack } from 'svelte';
 	import { atlas, isCounted, visitedSet } from '$lib/atlas.svelte';
-	import { reduceMotion, closeSheet, hooks, openCountry, openPicker, setFull, ui } from '$lib/app.svelte';
+	import { reduceMotion, closeSheet, hooks, openCountry, openPicker, openRoute, selectedRoute, setFull, ui } from '$lib/app.svelte';
 	import { CONT, CONT_VIEW } from '$lib/countries';
 	import { createWorldMap, type MapSync, type WorldMap } from '$lib/map/engine';
 	import { tourPlan } from '$lib/addTour';
@@ -90,6 +90,12 @@
 			getSelected: () => ui.selected,
 			isVisible: () => true, // ein Globus für alle Tabs (zwischen Kopf und Inhalt)
 			getRoutes: () => (ui.tab === 'flights' ? fd.routes : null),
+			getSelectedRoute: selectedRoute,
+			// Flugstrecke angetippt: Seite zur Strecke kompakt öffnen, Globus darüber mittig
+			onTapRoute: (key) => {
+				openRoute(key, { peek: true });
+				requestAnimationFrame(keepMapVisible);
+			},
 			isFull: () => ui.full,
 			getAvoid: () => {
 				const r = cvT.getBoundingClientRect();
@@ -111,7 +117,7 @@
 				requestAnimationFrame(keepMapVisible);
 			},
 			onTapEmpty: () => {
-				if (ui.selected) closeSheet();
+				if (ui.selected || selectedRoute()) closeSheet();
 			},
 			onSync: (v) => (s = v),
 			// nach eigenem Ziehen/Zoomen: gedrückter Kontinent-Knopf = wo man gerade ist; mehrere Kontinente im Bild: keiner.
@@ -128,7 +134,7 @@
 		const onOutside = (e: Event) => {
 			const t = e.target as Element | null;
 			if (t && (box.contains(t) || t.closest('.sheet, .scrim'))) return;
-			const peekOpen = ui.sheetOpen && ui.sheetView?.kind === 'country' && ui.sheetDetent === 'peek';
+			const peekOpen = ui.sheetOpen && (ui.sheetView?.kind === 'country' || ui.sheetView?.kind === 'route') && ui.sheetDetent === 'peek';
 			if (!ui.mapActive && !peekOpen && !ui.selected) return;
 			if (ui.sheetOpen && !peekOpen) return;
 			ui.mapActive = false;
@@ -148,7 +154,11 @@
 			flyToCountry: m.flyToCountry,
 			flyToContinent: m.flyToContinent,
 			highlight: m.highlight,
-			scrollIntoView: () => box.scrollIntoView?.({ behavior: reduceMotion() ? 'auto' : 'smooth', block: 'center' })
+			scrollIntoView: () => box.scrollIntoView?.({ behavior: reduceMotion() ? 'auto' : 'smooth', block: 'center' }),
+			focusRoute: (key) => {
+				m.showRoutes({ grow: 900, focus: key });
+				requestAnimationFrame(keepMapVisible);
+			}
 		};
 		return () => {
 			stopTour();
@@ -170,6 +180,11 @@
 		void ui.selected;
 		map?.markDirty(true);
 	});
+	// Strecke ausgewählt bzw. Auswahl aufgehoben: hervorgehobenen Bogen neu zeichnen
+	$effect(() => {
+		void selectedRoute();
+		map?.markDirty(false);
+	});
 	// Start-Animation: Einflug auf die Startregion, endet gleichzeitig mit Zählern und Flugkurve
 	$effect(() => {
 		const it = ui.intro;
@@ -177,7 +192,8 @@
 		const now = performance.now();
 		scheduleCoach(Math.max(0, it.end - now) + 900);
 		// App startet im Tab „Flüge“: statt Einflug auf die Startregion die Strecken ins Bild holen
-		if (untrack(() => ui.tab) === 'flights') return routesIn(1100);
+		// (untrack: sonst liefe das bei jeder Änderung der Strecken erneut und holte alle ins Bild)
+		if (untrack(() => ui.tab) === 'flights') return untrack(() => routesIn(1100));
 		map.intro(Math.max(0, it.start - now), Math.max(200, it.end - Math.max(now, it.start)));
 	});
 	let tourT: ReturnType<typeof setTimeout>[] = [];

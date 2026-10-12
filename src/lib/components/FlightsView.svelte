@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { removeFlights } from '$lib/atlas.svelte';
-	import { closeFlightsPage, openFlightsPage, toast, ui, type FlightsPage } from '$lib/app.svelte';
+	import { closeFlightsPage, openFlightsPage, openRoute, toast, ui, type FlightsPage } from '$lib/app.svelte';
 	import { flag, nameOf } from '$lib/countries';
-	import { flightNo, fmtDuration, fmtInt, type Airlines, type Airports, type FlightStats, type Leg } from '$lib/flights';
+	import { flightNo, fmtDuration, fmtInt, routeKey, type Airlines, type Airports, type FlightStats, type Leg } from '$lib/flights';
 	import { swipeClose } from '$lib/swipeClose';
 	import SwipeRow from './SwipeRow.svelte';
 
-	/* Vollbild-Seite im Tab „Flüge“ mit drei Reitern: Flüge (nach Jahr, neueste zuerst; Wischen = Löschen),
+	/* Vollbild-Seite im Tab „Flüge“ mit drei Reitern: Flüge (nach Jahr, neueste zuerst; Tippen = Seite zur Strecke, Wischen = Löschen),
 	   Flughäfen (Besuche nach Flighty-Regel, meistbesuchte zuerst) und Airlines. Schließen per Wischen nach unten. */
 
 	let { st, ap, al }: { st: FlightStats; ap: Airports; al: Airlines | null } = $props();
@@ -67,7 +67,7 @@
 					<ul class="list fl-list">
 						{#each legs as l (l.f.id)}
 							<SwipeRow ondelete={() => del(l)}>
-								<button type="button" class:off={!l.done}>
+								<button type="button" class="fl-tap" class:off={!l.done} onclick={() => openRoute(routeKey(l.f.from, l.to), { id: l.f.id })}>
 									<span class="fl-day">{day(l.f.date)}</span>
 									<span class="fl-route">
 										<b>{l.f.from} → {l.to}</b>

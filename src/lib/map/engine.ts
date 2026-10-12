@@ -6,7 +6,7 @@ import { FC, FINE_W, INFO, SIMP_W, features, fetchFineLod, fineLod, getLod, lodR
 import { fastGlobe, type FastGlobe } from './fastglobe';
 import { fastFlat } from './fastflat';
 import { WATER_TOL, loadWaterLayer, waterInView, waterLayer } from './water';
-import { drawRoutes, type RouteSet } from './routes';
+import { drawRoutes, routeAt, type RouteSet } from './routes';
 
 /* Weltkarte auf zwei Canvas-Ebenen: Globus (orthografisch) und flache Karte (Natural Earth).
    cvB: Karte (ändert sich selten), cvT: Punkte kleiner Länder und Beschriftung. */
@@ -48,6 +48,10 @@ export interface MapOptions {
 	onSettle?(code: string | null): void;
 	/** Flugstrecken über der Karte (Tab „Flüge“), sonst null */
 	getRoutes?(): RouteSet | null;
+	/** ausgewählte Strecke („FRA-JFK“), wird hervorgehoben */
+	getSelectedRoute?(): string | null;
+	/** Tipp auf eine Flugstrecke (hat Vorrang vor dem Land darunter) */
+	onTapRoute?(key: string): void;
 }
 
 const TAU = Math.PI * 2;
@@ -1135,10 +1139,7 @@ export function createWorldMap(o: MapOptions) {
 		const routes = o.getRoutes?.();
 		if (routes) {
 			const k = routeT0 ? Math.max(0, Math.min(1, (now - routeT0) / routeMs)) : 1;
-			const a = view.lon * (Math.PI / 180),
-				b = view.lat * (Math.PI / 180);
-			const front: [number, number, number] | null = view.mode === 'globe' ? [Math.cos(b) * Math.cos(a), Math.cos(b) * Math.sin(a), Math.sin(b)] : null;
-			drawRoutes(c, P, routes, { globe: front, lon0: view.lon }, 1 - Math.pow(1 - k, 3));
+			drawRoutes(c, P, routes, { ...routeView(), sel: o.getSelectedRoute?.() }, 1 - Math.pow(1 - k, 3));
 		}
 		const visited = o.getVisited(),
 			wish = o.getWish(),
@@ -1329,6 +1330,12 @@ export function createWorldMap(o: MapOptions) {
 		flyTo({ lon: v.c[0], lat: v.c[1], k: toModeK(v.k, v.c) }, 1000);
 	}
 
+	/** Blickrichtung (Globus) bzw. Kartenmitte für die Flugstrecken */
+	function routeView(): { globe: [number, number, number] | null; lon0: number } {
+		const a = view.lon * (Math.PI / 180),
+			b = view.lat * (Math.PI / 180);
+		return { globe: view.mode === 'globe' ? [Math.cos(b) * Math.cos(a), Math.cos(b) * Math.sin(a), Math.sin(b)] : null, lon0: view.lon };
+	}
 	/** Pixel pro Grad am Kartenmittelpunkt (für die Bildschirmgröße eines Landes) */
 	const pxPerDeg = () => ((baseScale() * view.k) / 57.2958) * (view.mode === 'globe' ? 1 : 0.87);
 	/** Land unter einem Bildschirmpunkt (exakt) */
@@ -1382,8 +1389,17 @@ export function createWorldMap(o: MapOptions) {
 	function tap(cx: number, cy: number, touch = false, focusOnly = false) {
 		const r = cv.getBoundingClientRect(),
 			x = cx - r.left,
-			y = cy - r.top,
-			hit = pick(x, y, touch ? 16 : 8);
+			y = cy - r.top;
+		// Flugstrecke unter dem Finger (nur fertig aufgebaut): öffnet die Seite zur Strecke, der Globus bleibt stehen.
+		// Auf einem Land nur ganz nah am Bogen (sonst wären Länder unter dichten Strecken, z. B. in Europa, kaum antippbar)
+		const rs = o.onTapRoute && !routeT0 ? o.getRoutes?.() : null;
+		const rk = rs ? routeAt(curProj(), rs, routeView(), x, y, touch ? 14 : 7) : null;
+		if (rk && (rk.d <= (touch ? 6 : 3.5) || !at(x, y))) {
+			o.onTapRoute!(rk.key);
+			markDirty(false);
+			return;
+		}
+		const hit = pick(x, y, touch ? 16 : 8);
 		if (!hit) {
 			o.onTapEmpty();
 			if (focusOnly) {
@@ -1687,13 +1703,23 @@ export function createWorldMap(o: MapOptions) {
 		flyToCountries,
 		flyToContinent,
 		/** Flugstrecken neu zeichnen; grow: wachsen lassen (ms), fit: Globus fliegt so, dass alle Strecken im Bild sind */
-		showRoutes(opts: { grow?: number; fit?: boolean } = {}) {
+		/** focus: nur diese Strecke („FRA-JFK“) ins Bild holen */
+		showRoutes(opts: { grow?: number; fit?: boolean; focus?: string } = {}) {
 			const rs = o.getRoutes?.();
 			if (opts.grow && rs && !reduce()) {
 				routeT0 = performance.now();
 				routeMs = opts.grow;
 			} else routeT0 = 0;
-			if (opts.fit && rs?.fit) {
+			const arc = opts.focus ? rs?.arcs.find((a) => a.key === opts.focus) : null;
+			if (arc) {
+				// Mitte des Bogens; Streuung = halbe Bogenlänge
+				const n = arc.ll.length / 2,
+					m = Math.floor(n / 2),
+					c: [number, number] = [arc.ll[m * 2], arc.ll[m * 2 + 1]];
+				const d = geoDistance([arc.ll[0], arc.ll[1]], c) * (180 / Math.PI);
+				cancelMotion();
+				flyToSpread(c, Math.max(6, d + 4), 1100);
+			} else if (opts.fit && rs?.fit) {
 				cancelMotion();
 				flyToSpread(rs.fit.c, rs.fit.spread + 3, 1100);
 			}

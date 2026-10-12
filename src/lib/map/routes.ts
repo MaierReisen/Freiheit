@@ -11,6 +11,8 @@ interface Arc {
 	u: Float64Array;
 	n: number;
 	planned: boolean;
+	/** Strecke als Flughafen-Paar („FRA-JFK“, alphabetisch): öffnet beim Antippen die Seite zur Strecke */
+	key: string;
 }
 export interface RouteSet {
 	arcs: Arc[];
@@ -36,16 +38,16 @@ const unit = (lon: number, lat: number): [number, number, number] => {
 };
 
 /** Strecken (Paare von [lon, lat], richtungsunabhängig zusammengefasst) → vorberechnete Bögen */
-export function buildRoutes(legs: { a: [number, number]; b: [number, number]; planned: boolean }[]): RouteSet {
-	const byKey = new Map<string, { a: [number, number]; b: [number, number]; n: number; planned: boolean }>();
+export function buildRoutes(legs: { a: [number, number]; b: [number, number]; planned: boolean; key: string }[]): RouteSet {
+	const byKey = new Map<string, { a: [number, number]; b: [number, number]; n: number; planned: boolean; key: string }>();
 	const ports = new Map<string, { c: [number, number]; n: number }>();
 	for (const l of legs) {
 		const ka = l.a.join(','),
 			kb = l.b.join(','),
-			key = (ka < kb ? ka + '|' + kb : kb + '|' + ka) + (l.planned ? '|p' : '');
+			key = l.key + (l.planned ? '|p' : '');
 		const r = byKey.get(key);
 		if (r) r.n++;
-		else byKey.set(key, { a: l.a, b: l.b, n: 1, planned: l.planned });
+		else byKey.set(key, { a: l.a, b: l.b, n: 1, planned: l.planned, key: l.key });
 		for (const [k, c] of [[ka, l.a] as const, [kb, l.b] as const]) {
 			const p = ports.get(k);
 			if (p) p.n++;
@@ -77,7 +79,7 @@ export function buildRoutes(legs: { a: [number, number]; b: [number, number]; pl
 			ll[i * 2] = Math.atan2(y, x) / D2R;
 			ll[i * 2 + 1] = Math.atan2(z, Math.hypot(x, y)) / D2R;
 		}
-		arcs.push({ ll, u, n: r.n, planned: r.planned });
+		arcs.push({ ll, u, n: r.n, planned: r.planned, key: r.key });
 	}
 	// selten geflogene zuerst zeichnen, häufige liegen obenauf
 	arcs.sort((a, b) => Number(b.planned) - Number(a.planned) || a.n - b.n);
@@ -117,14 +119,57 @@ export function buildRoutes(legs: { a: [number, number]; b: [number, number]; pl
 	return { arcs, planned: arcs.filter((a) => a.planned), flown: buckets, airports, fit };
 }
 
+/** Strecke unter einem Bildschirmpunkt (nächster Bogen im Umkreis r, Rückseite des Globus zählt nicht) mit Abstand in px */
+export function routeAt(P: GeoProjection, rs: RouteSet, view: { globe: [number, number, number] | null; lon0: number }, x: number, y: number, r: number): { key: string; d: number } | null {
+	const front = view.globe;
+	let best: string | null = null,
+		bestD = r;
+	for (const a of rs.arcs) {
+		let px = NaN,
+			py = NaN,
+			pr = 0;
+		for (let i = 0; i < a.ll.length / 2; i++) {
+			if (front && a.u[i * 3] * front[0] + a.u[i * 3 + 1] * front[1] + a.u[i * 3 + 2] * front[2] < 0.02) {
+				px = NaN;
+				continue;
+			}
+			const p = P([a.ll[i * 2], a.ll[i * 2 + 1]]);
+			if (!p) {
+				px = NaN;
+				continue;
+			}
+			const rr = (((a.ll[i * 2] - view.lon0) % 360) + 540) % 360 - 180;
+			if (!front && Math.abs(rr - pr) > 180) px = NaN;
+			pr = rr;
+			// Abstand zum Teilstück (px,py)–p
+			let d: number;
+			if (isNaN(px)) d = Math.hypot(p[0] - x, p[1] - y);
+			else {
+				const dx = p[0] - px,
+					dy = p[1] - py,
+					l2 = dx * dx + dy * dy,
+					k = l2 ? Math.max(0, Math.min(1, ((x - px) * dx + (y - py) * dy) / l2)) : 0;
+				d = Math.hypot(px + k * dx - x, py + k * dy - y);
+			}
+			if (d < bestD) {
+				bestD = d;
+				best = a.key;
+			}
+			px = p[0];
+			py = p[1];
+		}
+	}
+	return best ? { key: best, d: bestD } : null;
+}
+
 export const ROUTE_COLOR = '#F6C445';
 
 /**
  * Bögen und Flughäfen zeichnen. globe: Blickrichtung als Einheitsvektor (Punkte dahinter werden ausgelassen);
  * lon0: Kartenmitte (flache Karte: Schnitt bei lon0 + 180°);
- * t: Anteil des Aufbaus (0–1, jeder Bogen wächst vom Start zum Ziel), 1 = fertig.
+ * t: Anteil des Aufbaus (0–1, jeder Bogen wächst vom Start zum Ziel), 1 = fertig; sel: ausgewählte Strecke (hell hervorgehoben).
  */
-export function drawRoutes(c: CanvasRenderingContext2D, P: GeoProjection, rs: RouteSet, view: { globe: [number, number, number] | null; lon0: number }, t = 1) {
+export function drawRoutes(c: CanvasRenderingContext2D, P: GeoProjection, rs: RouteSet, view: { globe: [number, number, number] | null; lon0: number; sel?: string | null }, t = 1) {
 	const front = view.globe;
 	// Horizont minimal nach innen, damit der Bogen nicht über den Kugelrand hinaus gezeichnet wird
 	const H = 0.02;
@@ -174,6 +219,20 @@ export function drawRoutes(c: CanvasRenderingContext2D, P: GeoProjection, rs: Ro
 		c.lineWidth = w;
 		c.strokeStyle = ROUTE_COLOR;
 		c.stroke();
+	}
+	// ausgewählte Strecke: weiß mit kräftigem Schein, obenauf
+	if (view.sel) {
+		const sel = rs.arcs.filter((a) => a.key === view.sel);
+		if (sel.length) {
+			c.beginPath();
+			for (const a of sel) trace(a);
+			c.lineWidth = 9;
+			c.strokeStyle = 'rgba(255,246,220,.3)';
+			c.stroke();
+			c.lineWidth = 3.2;
+			c.strokeStyle = '#FFF6DC';
+			c.stroke();
+		}
 	}
 	// Flughäfen: kleiner heller Punkt mit dunklem Rand (erst wenn der Aufbau dort angekommen ist: am Ende sichtbar)
 	if (t >= 1) {

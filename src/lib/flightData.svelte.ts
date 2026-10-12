@@ -1,5 +1,5 @@
 import { atlas } from './atlas.svelte';
-import { flightStats, loadAirlines, loadAirports, type Airlines, type Airports } from './flights';
+import { flightStats, loadAirlines, loadAirports, routeKey, type Airlines, type Airports } from './flights';
 import { buildRoutes } from './map/routes';
 
 /* Gemeinsamer Stand für den Tab „Flüge“ (Kopf, Inhalt, Globus): Flughafen-/Airline-Liste (nachgeladen),
@@ -25,12 +25,12 @@ class FlightData {
 			ap = this.ap,
 			y = this.year;
 		if (!st || !ap) return null;
-		const legs: { a: [number, number]; b: [number, number]; planned: boolean }[] = [];
+		const legs: { a: [number, number]; b: [number, number]; planned: boolean; key: string }[] = [];
 		for (const l of st.legs) {
 			if (l.f.d.cx || (!l.done && y !== null) || (y !== null && +l.f.date.slice(0, 4) !== y)) continue;
 			const A = ap[l.f.from],
 				B = ap[l.to];
-			if (A && B) legs.push({ a: [A[4], A[3]], b: [B[4], B[3]], planned: !l.done });
+			if (A && B) legs.push({ a: [A[4], A[3]], b: [B[4], B[3]], planned: !l.done, key: routeKey(l.f.from, l.to) });
 		}
 		return legs.length ? buildRoutes(legs) : null;
 	});

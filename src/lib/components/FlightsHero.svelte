@@ -1,11 +1,11 @@
 <script lang="ts">
-	import { atlas, putFlights } from '$lib/atlas.svelte';
-	import { easeOutCubic, introClock, openFlightsPage, toast, ui } from '$lib/app.svelte';
+	import { atlas } from '$lib/atlas.svelte';
+	import { easeOutCubic, introClock, openAddFlight, openFlightsPage, ui } from '$lib/app.svelte';
 	import { fd } from '$lib/flightData.svelte';
-	import { MOON_KM, fmtDuration, fmtInt, parseFlighty } from '$lib/flights';
+	import { MOON_KM, fmtDuration, fmtInt } from '$lib/flights';
 	import HeroFlight from './HeroFlight.svelte';
 
-	/* Kopf des Tabs „Flüge“ im Stil der Startseite: große Zahl, Import-Knopf, Flugkurve (Anteil der Strecke zum Mond)
+	/* Kopf des Tabs „Flüge“ im Stil der Startseite: große Zahl, Knopf „+ Flug“ (von Hand eintragen; Import aus Flighty steht in den Einstellungen), Flugkurve (Anteil der Strecke zum Mond)
 	   und darunter Jahres-Knöpfe für den Globus (wie die Kontinent-Knöpfe auf der Startseite). */
 
 	const st = $derived(fd.st);
@@ -27,29 +27,6 @@
 		fd.year = y;
 		ui.flightsFit++;
 	}
-
-	let fileInput: HTMLInputElement;
-	async function onFile() {
-		const f = fileInput.files?.[0];
-		fileInput.value = '';
-		if (!f) return;
-		try {
-			const list = parseFlighty(await f.text());
-			if (!list.length) throw new Error('leer');
-			const r = putFlights(list);
-			toast(
-				r.fresh
-					? `${r.fresh} ${r.fresh === 1 ? 'Flug' : 'Flüge'} neu eingelesen`
-					: r.changed
-						? `${r.changed} ${r.changed === 1 ? 'Flug' : 'Flüge'} aktualisiert`
-						: 'Alle Flüge waren schon da'
-			);
-			fd.load();
-			if (r.fresh) ui.flightsFit++;
-		} catch {
-			toast('Datei nicht lesbar. Erwartet wird der Export aus Flighty.');
-		}
-	}
 </script>
 
 <section class="hero fl-hero">
@@ -58,14 +35,13 @@
 			<span class="count" class:d3={n >= 100}>{shownN}</span>
 			<span class="count-meta">
 				<span class="count-label">{shownN === 1 ? 'Flug' : 'Flüge'}</span>
-				<span class="count-sub">{st && n ? `${fmtInt(st.km)} km · ${fmtDuration(st.min)}` : 'aus Flighty'}</span>
+				<span class="count-sub">{st && n ? `${fmtInt(st.km)} km · ${fmtDuration(st.min)}` : 'noch keine'}</span>
 			</span>
 		</button>
-		<button type="button" class="hero-add" aria-label="Flighty-Datei einlesen" onclick={() => fileInput.click()}
-			><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V4M7.5 8.5 12 4l4.5 4.5M5 15v4h14v-4" /></svg><span>Import</span></button
+		<button type="button" class="hero-add" aria-label="Flug hinzufügen" onclick={() => openAddFlight()}
+			><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg><span>Flug</span></button
 		>
 	</div>
-	<input type="file" accept=".csv,text/csv" hidden bind:this={fileInput} onchange={onFile} />
 	<HeroFlight progress={moon.p} label={moon.label} />
 </section>
 <div class="continents" id="flightYears">

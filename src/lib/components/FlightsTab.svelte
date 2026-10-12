@@ -8,7 +8,7 @@
 	import FlightsView from './FlightsView.svelte';
 
 	/* Tab „Flüge“ unter dem Globus: 4 Werte wie im Flighty-Pass (Strecke, Flugzeit, Flughäfen, Airlines),
-	   darunter Zeilen zu den Listen (Vollbild) und Rekorde. Kopf mit Zahl und Import: FlightsHero.
+	   darunter Zeilen zu den Listen (Vollbild) und Rekorde. Kopf mit Zahl und „+ Flug“: FlightsHero.
 	   Flughafen- und Airline-Liste werden erst nachgeladen (beim Öffnen des Tabs bzw. im Leerlauf). */
 
 	$effect(() => {
@@ -47,10 +47,10 @@
 <main class="tab" id="tab-flights" data-pane="flights" hidden={ui.tab !== 'flights'}>
 	{#if !atlas.flights.length}
 		<div class="card fl-empty">
-			<h2>Deine Flüge aus Flighty</h2>
+			<h2>Deine Flüge</h2>
 			<ol>
-				<li>In Flighty die <b>Einstellungen</b> öffnen und deine Flüge <b>exportieren</b> (CSV-Datei).</li>
-				<li>Oben auf <b>Import</b> tippen und die Datei wählen.</li>
+				<li>Oben auf <b>+ Flug</b> tippen und Datum, Von und Nach eintragen.</li>
+				<li>Oder alle Flüge aus Flighty übernehmen: in Flighty die Flüge <b>exportieren</b> (CSV-Datei), dann hier <b>Einstellungen → Flüge → Aus Flighty importieren</b>.</li>
 			</ol>
 			<p class="note">Erneutes Einlesen legt nichts doppelt an, neue Flüge kommen dazu. Der Buchungscode wird nicht übernommen.</p>
 		</div>
