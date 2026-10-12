@@ -1,43 +1,27 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { atlas, putFlights } from '$lib/atlas.svelte';
-	import { openFlightsPage, toast, ui } from '$lib/app.svelte';
+	import { atlas } from '$lib/atlas.svelte';
+	import { openFlightsPage, ui } from '$lib/app.svelte';
 	import { flag, nameOf } from '$lib/countries';
-	import { EARTH_KM, MOON_KM, flightStats, fmtDuration, fmtInt, loadAirlines, loadAirports, parseFlighty, type Airlines, type Airports, type Leg } from '$lib/flights';
+	import { fd } from '$lib/flightData.svelte';
+	import { EARTH_KM, MOON_KM, fmtDuration, fmtInt, type Leg } from '$lib/flights';
 	import FlightsView from './FlightsView.svelte';
 
-	/* Tab „Flüge“: große Zahl, Werte wie im Flighty-Pass (Strecke, Flugzeit, Flughäfen, Länder, Airlines),
-	   darunter Zeilen zu den Listen (Vollbild) und Rekorde. Flüge kommen per Flighty-Datei (CSV) herein.
+	/* Tab „Flüge“ unter dem Globus: 4 Werte wie im Flighty-Pass (Strecke, Flugzeit, Flughäfen, Airlines),
+	   darunter Zeilen zu den Listen (Vollbild) und Rekorde. Kopf mit Zahl und Import: FlightsHero.
 	   Flughafen- und Airline-Liste werden erst nachgeladen (beim Öffnen des Tabs bzw. im Leerlauf). */
 
-	let ap = $state.raw<Airports | null>(null);
-	let al = $state.raw<Airlines | null>(null);
-	let loading = false;
-	function load() {
-		if (ap || loading) return;
-		loading = true;
-		Promise.all([loadAirports(), loadAirlines()])
-			.then(([a, b]) => {
-				ap = a;
-				al = b;
-			})
-			.catch(() => {
-				loading = false; // z. B. offline: beim nächsten Öffnen des Tabs erneut versuchen
-			});
-	}
-	// „jetzt“ für geplante Flüge: beim Öffnen des Tabs und bei Rückkehr in die App neu (geplante werden so zu geflogenen)
-	let now = $state(Date.now());
 	$effect(() => {
 		if (ui.tab === 'flights') {
-			load();
-			now = Date.now();
+			fd.load();
+			fd.now = Date.now();
 		}
 	});
 	onMount(() => {
 		// im Leerlauf vorbereiten, damit der Tab sofort fertig ist
-		const t = setTimeout(() => (window.requestIdleCallback ?? ((f: () => void) => setTimeout(f, 1)))(load), 4000);
+		const t = setTimeout(() => (window.requestIdleCallback ?? ((f: () => void) => setTimeout(f, 1)))(() => fd.load()), 4000);
 		const onVis = () => {
-			if (!document.hidden && ui.tab === 'flights') now = Date.now();
+			if (!document.hidden && ui.tab === 'flights') fd.now = Date.now();
 		};
 		document.addEventListener('visibilitychange', onVis);
 		return () => {
@@ -46,8 +30,9 @@
 		};
 	});
 
-	const st = $derived(ap ? flightStats(atlas.flights, ap, now) : null);
-	const n = $derived(st ? st.n : atlas.flights.length);
+	const st = $derived(fd.st);
+	const ap = $derived(fd.ap);
+	const al = $derived(fd.al);
 	const city = (code: string) => ap?.[code]?.[0] || code;
 	const route = (l: Leg) => `${city(l.f.from)} → ${city(l.to)}`;
 	const dec1 = (x: number) => x.toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
@@ -55,53 +40,15 @@
 	const longDay = (d: string) => new Date(d + 'T12:00:00Z').toLocaleDateString('de-DE', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
 	const topAirport = $derived(st?.airports[0]);
 	const topRoute = $derived(st?.routes[0]);
-
-	let fileInput: HTMLInputElement;
-	async function onFile() {
-		const f = fileInput.files?.[0];
-		fileInput.value = '';
-		if (!f) return;
-		try {
-			const list = parseFlighty(await f.text());
-			if (!list.length) throw new Error('leer');
-			const r = putFlights(list);
-			toast(
-				r.fresh
-					? `${r.fresh} ${r.fresh === 1 ? 'Flug' : 'Flüge'} neu eingelesen`
-					: r.changed
-						? `${r.changed} ${r.changed === 1 ? 'Flug' : 'Flüge'} aktualisiert`
-						: 'Alle Flüge waren schon da'
-			);
-			load();
-		} catch {
-			toast('Datei nicht lesbar. Erwartet wird der Export aus Flighty.');
-		}
-	}
 </script>
 
-<main class="tab" id="tab-flights" hidden={ui.tab !== 'flights'}>
-	<section class="hero fl-hero">
-		<div class="hero-row">
-			<button type="button" class="count-btn" aria-label="{n} Flüge. Zur Liste" onclick={() => st && n && openFlightsPage('flights')}>
-				<span class="count" class:d3={n >= 100}>{n}</span>
-				<span class="count-meta">
-					<span class="count-label">{n === 1 ? 'Flug' : 'Flüge'}</span>
-					<span class="count-sub">{st && n ? `${fmtInt(st.km)} km · ${fmtDuration(st.min)} Flugzeit` : 'aus Flighty'}</span>
-				</span>
-			</button>
-			<button type="button" class="hero-add" aria-label="Flighty-Datei einlesen" onclick={() => fileInput.click()}
-				><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V4M7.5 8.5 12 4l4.5 4.5M5 15v4h14v-4" /></svg><span>Import</span></button
-			>
-		</div>
-		<input type="file" accept=".csv,text/csv" hidden bind:this={fileInput} onchange={onFile} />
-	</section>
-
+<main class="tab" id="tab-flights" data-pane="flights" hidden={ui.tab !== 'flights'}>
 	{#if !atlas.flights.length}
 		<div class="card fl-empty">
 			<h2>Deine Flüge aus Flighty</h2>
 			<ol>
 				<li>In Flighty die <b>Einstellungen</b> öffnen und deine Flüge <b>exportieren</b> (CSV-Datei).</li>
-				<li>Hier auf <b>Import</b> tippen und die Datei wählen.</li>
+				<li>Oben auf <b>Import</b> tippen und die Datei wählen.</li>
 			</ol>
 			<p class="note">Erneutes Einlesen legt nichts doppelt an, neue Flüge kommen dazu. Der Buchungscode wird nicht übernommen.</p>
 		</div>

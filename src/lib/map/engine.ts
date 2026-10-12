@@ -6,6 +6,7 @@ import { FC, FINE_W, INFO, SIMP_W, features, fetchFineLod, fineLod, getLod, lodR
 import { fastGlobe, type FastGlobe } from './fastglobe';
 import { fastFlat } from './fastflat';
 import { WATER_TOL, loadWaterLayer, waterInView, waterLayer } from './water';
+import { drawRoutes, type RouteSet } from './routes';
 
 /* Weltkarte auf zwei Canvas-Ebenen: Globus (orthografisch) und flache Karte (Natural Earth).
    cvB: Karte (ändert sich selten), cvT: Punkte kleiner Länder und Beschriftung. */
@@ -45,6 +46,8 @@ export interface MapOptions {
 	onSync(s: MapSync): void;
 	/** Karte kommt zur Ruhe: Land in der Bildmitte (bzw. nächstes Land), null wenn mehrere Kontinente zu sehen sind */
 	onSettle?(code: string | null): void;
+	/** Flugstrecken über der Karte (Tab „Flüge“), sonst null */
+	getRoutes?(): RouteSet | null;
 }
 
 const TAU = Math.PI * 2;
@@ -197,6 +200,9 @@ export function createWorldMap(o: MapOptions) {
 	// Neu hinzugefügtes Land kurz hervorheben (Sonnen-Leuchten, Sonar-Ringe, Name)
 	let hl: { codes: string[]; t0: number; dur: number; polys: GeoJSON.Polygon[][]; at: number[] | null; rings: boolean } | null = null;
 	const HL_MS = 2800;
+	// Flugstrecken wachsen beim Einblenden vom Start zum Ziel (Startzeit, Dauer)
+	let routeT0 = 0,
+		routeMs = 0;
 	// weicher Übergang von der groben (Bewegung) zur feinen Darstellung statt sichtbarem Umspringen
 	let fadeCv: HTMLCanvasElement | null = null,
 		fadeT0 = 0,
@@ -577,7 +583,7 @@ export function createWorldMap(o: MapOptions) {
 			baseDirty = false;
 			topDirty = true;
 		}
-		const animTop = (fadeT0 && ts - fadeT0 < fadeMs) || (hl && ts - hl.t0 < hl.dur);
+		const animTop = (fadeT0 && ts - fadeT0 < fadeMs) || (hl && ts - hl.t0 < hl.dur) || (routeT0 && ts - routeT0 < routeMs);
 		if (topDirty || animTop) {
 			drawTop(ts);
 			topDirty = false;
@@ -585,6 +591,7 @@ export function createWorldMap(o: MapOptions) {
 		if (!animTop) {
 			fadeT0 = 0;
 			if (hl && ts - hl.t0 >= hl.dur) hl = null;
+			routeT0 = 0;
 		}
 		if (moving || animTop) requestDraw();
 	}
@@ -1125,6 +1132,14 @@ export function createWorldMap(o: MapOptions) {
 		c.setTransform(tdpr, 0, 0, tdpr, 0, 0);
 		const P = curProj();
 		if (hl && now >= hl.t0) drawHighlight(c, P, (now - hl.t0) / hl.dur);
+		const routes = o.getRoutes?.();
+		if (routes) {
+			const k = routeT0 ? Math.max(0, Math.min(1, (now - routeT0) / routeMs)) : 1;
+			const a = view.lon * (Math.PI / 180),
+				b = view.lat * (Math.PI / 180);
+			const front: [number, number, number] | null = view.mode === 'globe' ? [Math.cos(b) * Math.cos(a), Math.cos(b) * Math.sin(a), Math.sin(b)] : null;
+			drawRoutes(c, P, routes, { globe: front, cw }, 1 - Math.pow(1 - k, 3));
+		}
 		const visited = o.getVisited(),
 			wish = o.getWish(),
 			selected = o.getSelected();
@@ -1285,6 +1300,10 @@ export function createWorldMap(o: MapOptions) {
 		const k = opts.keepK ? Math.max(view.k, 1) : opts.zoom ? Math.max(target, minK) : Math.max(target, view.k);
 		flyTo({ lon: i.c[0], lat: i.c[1], k }, opts.ms || 1000);
 	}
+	/** Übersichts-Flug: Mittelpunkt c, so weit herausgezoomt, dass alles im Umkreis `spread` (Grad) ins Bild passt */
+	function flyToSpread(c: [number, number], spread: number, ms: number) {
+		flyTo({ lon: c[0], lat: c[1], k: toModeK(clamp(75 / spread, 1, 4), c) }, ms);
+	}
 	/** Übersichts-Flug über mehrere Länder: Mittelpunkt aller, so weit herausgezoomt, dass alle ins Bild passen */
 	function flyToCountries(codes: string[], ms = 1500) {
 		const list = codes.filter((c) => INFO[c]);
@@ -1302,7 +1321,7 @@ export function createWorldMap(o: MapOptions) {
 		// Streuung in Grad (größter Abstand zum Mittelpunkt, plus Platz für die Länder selbst)
 		let spread = 6;
 		for (const id of list) spread = Math.max(spread, (geoDistance(INFO[id].c, c) * 180) / Math.PI + INFO[id].size / 2);
-		flyTo({ lon: c[0], lat: c[1], k: toModeK(clamp(75 / spread, 1, 4), c) }, ms);
+		flyToSpread(c, spread, ms);
 	}
 	function flyToContinent(code: string) {
 		const v = CONT_VIEW[code as ContinentCode];
@@ -1667,6 +1686,19 @@ export function createWorldMap(o: MapOptions) {
 		flyToCountry,
 		flyToCountries,
 		flyToContinent,
+		/** Flugstrecken neu zeichnen; grow: wachsen lassen (ms), fit: Globus fliegt so, dass alle Strecken im Bild sind */
+		showRoutes(opts: { grow?: number; fit?: boolean } = {}) {
+			const rs = o.getRoutes?.();
+			if (opts.grow && rs && !reduce()) {
+				routeT0 = performance.now();
+				routeMs = opts.grow;
+			} else routeT0 = 0;
+			if (opts.fit && rs?.fit) {
+				cancelMotion();
+				flyToSpread(rs.fit.c, rs.fit.spread + 3, 1100);
+			}
+			markDirty(false);
+		},
 		zoomBy(m: number) {
 			cancelMotion();
 			flyTo({ k: view.k * m }, 350);

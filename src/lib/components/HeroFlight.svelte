@@ -11,7 +11,8 @@
 	   - eigenes neues Land: Anschub nur nach vorn, Nachbrenner-Leuchten, Flügelwackeln, Welle, Funken, „+x %“
 	   - alle anderen Änderungen (Laden aus dem Konto, Entfernen, Länderliste, Import): ruhig an die neue Stelle */
 
-	let { progress }: { progress: number } = $props();
+	/** label: Text unter dem Prozentwert (Startseite „der Welt“, Flüge „zum Mond“) */
+	let { progress, label = 'der Welt' }: { progress: number; label?: string } = $props();
 
 	const H = 150; // Höhe des Streifens
 	const PLANE = 'M34 0c0-3-4-5-8-5H10L-6-28h-9l8 23H-18l-7-9h-7l4 14-4 14h7l7-9H-7l-8 23h9L10 5h16c4 0 8-2 8-5z';
@@ -225,6 +226,6 @@
 				</span>
 			{/key}
 		{/if}
-		<div class="flight-pct" bind:this={pctEl}><b>{fmt(shownPct)} %</b><span>der Welt</span></div>
+		<div class="flight-pct" bind:this={pctEl}><b>{fmt(shownPct)} %</b><span>{label}</span></div>
 	{/if}
 </div>

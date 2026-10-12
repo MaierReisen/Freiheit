@@ -5,6 +5,7 @@
 	import { CONT, CONT_VIEW } from '$lib/countries';
 	import { createWorldMap, type MapSync, type WorldMap } from '$lib/map/engine';
 	import { tourPlan } from '$lib/addTour';
+	import { fd } from '$lib/flightData.svelte';
 	import ContinentChips from './ContinentChips.svelte';
 
 	let box: HTMLDivElement;
@@ -65,6 +66,15 @@
 		}, delay);
 	}
 
+	let lastTop = -1;
+	function fitTop() {
+		if (ui.full || !box) return;
+		const top = Math.round(box.getBoundingClientRect().top + window.scrollY);
+		if (top === lastTop || top <= 0) return;
+		lastTop = top;
+		box.style.setProperty('--map-top', top + 'px');
+	}
+
 	/** Seite so rollen, dass der Globus mittig im freien Bereich über der kompakten Länderseite steht */
 	function keepMapVisible() {
 		if (ui.full || !ui.sheetOpen || ui.sheetDetent !== 'peek') return;
@@ -87,7 +97,8 @@
 			isCounted,
 			getWish: () => new Set<string>(), // Wunschliste vorerst ausgeblendet
 			getSelected: () => ui.selected,
-			isVisible: () => ui.full || ui.tab === 'home',
+			isVisible: () => true, // ein Globus für alle Tabs (zwischen Kopf und Inhalt)
+			getRoutes: () => (ui.tab === 'flights' ? fd.routes : null),
 			isFull: () => ui.full,
 			getAvoid: () => {
 				const r = cvT.getBoundingClientRect();
@@ -139,6 +150,12 @@
 			stopTour(); // Berührung bricht die Tour über neue Länder ab
 		};
 		box.addEventListener('pointerdown', onTouchMap, true);
+		// Höhe: Globus endet beim Öffnen über der Tab-Leiste (CSS rechnet mit --map-top = Abstand vom Seitenanfang).
+		// Neu gemessen, wenn sich der Kopf darüber ändert (Tabwechsel, Schrift geladen, Drehen)
+		const heads = [...(box.parentElement?.children ?? [])].slice(0, [...(box.parentElement?.children ?? [])].indexOf(box));
+		const ro = new ResizeObserver(fitTop);
+		heads.forEach((h) => ro.observe(h));
+		fitTop();
 		document.addEventListener('pointerdown', onOutside, true);
 		document.addEventListener('wheel', onOutside, { capture: true, passive: true });
 		hooks.map = {
@@ -149,6 +166,7 @@
 			scrollIntoView: () => box.scrollIntoView?.({ behavior: reduceMotion() ? 'auto' : 'smooth', block: 'center' })
 		};
 		return () => {
+			ro.disconnect();
 			stopTour();
 			clearTimeout(coachTimer);
 			box.removeEventListener('pointerdown', onTouchMap, true);
@@ -226,6 +244,33 @@
 		void s.mode;
 		hideCoach(false);
 	});
+	// Tab „Flüge“: Strecken wachsen vom Start zum Ziel, Globus holt alle ins Bild; zurück auf „Welt“: wieder zum Kontinent
+	let shownTab = ui.tab;
+	$effect(() => {
+		const t = ui.tab;
+		if (!map || t === shownTab) return;
+		const from = shownTab;
+		shownTab = t;
+		if (t === 'flights') map.showRoutes({ grow: 1100, fit: true });
+		else {
+			map.showRoutes();
+			const k = ui.focusContinent || atlas.settings.homeContinent;
+			if (from === 'flights' && k && CONT_VIEW[k as keyof typeof CONT_VIEW]) {
+				ui.focusContinent = k;
+				map.flyToContinent(k);
+			}
+		}
+	});
+	// Jahr gewählt bzw. neue Flüge eingelesen: Strecken neu aufbauen und ins Bild holen
+	$effect(() => {
+		const k = ui.flightsFit;
+		if (k && map && ui.tab === 'flights') map.showRoutes({ grow: 800, fit: true });
+	});
+	// Strecken geändert (Flughafenliste geladen, Flüge gelöscht …): neu zeichnen
+	$effect(() => {
+		void fd.routes;
+		map?.markDirty(false);
+	});
 	// Vollbild an/aus: Größe neu bestimmen
 	$effect(() => {
 		void ui.full;
@@ -263,7 +308,7 @@
 	{/if}
 	<span class="map-hint" id="mapHint">{hint}</span>
 	<div class="map-panel" id="mapPanel">
-		<div class="legend"><span><i class="sw v"></i>Bereist</span></div>
+		<div class="legend"><span><i class="sw v"></i>Bereist</span>{#if ui.tab === 'flights' && fd.routes}<span><i class="sw rt"></i>Flugstrecken</span>{/if}</div>
 		<div class="panel-row">
 			<button type="button" class="mchip" id="mSpin" aria-pressed={s.spin} hidden={s.mode !== 'globe'} onclick={() => map?.toggleSpin()}>Drehen</button>
 			<button type="button" class="mchip" id="mSearch" onclick={() => openPicker('fly')}>Land suchen</button>
@@ -271,7 +316,7 @@
 		<ContinentChips id="mapConts" all />
 	</div>
 </div>
-<div class="legend"><span><i class="sw v"></i>Bereist</span></div>
+<div class="legend"><span><i class="sw v"></i>Bereist</span>{#if ui.tab === 'flights' && fd.routes}<span><i class="sw rt"></i>{fd.year ? `Flüge ${fd.year}` : 'Flugstrecken'}</span>{#if !fd.year && fd.st?.upcoming}<span><i class="sw rt plan"></i>Geplant</span>{/if}{/if}</div>
 
 <style>
 	.coach{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:14px;pointer-events:none;z-index:5;animation:coach-in .5s ease both}

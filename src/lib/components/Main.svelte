@@ -16,6 +16,7 @@
 	import ContinentsView from './ContinentsView.svelte';
 	import WorldMap from './WorldMap.svelte';
 	import FlightsTab from './FlightsTab.svelte';
+	import FlightsHero from './FlightsHero.svelte';
 
 	function onKeydown(e: KeyboardEvent) {
 		if (e.key !== 'Escape') return;
@@ -101,11 +102,18 @@
 	ontouchcancel={() => (swipe = null)}
 />
 
+<!-- Kopf je Tab, darunter ein gemeinsamer Globus (eine Karte für alle Tabs: bleibt beim Wechsel stehen, kein zweites
+     Zeichnen/Laden), darunter der Inhalt je Tab. Kopf und Inhalt eines Tabs gleiten beim Wechsel gemeinsam herein. -->
 <div id="appMain">
-	<main class="tab" id="tab-home" hidden={ui.tab !== 'home'}>
+	<div class="tab" data-pane="home" hidden={ui.tab !== 'home'}>
 		<Hero />
 		<ContinentChips id="continents" />
-		<WorldMap />
+	</div>
+	<div class="tab" data-pane="flights" hidden={ui.tab !== 'flights'}>
+		<FlightsHero />
+	</div>
+	<WorldMap />
+	<main class="tab" id="tab-home" data-pane="home" hidden={ui.tab !== 'home'}>
 		<div class="blocks">
 			<PassTile />
 			<h2 class="blocks-h">Meine Welt</h2>

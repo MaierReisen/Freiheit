@@ -90,6 +90,8 @@ export const ui = $state({
 	passOpen: false,
 	/** Seite im Tab „Flüge“ (Vollbild, '' = zu) */
 	flightsPage: '' as FlightsPage | '',
+	/** zählt hoch, wenn der Globus im Tab „Flüge“ alle (bzw. die gewählten) Strecken ins Bild holen soll */
+	flightsFit: 0,
 	/** Globus auf der Startseite per Tipp aktiviert (Touch): dann drehen, kippen, zoomen statt Seite scrollen */
 	mapActive: false,
 	/** Kontinent, auf dem die Karte gerade steht (per Chip oder Ziehen; null = Startregion, '' = mehrere Kontinente im Bild); nur Ansicht */
@@ -294,14 +296,15 @@ export function closeFlightsPage() {
 function showTab(t: Tab, dir: number) {
 	ui.tab = t;
 	tick().then(() => {
-		const el = document.getElementById('tab-' + t);
-		if (!el) return;
-		el.classList.remove('in-r', 'in-l');
-		if (dir && !reduceMotion()) {
-			void el.offsetWidth;
-			el.classList.add(dir > 0 ? 'in-r' : 'in-l');
-		}
-		if (t === 'home') requestAnimationFrame(() => hooks.map?.resize());
+		// Kopf und Inhalt des Tabs (der Globus dazwischen gehört allen Tabs und bleibt stehen)
+		document.querySelectorAll<HTMLElement>(`.tab[data-pane="${t}"]`).forEach((el) => {
+			el.classList.remove('in-r', 'in-l');
+			if (dir && !reduceMotion()) {
+				void el.offsetWidth;
+				el.classList.add(dir > 0 ? 'in-r' : 'in-l');
+			}
+		});
+		requestAnimationFrame(() => hooks.map?.resize());
 	});
 }
 export function goTab(tab: string, push = true, dir?: number) {

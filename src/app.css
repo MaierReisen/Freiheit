@@ -75,6 +75,8 @@ button:focus,button:focus-visible,[role="button"]:focus,[role="button"]:focus-vi
 .sw{width:14px;height:14px;border-radius:4px;display:inline-block}
 .sw.v{background:var(--primary)}
 .sw.w{background:var(--sun)}
+.sw.rt{width:18px;height:3px;border-radius:2px;background:#F6C445;box-shadow:0 0 0 1px rgba(246,196,69,.25)}
+.sw.rt.plan{background:repeating-linear-gradient(90deg,#E9C77A 0 4px,transparent 4px 7px);box-shadow:none}
 a.btn{display:inline-block;text-decoration:none;color:inherit}
 a.btn.primary{color:var(--on-primary)}
 .err{color:var(--err);margin:14px 0 0;font-size:14px}
@@ -232,7 +234,8 @@ body.noscroll{overflow:hidden}
 [data-motion="reduce"] .tab.in-r,[data-motion="reduce"] .tab.in-l{animation:none}[data-motion="reduce"] .tabbar .ind{transition:none}
 
 /* Weltkarte: dunkle Bühne, zwei Canvas-Ebenen */
-.map-box{position:relative;margin:16px -20px 0;height:clamp(340px,98vw,500px);background:radial-gradient(120% 90% at 50% 0%,#12374E 0%,#0A2030 52%,#07141F 100%);overflow:hidden;touch-action:auto;color:#fff;border-radius:0}
+/* Höhe: so, dass der Globus beim Öffnen über der Tab-Leiste endet (--map-top misst WorldMap), höchstens wie bisher */
+.map-box{position:relative;margin:16px -20px 0;height:clamp(260px,calc(100svh - var(--map-top,440px) - 96px - env(safe-area-inset-bottom,0px)),min(98vw,500px));background:radial-gradient(120% 90% at 50% 0%,#12374E 0%,#0A2030 52%,#07141F 100%);overflow:hidden;touch-action:auto;color:#fff;border-radius:0}
 @media (min-width:600px){.map-box{margin:16px 0 0;border-radius:var(--r-lg)}}
 .map-box canvas{position:absolute;inset:0;width:100%;height:100%;display:block;outline:none;-webkit-tap-highlight-color:transparent}
 #mapCv{pointer-events:none}
