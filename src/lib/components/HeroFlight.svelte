@@ -9,10 +9,13 @@
 	   - App-Start (und nach längerer Pause): Rollen, Abheben, Flug bis zum erreichten Punkt –
 	     auf der gemeinsamen Zeitachse (ui.intro), endet gleichzeitig mit Globus und Zählern
 	   - eigenes neues Land: Anschub nur nach vorn, Nachbrenner-Leuchten, Flügelwackeln, Welle, Funken, „+x %“
-	   - alle anderen Änderungen (Laden aus dem Konto, Entfernen, Länderliste, Import): ruhig an die neue Stelle */
+	   - alle anderen Änderungen (Laden aus dem Konto, Entfernen, Länderliste, Import): ruhig an die neue Stelle
+	   Szene „landing“ (Tab Flüge, Fortsetzung der Geschichte): Anflug von links in Reiseflughöhe, Aufsetzen vor der Sonne,
+	   Ausrollen zum Flughafen (Tower + Terminal als Silhouette am Horizont); Prozentwert links unten. */
 
-	/** label: Text unter dem Prozentwert (Startseite „der Welt“, Flüge „zum Mond“) */
-	let { progress, label = 'der Welt' }: { progress: number; label?: string } = $props();
+	/** label: Text unter dem Prozentwert (Startseite „der Welt“, Flüge „zum Mond“); scene: Start (Welt) oder Landung (Flüge) */
+	let { progress, label = 'der Welt', scene = 'takeoff' }: { progress: number; label?: string; scene?: 'takeoff' | 'landing' } = $props();
+	const landing = $derived(scene === 'landing');
 
 	const H = 150; // Höhe des Streifens
 	const PLANE = 'M34 0c0-3-4-5-8-5H10L-6-28h-9l8 23H-18l-7-9h-7l4 14-4 14h7l7-9H-7l-8 23h9L10 5h16c4 0 8-2 8-5z';
@@ -24,7 +27,8 @@
 	let pctEl = $state<HTMLDivElement | null>(null);
 	// Hindernisse im Streifen (relativ zu ihm): Unterkante des „+ Land“-Buttons, Prozentwert rechts unten
 	let btnBottom = $state(-Infinity);
-	let pctBox = $state({ left: Infinity, top: Infinity });
+	let pctBox = $state({ left: Infinity, right: -Infinity, top: Infinity });
+	let textBottom = $state(0); // Unterkante der großen Zahl links oben (Landung: Anflug darunter)
 	const CLEAR = 26; // Abstand der Kurve zu Button und Prozentwert (halbe Flugzeuggröße plus Luft)
 	let pathEl = $state<SVGPathElement | null>(null);
 	let len = $state(0);
@@ -39,9 +43,21 @@
 
 	// Geometrie: Räder auf dem Horizont, Sonne mittig-links (rechts unten bleibt Platz für den Prozentwert)
 	const yG = H - 9;
-	const sun = $derived({ cx: w * 0.46, r: Math.min(76, Math.max(54, w * 0.21)) });
+	const sun = $derived({ cx: w * (landing ? 0.72 : 0.46), r: Math.min(76, Math.max(54, w * 0.21)) });
+	// Landung: Aufsetzpunkt vor der Sonne, Ausrollen bis vor das Terminal
+	const xTouch = $derived(w * 0.58),
+		xStop = $derived(w * 0.8);
 	const LIFT = 0.07; // Anteil der Kurve bis zum Abheben (kurze Startbahn)
+	const dLanding = $derived.by(() => {
+		const x0 = -4,
+			y0 = Math.max(46, textBottom + CLEAR * 0.7), // Reiseflughöhe unter der großen Zahl
+			// Sinkflug beginnt erst rechts vom Prozentwert, damit die Kurve darüber bleibt
+			xs = Math.max(w * 0.14, Math.min(w * 0.3, pctBox.right - CLEAR)),
+			ys = Math.min(y0 + 6, pctBox.top - CLEAR);
+		return `M${x0} ${y0} C${xs * 0.5} ${y0} ${xs * 0.7} ${ys} ${xs} ${ys + 2} C${xs + (xTouch - xs) * 0.45} ${ys + 14} ${xTouch - (xTouch - xs) * 0.35} ${yG} ${xTouch} ${yG} L${xStop} ${yG}`;
+	});
 	const d = $derived.by(() => {
+		if (landing) return dLanding;
 		const x0 = w * 0.03,
 			xr = w * 0.12, // Abheben
 			ex = w - 6,
@@ -62,7 +78,24 @@
 	// Anteil der Kurve: 0 Länder = Anfang der Startbahn; ab dem ersten Land in der Luft, danach Wurzel
 	// (legt den Fortschritt nach vorn, damit auch wenige Länder sichtbar weit tragen)
 	const p = $derived(Math.max(0, Math.min(1, progress)));
-	const target = $derived(p > 0 ? LIFT + 0.05 + (1 - LIFT - 0.05) * Math.sqrt(p) : 0);
+	// Landung: gleichmäßig (bei der Hälfte noch im Anflug, Aufsetzen erst kurz vor dem Ziel)
+	const target = $derived(landing ? 0.03 + 0.97 * p : p > 0 ? LIFT + 0.05 + (1 - LIFT - 0.05) * Math.sqrt(p) : 0);
+
+	// Flughafen am Horizont (Landung): Tower und Terminal mit gewölbtem Dach, Fuß auf der Landebahn
+	const port = $derived.by(() => {
+		const b = yG + 1,
+			tx = w * 0.93,
+			t0 = w * 0.66,
+			t1 = w * 0.89;
+		return {
+			d:
+				`M${tx - 4} ${b}V${b - 34}h-6l3-10h14l3 10h-6V${b}z` + // Schaft und Kanzel
+				`M${tx - 8} ${b - 44}h16l-2-3h-12z` + // Dach
+				`M${tx - 0.6} ${b - 47}v-9h1.2v9z` + // Antenne
+				`M${t0} ${b}V${b - 11}Q${(t0 + t1) / 2} ${b - 24} ${t1} ${b - 11}V${b}z`, // Terminal
+			lights: [0.42, 0.46, 0.5, 0.54].map((k) => w * k)
+		};
+	});
 
 	const plane = $derived.by(() => {
 		if (!pathEl || !len) return null;
@@ -70,7 +103,9 @@
 		const a = pathEl.getPointAtLength(at),
 			q = pathEl.getPointAtLength(Math.min(len, at + 3)),
 			r = pathEl.getPointAtLength(Math.max(0, at - 3));
-		return { x: a.x, y: a.y, deg: (Math.atan2(q.y - r.y, q.x - r.x) * 180) / Math.PI + wiggle };
+		// Landung: Nase flacher als die Kurve (Flugzeug schwebt an, statt hinunterzustürzen)
+		const deg = (Math.atan2(q.y - r.y, q.x - r.x) * 180) / Math.PI;
+		return { x: a.x, y: a.y, deg: (landing ? deg * 0.45 : deg) + wiggle };
 	});
 
 	$effect(() => {
@@ -146,7 +181,9 @@
 		const btn = host.parentElement?.querySelector('.hero-add')?.getBoundingClientRect();
 		btnBottom = btn && btn.right > box.left + box.width * 0.5 ? btn.bottom - box.top : -Infinity;
 		const pr = pctEl?.getBoundingClientRect();
-		pctBox = pr ? { left: pr.left - box.left, top: pr.top - box.top } : { left: Infinity, top: Infinity };
+		pctBox = pr ? { left: pr.left - box.left, right: pr.right - box.left, top: pr.top - box.top } : { left: Infinity, right: -Infinity, top: Infinity };
+		const cnt = host.parentElement?.querySelector('.count-btn, .count')?.getBoundingClientRect();
+		textBottom = cnt ? cnt.bottom - box.top : 0;
 	}
 
 	// Prozentwert wird erst nach der ersten Breitenmessung gezeichnet: dann neu vermessen
@@ -193,6 +230,12 @@
 			<!-- Sonne als Halbkreis über dem Horizont, mit weichem Lichtschein -->
 			<path d="M{sun.cx - sun.r - 26} {H} a{sun.r + 26} {sun.r + 26} 0 0 1 {2 * (sun.r + 26)} 0z" fill="url(#glow-{uid})" />
 			<path class="flight-sun" d="M{sun.cx - sun.r} {H} a{sun.r} {sun.r} 0 0 1 {2 * sun.r} 0z" />
+			{#if landing}
+				<!-- Flughafen: Anflugbefeuerung vor dem Aufsetzpunkt, Tower und Terminal; vor der Sonne als dunkle Silhouette -->
+				{#each port.lights as x (x)}<circle class="flight-light" cx={x} cy={yG} r="1.6" />{/each}
+				<path class="flight-port" d={port.d} />
+				<path class="flight-plane-sil" d={port.d} clip-path="url(#sun-{uid})" />
+			{/if}
 			<path class="flight-rest" {d} />
 			<path class="flight-done" {d} bind:this={pathEl} stroke-dasharray="{len * shown} {len + 10}" />
 			{#if boost && len}
@@ -226,6 +269,6 @@
 				</span>
 			{/key}
 		{/if}
-		<div class="flight-pct" bind:this={pctEl}><b>{fmt(shownPct)} %</b><span>{label}</span></div>
+		<div class="flight-pct" class:left={landing} bind:this={pctEl}><b>{fmt(shownPct)} %</b><span>{label}</span></div>
 	{/if}
 </div>

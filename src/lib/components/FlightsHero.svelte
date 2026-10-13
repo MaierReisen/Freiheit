@@ -42,7 +42,7 @@
 			><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg><span>Flug</span></button
 		>
 	</div>
-	<HeroFlight progress={moon.p} label={moon.label} />
+	<HeroFlight progress={moon.p} label={moon.label} scene="landing" />
 </section>
 <div class="continents" id="flightYears">
 	<button type="button" class="cont" aria-pressed={fd.year === null} onclick={() => pickYear(null)}><b>Alle</b>{n} {n === 1 ? 'Flug' : 'Flüge'}</button>
