@@ -1,7 +1,9 @@
 <script lang="ts">
 	import { onMount, untrack } from 'svelte';
 	import { atlas } from '$lib/atlas.svelte';
-	import { openFlightsPage, ui } from '$lib/app.svelte';
+	import { openFlightsPage, openPass, ui } from '$lib/app.svelte';
+	import { badgeLevels, tierName } from '$lib/badges';
+	import { flightBadges } from '$lib/flightBadges';
 	import { flag, nameOf } from '$lib/countries';
 	import { fd } from '$lib/flightData.svelte';
 	import { EARTH_KM, MOON_KM, fmtDuration, fmtInt, type Leg } from '$lib/flights';
@@ -45,6 +47,18 @@
 	// nördlichster / südlichster besuchter Flughafen (nach Breitengrad)
 	const byLat = $derived(ap && st ? st.airports.filter((a) => ap[a.code]).sort((a, b) => ap[b.code][3] - ap[a.code][3]) : []);
 	const north = $derived(byLat[0]?.code);
+	// Flug-Abzeichen (Pass, Gruppe „Flüge“): Stand und die am weitesten gekommenen als Vorschau
+	const fb = $derived(st && ap ? flightBadges({ st, ap, al }) : []);
+	const fbTop = $derived(fb.filter((b) => b.level).sort((a, b) => b.level / b.tiers.length - a.level / a.tiers.length || b.p - a.p).slice(0, 3));
+	const fbSub = $derived.by(() => {
+		const n = [3, 2, 1].map((t) => fb.filter((b) => b.level && b.level + 3 - b.tiers.length === t).length);
+		const parts = ['Gold', 'Silber', 'Bronze'].map((name, i) => (n[i] ? `${n[i]} ${name}` : '')).filter(Boolean);
+		return parts.length ? parts.join(' · ') : `${badgeLevels(fb)} von ${fb.reduce((s, b) => s + b.tiers.length, 0)} Stufen`;
+	});
+	function showBadges() {
+		ui.passGroup = 'flug';
+		openPass();
+	}
 	const south = $derived(byLat.length > 1 ? byLat[byLat.length - 1].code : undefined);
 </script>
 
@@ -97,6 +111,16 @@
 					<span class="cat-sub">{topAirline}</span>
 				</span>
 			</button>
+			{#if fb.length}
+				<button type="button" class="cat-row" onclick={showBadges}>
+					<span class="cat-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8.5 3h7l-2 6h-3zM12 21a5.5 5.5 0 1 0 0-11 5.5 5.5 0 0 0 0 11zM12 13l1 2 2.2.3-1.6 1.5.4 2.2-2-1-2 1 .4-2.2-1.6-1.5 2.2-.3z" /></svg></span>
+					<span class="cat-txt">
+						<span class="cat-name">Abzeichen</span>
+						<span class="cat-sub">{fbSub}</span>
+					</span>
+					<span class="cat-flags" aria-label={fbTop.map((b) => `${b.name} (${tierName(b, b.level)})`).join(', ')}>{#each fbTop as b (b.id)}<span>{b.icon}</span>{/each}</span>
+				</button>
+			{/if}
 		</div>
 
 		<h2 class="blocks-h">Rekorde</h2>

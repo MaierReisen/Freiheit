@@ -6,7 +6,10 @@
 	import { CONT, flag, nameOf } from '$lib/countries';
 	import { INK_FILTERS, loadScenes, rankIndex, ranks, scenesLoaded, stamp, TIER_LABEL, wonderStamp, yearOf } from '$lib/passport';
 	import { WONDERS, type Wonder } from '$lib/wonders';
-	import { badgeLevels, badges, tierName, type Badge, type DetailItem } from '$lib/badges';
+	import { BADGE_GROUPS, badgeLevels, badges, tierName, type Badge, type BadgeGroup, type DetailItem } from '$lib/badges';
+	import { flightBadges } from '$lib/flightBadges';
+	import { fd } from '$lib/flightData.svelte';
+	import { flightStats } from '$lib/flights';
 	import { loadFacts, type Facts } from '$lib/facts';
 	import { countsForContinent, scopeTotal } from '$lib/scope';
 	import { ALL } from '$lib/map/geo';
@@ -389,9 +392,17 @@
 	let facts = $state.raw<Record<string, Facts> | null>(null);
 	$effect(() => {
 		if (ui.passOpen && !facts) loadFacts().then((f) => (facts = f));
+		if (ui.passOpen && atlas.flights.length) untrack(() => fd.load()); // Flughafen-Liste für die Flug-Abzeichen
 	});
+	// Flug-Abzeichen: ohne Flüge alle bei 0, mit Flügen erst, wenn die Flughafen-Liste geladen ist
+	const flCtx = $derived(atlas.flights.length ? (fd.st && fd.ap ? { st: fd.st, ap: fd.ap, al: fd.al } : null) : { st: flightStats([], {}), ap: {}, al: null });
 	const bs = $derived(
-		facts ? badges({ codes: contStamps.map((s) => s.code), facts, entered: Object.fromEntries(contStamps.map((s) => [s.code, s.entered])) }, atlas.settings.countryScope) : []
+		facts
+			? [
+					...badges({ codes: contStamps.map((s) => s.code), facts, entered: Object.fromEntries(contStamps.map((s) => [s.code, s.entered])) }, atlas.settings.countryScope),
+					...flightBadges(flCtx)
+				]
+			: []
 	);
 	let picked = $state<string | null>(null);
 	const pick = $derived(bs.find((b) => b.id === picked) ?? null);
@@ -712,11 +723,23 @@
 	// Tipp auf die Abzeichen-Meldung auf der Startseite: Pass öffnet direkt beim Abzeichen
 	$effect(() => {
 		const id = ui.passBadge;
-		if (!id || !ui.passOpen) return;
+		// warten, bis das Abzeichen berechnet ist (Flug-Abzeichen brauchen die nachgeladene Flughafen-Liste)
+		if (!id || !ui.passOpen || !bs.some((b) => b.id === id)) return;
 		untrack(() => {
 			ui.passBadge = '';
 			if (tab !== 'ab') pickTab('ab');
+			bGroup = 'all';
 			tick().then(() => choose(id).then(() => body?.querySelector<HTMLElement>(`[data-badge="${id}"]`)?.scrollIntoView({ block: 'center', behavior: 'auto' })));
+		});
+	});
+	// Tipp auf „Abzeichen“ im Tab „Flüge“: Pass öffnet bei dieser Gruppe
+	$effect(() => {
+		const g = ui.passGroup as BadgeGroup;
+		if (!g || !ui.passOpen) return;
+		untrack(() => {
+			ui.passGroup = '';
+			if (tab !== 'ab') pickTab('ab');
+			bGroup = g;
 		});
 	});
 	$effect(() => {
@@ -740,6 +763,19 @@
 	const wonderOpen = $derived(wonders.filter((w) => w.open && !w.have));
 	// Abzeichen in einer Liste: höchste erreichte Stufe zuerst (Gold, Silber, Bronze, noch keine), innerhalb gleich weit nach Fortschritt zur nächsten Stufe
 	const bSorted = $derived(bs.map((b) => ({ b, t: +(tierClass(b).slice(1) || 0) })).sort((x, y) => y.t - x.t || y.b.p - x.b.p).map((x) => x.b));
+	// Gruppen (Kontinente, Erdkunde, Kultur, Zeit, Flüge) je als eigene Visa-Seite; Auswahl oben zeigt alle oder nur eine Gruppe
+	let bGroup = $state<BadgeGroup | 'all'>('all');
+	const groups = $derived(
+		BADGE_GROUPS.map((g) => {
+			const list = bSorted.filter((b) => b.group === g.id);
+			return { ...g, list, have: badgeLevels(list), all: list.reduce((s, b) => s + b.tiers.length, 0) };
+		}).filter((g) => g.list.length)
+	);
+	function pickGroup(g: BadgeGroup | 'all') {
+		if (g === bGroup) return;
+		choose(null);
+		bGroup = g;
+	}
 	const medals = $derived([3, 2, 1].map((t) => bs.filter((b) => tierClass(b) === 't' + t).length));
 
 	/* ---------- Teilen: Übersicht als Bild (zwei Varianten, ohne Namen) ---------- */
@@ -1026,10 +1062,18 @@
 					<div class="pp-mcount" aria-label="{medals[0]} Gold, {medals[1]} Silber, {medals[2]} Bronze">
 						<span><i class="t3"></i>{medals[0]} Gold</span><span><i class="t2"></i>{medals[1]} Silber</span><span><i class="t1"></i>{medals[2]} Bronze</span>
 					</div>
-					<div class="pp-visa">
-						<div class="pp-page-h"><span>Abzeichen</span><span>{badgeLevels(bs)} / {bs.reduce((s, b) => s + b.tiers.length, 0)}</span></div>
-						<div class="pp-badges">{#each bSorted as b (b.id)}{@render badge(b)}{/each}</div>
+					<div class="pp-groups" role="group" aria-label="Abzeichen-Gruppe">
+						<button type="button" aria-pressed={bGroup === 'all'} onclick={() => pickGroup('all')}>Alle</button>
+						{#each groups as g (g.id)}<button type="button" aria-pressed={bGroup === g.id} onclick={() => pickGroup(g.id)}><span aria-hidden="true">{g.icon}</span>{g.name}</button>{/each}
 					</div>
+					{#each groups as g (g.id)}
+						{#if bGroup === 'all' || bGroup === g.id}
+							<div class="pp-visa">
+								<div class="pp-page-h"><span>{g.icon} {g.name}</span><span>{g.have} / {g.all}</span></div>
+								<div class="pp-badges">{#each g.list as b (b.id)}{@render badge(b)}{/each}</div>
+							</div>
+						{/if}
+					{/each}
 				{/if}
 			</div>
 		{/if}
@@ -1102,7 +1146,7 @@
 						{#if det.missMore}<p class="pp-lnote">… und {det.missMore} weitere</p>{/if}
 					{:else if det.note}
 						<p class="pp-lnote">{det.note}</p>
-					{:else if !max}
+					{:else if !max && det.missT}
 						<p class="pp-lnote">Alles dabei 🎉</p>
 					{/if}
 				</div>

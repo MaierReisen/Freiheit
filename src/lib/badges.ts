@@ -11,17 +11,27 @@ export interface BadgeCtx {
 	/** Einreisedatum je Land ("JJJJ-MM" oder "JJJJ") */
 	entered: Record<string, string | undefined>;
 }
-interface Def {
+/** Gruppe in der Abzeichen-Übersicht des Passes */
+export type BadgeGroup = 'welt' | 'erde' | 'kultur' | 'zeit' | 'flug';
+export const BADGE_GROUPS: { id: BadgeGroup; name: string; icon: string }[] = [
+	{ id: 'welt', name: 'Kontinente', icon: '🌍' },
+	{ id: 'erde', name: 'Erdkunde', icon: '🗺️' },
+	{ id: 'kultur', name: 'Kultur', icon: '🗣️' },
+	{ id: 'zeit', name: 'Zeit', icon: '⏰' },
+	{ id: 'flug', name: 'Flüge', icon: '✈️' }
+];
+export interface Def<C = BadgeCtx> {
 	id: string;
+	group: BadgeGroup;
 	name: string;
 	icon: string;
 	/** Was gezählt wird, z. B. „Inselstaaten“ */
 	what: string;
 	tiers: number[];
-	val: (x: BadgeCtx) => number;
+	val: (x: C) => number;
 	fmt?: (v: number) => string;
 	/** Was zählt schon, was fehlt noch (erst beim Aufklappen berechnet) */
-	detail?: (x: BadgeCtx) => BadgeDetail;
+	detail?: (x: C) => BadgeDetail;
 }
 /** Eintrag der Detail-Liste: Land (code) oder sonstiger Punkt (icon) */
 export interface DetailItem {
@@ -42,6 +52,7 @@ export interface BadgeDetail {
 }
 export interface Badge {
 	id: string;
+	group: BadgeGroup;
 	name: string;
 	icon: string;
 	what: string;
@@ -72,7 +83,7 @@ const POLAR = set('NO SE FI IS RU CA US AQ');
 const MICRO = set('VA SM MC LI AD LU MT');
 const count = (x: BadgeCtx, s: Set<string>) => x.codes.filter((c) => s.has(c)).length;
 const distinct = (x: BadgeCtx, f: (fa: Facts) => string[] | undefined) => new Set(x.codes.flatMap((c) => f(x.facts[c] ?? {}) ?? [])).size;
-const num = (v: number) => new Intl.NumberFormat('de-DE').format(v);
+export const num = (v: number) => new Intl.NumberFormat('de-DE').format(v);
 const popFmt = (v: number) => (v >= 1e9 ? (v / 1e9).toLocaleString('de-DE', { maximumFractionDigits: 1 }) + ' Mrd.' : v >= 1e6 ? Math.round(v / 1e6) + ' Mio.' : num(Math.round(v / 1000)) + ' Tsd.');
 const dn = (type: 'language' | 'currency') => {
 	try {
@@ -90,7 +101,7 @@ const nm = (d: Intl.DisplayNames | null, c: string) => {
 		return c;
 	}
 };
-const byName = (a: DetailItem, b: DetailItem) => compareNames(a.label, b.label);
+export const byName = (a: DetailItem, b: DetailItem) => compareNames(a.label, b.label);
 const land = (c: string, sub?: string): DetailItem => ({ code: c, label: nameOf(c), sub });
 /** Liste aus einer Länder-Menge: besuchte zählen, übrige fehlen */
 const pool =
@@ -213,7 +224,7 @@ function defs(scope: CountryScope, facts: Record<string, Facts>): Def[] {
 	const eight = new Set(all.filter((c) => (facts[c]?.peak?.[1] ?? 0) >= 8000));
 	const worldArea = all.reduce((s, c) => s + area(c), 0) || 1;
 	const out: Def[] = [
-		{ id: 'cont', name: 'Sieben Kontinente', icon: '🌐', what: 'Kontinente', tiers: [3, 5, 7], val: (x) => new Set(x.codes.map((c) => CONT[c]).filter(Boolean)).size,
+		{ id: 'cont', group: 'welt', name: 'Sieben Kontinente', icon: '🌐', what: 'Kontinente', tiers: [3, 5, 7], val: (x) => new Set(x.codes.map((c) => CONT[c]).filter(Boolean)).size,
 			detail: (x) => {
 				const n = new Map<ContinentCode, number>();
 				for (const c of x.codes) if (CONT[c]) n.set(CONT[c], (n.get(CONT[c]) ?? 0) + 1);
@@ -230,6 +241,7 @@ function defs(scope: CountryScope, facts: Record<string, Facts>): Def[] {
 			const n = scopeTotalIn(scope, k);
 			return {
 				id: 'c' + k,
+				group: 'welt',
 				name: CONT_BADGES[k][0],
 				icon: CONT_BADGES[k][1],
 				what: `Länder in ${CONT_NAMES[k]}`,
@@ -238,20 +250,21 @@ function defs(scope: CountryScope, facts: Record<string, Facts>): Def[] {
 				detail: pool(() => all.filter((c) => CONT[c] === k))
 			};
 		}),
-		{ id: 'island', name: 'Inselhüpfer', icon: '🏝️', what: 'Inselstaaten', tiers: [3, 10, 25], val: (x) => count(x, ISLANDS), detail: pool(() => all.filter((c) => ISLANDS.has(c))) },
-		{ id: 'landlocked', name: 'Landratte', icon: '🏕️', what: 'Länder ohne Meer', tiers: [3, 10, 25], val: (x) => x.codes.filter((c) => x.facts[c]?.land).length, detail: pool((x) => all.filter((c) => x.facts[c]?.land)) },
-		{ id: 'left', name: 'Linksfahrer', icon: '🚗', what: 'Länder mit Linksverkehr', tiers: [3, 10, 25], val: (x) => x.codes.filter((c) => x.facts[c]?.drive === 'l').length, detail: pool((x) => all.filter((c) => x.facts[c]?.drive === 'l')) },
-		{ id: 'cur', name: 'Devisenjongleur', icon: '💱', what: 'Währungen', tiers: [5, 15, 40], val: (x) => distinct(x, (f) => f.cur?.map((c) => c.c)), detail: collect(all, (f) => f.cur?.map((c) => c.c), (k) => nm(curDn, k), 'Währungen') },
-		{ id: 'lang', name: 'Sprachenbabel', icon: '🗣️', what: 'Amtssprachen', tiers: [5, 15, 40], val: (x) => distinct(x, (f) => f.lang), detail: collect(all, (f) => f.lang, (k) => nm(langDn, k), 'Sprachen') },
-		{ id: 'micro', name: 'Zwergstaaten', icon: '🏯', what: 'Zwergstaaten Europas', tiers: [3, 5, MICRO.size], val: (x) => count(x, MICRO), detail: pool(() => MICRO) },
-		{ id: 'giant', name: 'Giganten', icon: '🐘', what: 'der 10 größten Länder', tiers: [3, 6, 10], val: (x) => count(x, giants), detail: pool(() => [...giants].sort((a, b) => area(b) - area(a)), (c) => num(Math.round(area(c) / 1000) * 1000) + ' km²') },
-		{ id: 'pop', name: 'Milliarden-Club', icon: '👥', what: 'Menschen leben dort', tiers: [1e9, 3e9, 5e9], val: (x) => x.codes.reduce((s, c) => s + (x.facts[c]?.pop ?? 0), 0), fmt: popFmt, detail: ranked(all, (c) => facts[c]?.pop ?? 0, popFmt) },
-		{ id: 'area', name: 'Landnahme', icon: '📐', what: 'der Landfläche der Erde', tiers: [10, 25, 50], val: (x) => Math.floor((x.codes.reduce((s, c) => s + area(c), 0) / worldArea) * 100), fmt: (v) => v + ' %', detail: ranked(all, area, (a) => (a / worldArea * 100).toLocaleString('de-DE', { maximumFractionDigits: a / worldArea < 0.001 ? 2 : 1 }) + ' %') },
-		{ id: 'eq', name: 'Äquatortaufe', icon: '🌞', what: 'Länder am Äquator', tiers: [1, 3, 6], val: (x) => count(x, EQUATOR), detail: pool(() => all.filter((c) => EQUATOR.has(c))) },
-		{ id: 'polar', name: 'Polarkreise', icon: '🐧', what: 'Länder an den Polarkreisen (mit Antarktis)', tiers: [1, 4, POLAR.size], val: (x) => count(x, POLAR), detail: pool(() => POLAR) },
-		{ id: 'k8', name: 'Dach der Welt', icon: '🏔️', what: 'Länder mit Achttausender', tiers: [1, 2, eight.size], val: (x) => count(x, eight), detail: pool(() => eight, (c, x) => x.facts[c]?.peak && `${x.facts[c].peak![0]} · ${num(x.facts[c].peak![1])} m`) },
+		{ id: 'island', group: 'erde', name: 'Inselhüpfer', icon: '🏝️', what: 'Inselstaaten', tiers: [3, 10, 25], val: (x) => count(x, ISLANDS), detail: pool(() => all.filter((c) => ISLANDS.has(c))) },
+		{ id: 'landlocked', group: 'erde', name: 'Landratte', icon: '🏕️', what: 'Länder ohne Meer', tiers: [3, 10, 25], val: (x) => x.codes.filter((c) => x.facts[c]?.land).length, detail: pool((x) => all.filter((c) => x.facts[c]?.land)) },
+		{ id: 'left', group: 'kultur', name: 'Linksfahrer', icon: '🚗', what: 'Länder mit Linksverkehr', tiers: [3, 10, 25], val: (x) => x.codes.filter((c) => x.facts[c]?.drive === 'l').length, detail: pool((x) => all.filter((c) => x.facts[c]?.drive === 'l')) },
+		{ id: 'cur', group: 'kultur', name: 'Devisenjongleur', icon: '💱', what: 'Währungen', tiers: [5, 15, 40], val: (x) => distinct(x, (f) => f.cur?.map((c) => c.c)), detail: collect(all, (f) => f.cur?.map((c) => c.c), (k) => nm(curDn, k), 'Währungen') },
+		{ id: 'lang', group: 'kultur', name: 'Sprachenbabel', icon: '🗣️', what: 'Amtssprachen', tiers: [5, 15, 40], val: (x) => distinct(x, (f) => f.lang), detail: collect(all, (f) => f.lang, (k) => nm(langDn, k), 'Sprachen') },
+		{ id: 'micro', group: 'erde', name: 'Zwergstaaten', icon: '🏯', what: 'Zwergstaaten Europas', tiers: [3, 5, MICRO.size], val: (x) => count(x, MICRO), detail: pool(() => MICRO) },
+		{ id: 'giant', group: 'erde', name: 'Giganten', icon: '🐘', what: 'der 10 größten Länder', tiers: [3, 6, 10], val: (x) => count(x, giants), detail: pool(() => [...giants].sort((a, b) => area(b) - area(a)), (c) => num(Math.round(area(c) / 1000) * 1000) + ' km²') },
+		{ id: 'pop', group: 'erde', name: 'Milliarden-Club', icon: '👥', what: 'Menschen leben dort', tiers: [1e9, 3e9, 5e9], val: (x) => x.codes.reduce((s, c) => s + (x.facts[c]?.pop ?? 0), 0), fmt: popFmt, detail: ranked(all, (c) => facts[c]?.pop ?? 0, popFmt) },
+		{ id: 'area', group: 'erde', name: 'Landnahme', icon: '📐', what: 'der Landfläche der Erde', tiers: [10, 25, 50], val: (x) => Math.floor((x.codes.reduce((s, c) => s + area(c), 0) / worldArea) * 100), fmt: (v) => v + ' %', detail: ranked(all, area, (a) => (a / worldArea * 100).toLocaleString('de-DE', { maximumFractionDigits: a / worldArea < 0.001 ? 2 : 1 }) + ' %') },
+		{ id: 'eq', group: 'erde', name: 'Äquatortaufe', icon: '🌞', what: 'Länder am Äquator', tiers: [1, 3, 6], val: (x) => count(x, EQUATOR), detail: pool(() => all.filter((c) => EQUATOR.has(c))) },
+		{ id: 'polar', group: 'erde', name: 'Polarkreise', icon: '🐧', what: 'Länder an den Polarkreisen (mit Antarktis)', tiers: [1, 4, POLAR.size], val: (x) => count(x, POLAR), detail: pool(() => POLAR) },
+		{ id: 'k8', group: 'erde', name: 'Dach der Welt', icon: '🏔️', what: 'Länder mit Achttausender', tiers: [1, 2, eight.size], val: (x) => count(x, eight), detail: pool(() => eight, (c, x) => x.facts[c]?.peak && `${x.facts[c].peak![0]} · ${num(x.facts[c].peak![1])} m`) },
 		{
 			id: 'quad',
+			group: 'welt',
 			name: 'Vier Himmelsrichtungen',
 			icon: '🧭',
 			what: 'Erdviertel (Nord/Süd × Ost/West)',
@@ -272,6 +285,7 @@ function defs(scope: CountryScope, facts: Record<string, Facts>): Def[] {
 		},
 		{
 			id: 'tz',
+			group: 'zeit',
 			name: 'Zeitreisender',
 			icon: '⏰',
 			what: 'Stunden Zeitunterschied',
@@ -297,9 +311,10 @@ function defs(scope: CountryScope, facts: Record<string, Facts>): Def[] {
 				};
 			}
 		},
-		{ id: 'year', name: 'Rekordjahr', icon: '🚀', what: 'neue Länder in einem Jahr', tiers: [3, 5, 10], val: (x) => Math.max(0, ...perYear(x).values()), detail: yearDetail },
+		{ id: 'year', group: 'zeit', name: 'Rekordjahr', icon: '🚀', what: 'neue Länder in einem Jahr', tiers: [3, 5, 10], val: (x) => Math.max(0, ...perYear(x).values()), detail: yearDetail },
 		{
 			id: 'streak',
+			group: 'zeit',
 			name: 'Jahr für Jahr',
 			icon: '📅',
 			what: 'Jahre in Folge ein neues Land',
@@ -320,11 +335,8 @@ function defs(scope: CountryScope, facts: Record<string, Facts>): Def[] {
 	return out.map((d) => ({ ...d, tiers: [...new Set(d.tiers.filter((t) => t > 0))] }));
 }
 
-const defCache = new Map<string, Def[]>();
-/** Alle Abzeichen mit Stand (sortiert wie definiert) */
-export function badges(ctx: BadgeCtx, scope: CountryScope): Badge[] {
-	let ds = defCache.get(scope);
-	if (!ds) defCache.set(scope, (ds = defs(scope, ctx.facts)));
+/** Stand je Abzeichen aus den Definitionen */
+export function evalDefs<C>(ds: Def<C>[], ctx: C): Badge[] {
 	return ds.map((d) => {
 		const v = d.val(ctx),
 			fmt = d.fmt ?? num,
@@ -333,6 +345,7 @@ export function badges(ctx: BadgeCtx, scope: CountryScope): Badge[] {
 			from = d.tiers[level - 1] ?? 0;
 		return {
 			id: d.id,
+			group: d.group,
 			name: d.name,
 			icon: d.icon,
 			what: d.what,
@@ -346,6 +359,14 @@ export function badges(ctx: BadgeCtx, scope: CountryScope): Badge[] {
 			detail: () => d.detail?.(ctx) ?? { haveT: '', have: [], missT: '', miss: [] }
 		};
 	});
+}
+
+const defCache = new Map<string, Def[]>();
+/** Alle Länder-Abzeichen mit Stand (sortiert wie definiert; Flug-Abzeichen: flightBadges.ts) */
+export function badges(ctx: BadgeCtx, scope: CountryScope): Badge[] {
+	let ds = defCache.get(scope);
+	if (!ds) defCache.set(scope, (ds = defs(scope, ctx.facts)));
+	return evalDefs(ds, ctx);
 }
 
 /** Gesamtzahl erreichter Stufen */

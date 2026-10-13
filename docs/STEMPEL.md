@@ -1,6 +1,6 @@
 # Stempel – Übersicht
 
-> Automatisch erzeugt aus dem Code (App-Version 1.38.0). Nicht von Hand ändern, sondern neu erzeugen: `node scripts/build-stempel-doc.mjs`.
+> Automatisch erzeugt aus dem Code (App-Version 1.48.0). Nicht von Hand ändern, sondern neu erzeugen: `node scripts/build-stempel-doc.mjs`.
 
 > **Bilder aller Stempel:** [stempel.html](stempel.html) öffnen (Galerie mit Suche; Common, Rare, Epic, Legendary je Land + Weltwunder).
 
@@ -76,16 +76,27 @@ Eigene Seite im Pass mit den **neuen 7 Weltwundern** (Wahl von 2007). Ein „?�
 
 ## 5. Abzeichen
 
-Sonderauszeichnungen auf der Visa-Seite im Pass, in bis zu drei Stufen **Bronze / Silber / Gold** (Abzeichen mit nur einer Stufe sind gleich Gold). Berechnet aus bereisten Ländern, Länderfakten und Einreisedaten. Eine neue Stufe löst eine Feier-Karte aus.
+Sonderauszeichnungen auf der Visa-Seite im Pass, in bis zu drei Stufen **Bronze / Silber / Gold** (Abzeichen mit nur einer Stufe sind gleich Gold). Berechnet aus bereisten Ländern, Länderfakten und Einreisedaten, die Gruppe „Flüge“ aus den Flügen (Regeln wie im Tab „Flüge“). Im Pass nach Gruppen geordnet (je eine Visa-Seite, oben auswählbar). Eine neue Stufe löst eine Feier-Karte aus.
+
+### 🌍 Kontinente
 
 | Abzeichen | Gezählt wird | Stufen (Bronze / Silber / Gold) |
 |---|---|---|
 | 🌐 Sieben Kontinente | Kontinente | 3 / 5 / 7 |
+| 🧭 Vier Himmelsrichtungen | Erdviertel (Nord/Süd × Ost/West) | 2 / 3 / 4 |
+| 🏰 Alter Kontinent | Länder in Europa (¼ / ½ / alle) | ein Viertel / die Hälfte / alle Länder des Kontinents |
+| 🐉 Seidenstraße | Länder in Asien (¼ / ½ / alle) | ein Viertel / die Hälfte / alle Länder des Kontinents |
+| 🦁 Safari-Seele | Länder in Afrika (¼ / ½ / alle) | ein Viertel / die Hälfte / alle Länder des Kontinents |
+| 🗽 Neue Welt | Länder in Nordamerika (¼ / ½ / alle) | ein Viertel / die Hälfte / alle Länder des Kontinents |
+| 🦙 Kondorflug | Länder in Südamerika (¼ / ½ / alle) | ein Viertel / die Hälfte / alle Länder des Kontinents |
+| 🌺 Südsee | Länder in Ozeanien (¼ / ½ / alle) | ein Viertel / die Hälfte / alle Länder des Kontinents |
+
+### 🗺️ Erdkunde
+
+| Abzeichen | Gezählt wird | Stufen (Bronze / Silber / Gold) |
+|---|---|---|
 | 🏝️ Inselhüpfer | Inselstaaten | 3 / 10 / 25 |
 | 🏕️ Landratte | Länder ohne Meer | 3 / 10 / 25 |
-| 🚗 Linksfahrer | Länder mit Linksverkehr | 3 / 10 / 25 |
-| 💱 Devisenjongleur | Währungen | 5 / 15 / 40 |
-| 🗣️ Sprachenbabel | Amtssprachen | 5 / 15 / 40 |
 | 🏯 Zwergstaaten | Zwergstaaten Europas | 3 / 5 / 7 |
 | 🐘 Giganten | der 10 größten Länder | 3 / 6 / 10 |
 | 👥 Milliarden-Club | Menschen leben dort | 1 Mrd. / 3 Mrd. / 5 Mrd. |
@@ -93,16 +104,39 @@ Sonderauszeichnungen auf der Visa-Seite im Pass, in bis zu drei Stufen **Bronze 
 | 🌞 Äquatortaufe | Länder am Äquator | 1 / 3 / 6 |
 | 🐧 Polarkreise | Länder an den Polarkreisen (mit Antarktis) | 1 / 4 / 8 |
 | 🏔️ Dach der Welt | Länder mit Achttausender | 1 / 2 / 4 |
-| 🧭 Vier Himmelsrichtungen | Erdviertel (Nord/Süd × Ost/West) | 2 / 3 / 4 |
+
+### 🗣️ Kultur
+
+| Abzeichen | Gezählt wird | Stufen (Bronze / Silber / Gold) |
+|---|---|---|
+| 🚗 Linksfahrer | Länder mit Linksverkehr | 3 / 10 / 25 |
+| 💱 Devisenjongleur | Währungen | 5 / 15 / 40 |
+| 🗣️ Sprachenbabel | Amtssprachen | 5 / 15 / 40 |
+
+### ⏰ Zeit
+
+| Abzeichen | Gezählt wird | Stufen (Bronze / Silber / Gold) |
+|---|---|---|
 | ⏰ Zeitreisender | Stunden Zeitunterschied | 6 / 12 / 18 |
 | 🚀 Rekordjahr | neue Länder in einem Jahr | 3 / 5 / 10 |
 | 📅 Jahr für Jahr | Jahre in Folge ein neues Land | 3 / 5 / 10 |
-| 🏰 Alter Kontinent | Länder in Europa (¼ / ½ / alle) | ein Viertel / die Hälfte / alle Länder des Kontinents |
-| 🐉 Seidenstraße | Länder in Asien (¼ / ½ / alle) | ein Viertel / die Hälfte / alle Länder des Kontinents |
-| 🦁 Safari-Seele | Länder in Afrika (¼ / ½ / alle) | ein Viertel / die Hälfte / alle Länder des Kontinents |
-| 🗽 Neue Welt | Länder in Nordamerika (¼ / ½ / alle) | ein Viertel / die Hälfte / alle Länder des Kontinents |
-| 🦙 Kondorflug | Länder in Südamerika (¼ / ½ / alle) | ein Viertel / die Hälfte / alle Länder des Kontinents |
-| 🌺 Südsee | Länder in Ozeanien (¼ / ½ / alle) | ein Viertel / die Hälfte / alle Länder des Kontinents |
+
+### ✈️ Flüge
+
+| Abzeichen | Gezählt wird | Stufen (Bronze / Silber / Gold) |
+|---|---|---|
+| ✈️ Vielflieger | Flüge | 10 / 50 / 150 |
+| 🌙 Bis zum Mond | geflogen | 40.075 km (1× um die Erde) / 192.200 km / 384.400 km (Mond) |
+| ☁️ Über den Wolken | Stunden in der Luft | 24 / 168 / 500 |
+| 🗓️ Flugjahr | Flüge in einem Jahr | 10 / 30 / 60 |
+| 🛫 Flughafen-Sammler | Flughäfen | 10 / 30 / 75 |
+| 🎫 Airline-Sammler | Airlines | 5 / 15 / 30 |
+| 🌐 Kontinent-Hopper | Kontinente angeflogen | 2 / 4 / 6 |
+| 🦘 Langstrecke | längster Flug | 4000 / 8000 / 12000 |
+| 🌞 Über den Äquator | Flüge über den Äquator | 1 / 5 / 15 |
+| 🌅 Datumsgrenze | Flüge über die Datumsgrenze | 1 / 3 / 10 |
+| 🦉 Nachteule | Nachtflüge (Abflug 22–5 Uhr) | 1 / 10 / 25 |
+| 🔁 Stammstrecke | Flüge auf derselben Strecke | 3 / 5 / 10 |
 
 ## 6. Alle 250 Länderstempel
 

@@ -1,9 +1,9 @@
 /* Erzeugt docs/STEMPEL.md: alle Stempel aller Länder, Seltenheit, Weltwunder, Abzeichen, Ränge.
-   Liest die Quelldateien (passport.ts, scenes.ts, special.svelte.ts, wonders.ts, badges.ts) – nichts von Hand pflegen.
+   Liest die Quelldateien (passport.ts, scenes.ts, special.svelte.ts, wonders.ts, badges.ts, flightBadges.ts) – nichts von Hand pflegen.
    Aufruf: node scripts/build-stempel-doc.mjs */
 import fs from 'fs';
 const rd = (f) => fs.readFileSync(f, 'utf8');
-const P = rd('src/lib/passport.ts'), S = rd('src/lib/scenes.ts'), SP = rd('src/lib/special.svelte.ts'), W = rd('src/lib/wonders.ts'), B = rd('src/lib/badges.ts');
+const P = rd('src/lib/passport.ts'), S = rd('src/lib/scenes.ts'), SP = rd('src/lib/special.svelte.ts'), W = rd('src/lib/wonders.ts'), B = rd('src/lib/badges.ts'), FB = rd('src/lib/flightBadges.ts');
 const names = JSON.parse(rd('src/lib/data/names.json'));
 const cont = JSON.parse(rd('src/lib/data/continents.json'));
 const CONT = cont.byCountry, CN = cont.names;
@@ -69,13 +69,15 @@ const rare = pct(ch[1]), epic = pct(ch[2]), leg = pct(ch[3]), common = 100 - rar
 const wonders = [...W.matchAll(/\{ id: '(\w+)', name: '([^']+)', code: '(\w+)', place: '([^']+)' \}/g)].map((m) => ({ id: m[1], name: m[2], code: m[3], place: m[4] }));
 
 /* ---- Abzeichen ---- */
-const SIZE = { 'MICRO.size': 7, 'POLAR.size': 8, 'eight.size': 4 };
+const SIZE = { 'MICRO.size': 7, 'POLAR.size': 8, 'eight.size': 4, EARTH_KM: '40.075 km (1× um die Erde)', 'MOON_KM / 2': '192.200 km', MOON_KM: '384.400 km (Mond)' };
 const tierStr = (t) => t.split(',').map((x) => x.trim()).map((x) => SIZE[x] ?? (x === '1e9' ? '1 Mrd.' : x === '3e9' ? '3 Mrd.' : x === '5e9' ? '5 Mrd.' : x)).join(' / ');
-const bsec = sec(B, 'function defs(', 'export function badges');
+const bsec = sec(B, 'function defs(', 'export function evalDefs') + sec(FB, 'const LIST', 'const DEFS');
+const groups = [...B.matchAll(/\{ id: '(\w+)', name: '([^']+)', icon: '([^']+)' \}/g)].map((m) => ({ id: m[1], name: m[2], icon: m[3] }));
 const badges = [];
-for (const m of bsec.matchAll(/id: '(\w+)',\s*name: '([^']+)',\s*icon: '([^']+)',\s*what: '([^']+)',\s*tiers: \[([^\]]+)\]/g)) badges.push({ id: m[1], name: m[2], icon: m[3], what: m[4], tiers: tierStr(m[5]) });
+const BRE = /id: '(\w+)',\s*group: '(\w+)',\s*name: '([^']+)',\s*icon: '([^']+)',\s*what: '([^']+)',\s*tiers: \[([^\]]+)\]/g;
+for (const m of bsec.matchAll(BRE)) badges.push({ id: m[1], group: m[2], name: m[3], icon: m[4], what: m[5], tiers: tierStr(m[6]) });
 const contB = [...B.matchAll(/^\t([A-Z]{2}): \['([^']+)', '([^']+)'\]/gm)].map((m) => ({ k: m[1], name: m[2], icon: m[3] }));
-for (const b of contB) badges.push({ id: 'c' + b.k, name: b.name, icon: b.icon, what: `Länder in ${CN[b.k]} (¼ / ½ / alle)`, tiers: 'ein Viertel / die Hälfte / alle Länder des Kontinents' });
+for (const b of contB) badges.push({ id: 'c' + b.k, name: b.name, icon: b.icon, group: 'welt', what: `Länder in ${CN[b.k]} (¼ / ½ / alle)`, tiers: 'ein Viertel / die Hälfte / alle Länder des Kontinents' });
 const badgesOut = badges.filter((b, i, a) => a.findIndex((x) => x.id === b.id) === i);
 
 /* ---- Dokument ---- */
@@ -117,10 +119,12 @@ wonders.forEach((w, i) => push(`| ${R[i]} | ${w.name} | ${names[w.code]} (${w.co
 push('');
 
 push('## 5. Abzeichen', '',
-	'Sonderauszeichnungen auf der Visa-Seite im Pass, in bis zu drei Stufen **Bronze / Silber / Gold** (Abzeichen mit nur einer Stufe sind gleich Gold). Berechnet aus bereisten Ländern, Länderfakten und Einreisedaten. Eine neue Stufe löst eine Feier-Karte aus.', '',
-	'| Abzeichen | Gezählt wird | Stufen (Bronze / Silber / Gold) |', '|---|---|---|');
-for (const b of badgesOut) push(`| ${b.icon} ${b.name} | ${esc(b.what)} | ${esc(b.tiers)} |`);
-push('');
+	'Sonderauszeichnungen auf der Visa-Seite im Pass, in bis zu drei Stufen **Bronze / Silber / Gold** (Abzeichen mit nur einer Stufe sind gleich Gold). Berechnet aus bereisten Ländern, Länderfakten und Einreisedaten, die Gruppe „Flüge“ aus den Flügen (Regeln wie im Tab „Flüge“). Im Pass nach Gruppen geordnet (je eine Visa-Seite, oben auswählbar). Eine neue Stufe löst eine Feier-Karte aus.', '');
+for (const g of groups) {
+	push(`### ${g.icon} ${g.name}`, '', '| Abzeichen | Gezählt wird | Stufen (Bronze / Silber / Gold) |', '|---|---|---|');
+	for (const b of badgesOut.filter((b) => b.group === g.id)) push(`| ${b.icon} ${b.name} | ${esc(b.what)} | ${esc(b.tiers)} |`);
+	push('');
+}
 
 push(`## 6. Alle ${rows.length} Länderstempel`, '',
 	'Spalten: **Stempelname** = Text im Stempel · **Form/Farbe** = Rahmen und Stempelfarbe · **Common** = Motiv des normalen Stempels · **Rare / Epic / Legendary** = Bild der jeweiligen Briefmarke.', '');

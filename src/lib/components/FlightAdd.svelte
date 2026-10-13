@@ -1,9 +1,11 @@
 <script lang="ts">
 	import { atlas, putFlights } from '$lib/atlas.svelte';
-	import { closeFlightsPage, closeSheet, flashRoute, hooks, toast } from '$lib/app.svelte';
+	import { closeFlightsPage, closeSheet, flashRoute, hooks, toast, ui } from '$lib/app.svelte';
+	import { tierName } from '$lib/badges';
+	import { flightBadges } from '$lib/flightBadges';
 	import { flag, nameOf } from '$lib/countries';
 	import { fd } from '$lib/flightData.svelte';
-	import { estFlightMin, fmtDuration, fmtInt, gcKm, localToUtc, routeKey, type Flight, type FlightDetail } from '$lib/flights';
+	import { estFlightMin, flightStats, fmtDuration, fmtInt, gcKm, localToUtc, routeKey, type Flight, type FlightDetail } from '$lib/flights';
 
 	/* „Flug hinzufügen“ (Knopf „+ Flug“ im Tab „Flüge“ bzw. auf der Seite einer Strecke): Datum, Von, Nach,
 	   optional Flugnummer (z. B. „LH 400“, Airline wird daraus erkannt) und Ortszeiten. Flughäfen per Suche
@@ -135,6 +137,15 @@
 			return;
 		}
 		const f: Flight = { id, date, from, to, ...(airline ? { airline } : {}), ...(nr ? { no: nr } : {}), d };
+		// neue Stufe bei einem Flug-Abzeichen: vorher/nachher vergleichen, Feier-Karte nach dem Flug zur Strecke (je eine, höchstens 3)
+		const t = Date.now(),
+			was = flightBadges({ st: flightStats(atlas.flights, ap, t), ap, al: fd.al }),
+			up = flightBadges({ st: flightStats([...atlas.flights, f], ap, t), ap, al: fd.al }).filter((b, i) => b.level > was[i].level);
+		up.slice(0, 3).forEach((b, k) =>
+			setTimeout(() => {
+				ui.unlock = { key: ui.unlock.key + 1, cont: '', n: 0, rank: '', badge: b.name, badgeId: b.id, icon: b.icon, sub: `${tierName(b, b.level)} · ${b.fmt(b.v)} ${b.what}`, added: '', area: '' };
+			}, 1800 + k * 3900)
+		);
 		atlas.lastFlightAddedAt = Date.now();
 		putFlights([f]);
 		toast(`Flug ${from} → ${to} hinzugefügt`);

@@ -872,6 +872,10 @@ button.pp-tile:active{transform:scale(.98)}
 .pp-mcount span{display:flex;align-items:center;gap:6px}
 .pp-mcount i{width:14px;height:14px;border-radius:50%}
 .pp-mcount i.t1{background:var(--bzg)}.pp-mcount i.t2{background:var(--svg)}.pp-mcount i.t3{background:var(--gdg)}
+.pp-groups{display:flex;gap:6px;margin:0 -20px 14px;padding:0 20px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.pp-groups::-webkit-scrollbar{display:none}
+.pp-groups button{flex:none;display:flex;align-items:center;gap:5px;padding:7px 12px;border:0;border-radius:999px;background:var(--chip);color:var(--muted);font-weight:700;font-size:13.5px;white-space:nowrap;-webkit-tap-highlight-color:transparent}
+.pp-groups button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
 .pp-rsay{font-style:italic;color:var(--ink)!important}
 .pp-rlist{margin:8px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px}
 .pp-leg .pp-rlist li{display:flex;align-items:center;gap:12px;padding:9px 12px;border:0;border-radius:var(--r-md);background:var(--chip);opacity:.55}
