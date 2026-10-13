@@ -152,8 +152,20 @@
 		const target = go ? -s.side * w : 0;
 		// Dauer nach Restweg und Fingertempo: ein schneller Wisch läuft schnell aus
 		const rest = Math.abs(target - (s.nb.length || !x ? x : x * 0.25));
-		const ms = reduceMotion() ? 0 : Math.round(Math.max(180, Math.min(380, rest / Math.max(Math.abs(s.v), 1.1))));
+		const y0 = go ? window.scrollY : 0;
+		let ms = reduceMotion() ? 0 : Math.round(Math.max(180, Math.min(380, rest / Math.max(Math.abs(s.v), 1.1))));
+		if (ms && y0 > 0) ms = Math.max(ms, 320); // heruntergescrollt: Zeit lassen, um weich nach oben zu gleiten
 		place(s, target, ms);
+		// Neuer Tab beginnt oben: Seite gleitet im selben Takt nach oben statt am Ende zu springen
+		if (ms && y0 > 0) {
+			const t0 = performance.now();
+			const step = (now: number) => {
+				const p = Math.min(1, (now - t0) / ms);
+				window.scrollTo(0, y0 * Math.pow(1 - p, 3));
+				if (p < 1) requestAnimationFrame(step);
+			};
+			requestAnimationFrame(step);
+		}
 		const finish = () => {
 			settling = undefined;
 			document.documentElement.classList.remove('swiping');
