@@ -319,9 +319,12 @@ button.cont{border:0;font:inherit;font-size:14px;color:inherit}
 .flight-plus{position:absolute;pointer-events:none;font-family:var(--display);font-weight:800;font-size:14px;color:var(--primary);white-space:nowrap;animation:plusUp 1.6s cubic-bezier(.2,.8,.2,1) .25s both}
 @keyframes plusUp{0%{opacity:0;transform:translate(-50%,-14px) scale(.6)}20%{opacity:1;transform:translate(-50%,-26px) scale(1.12)}70%{opacity:1;transform:translate(-50%,-44px) scale(1)}100%{opacity:0;transform:translate(-50%,-58px) scale(.95)}}
 .flight-pct{position:absolute;right:0;bottom:12px;min-width:108px;display:flex;flex-direction:column;align-items:flex-end;line-height:1} /* feste Mindestbreite: Kurve weicht immer gleich aus */
-.flight-pct.left{right:auto;left:0;align-items:flex-start}
-.flight-port{fill:var(--ink);fill-opacity:.16}
+.flight-pct.top{bottom:auto}
+.flight-port{fill:var(--ink);fill-opacity:.2}
 .flight-light{fill:var(--sun)}
+.flight-beacon{fill:var(--err);animation:beacon 1.6s steps(1) infinite}
+@keyframes beacon{0%{opacity:1}12%{opacity:.15}100%{opacity:.15}}
+[data-motion="reduce"] .flight-beacon{animation:none}
 .flight-pct b{font-family:var(--display);font-weight:800;font-size:26px;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
 .flight-pct span{margin-top:4px;font-size:13px;font-weight:600;color:var(--muted)}
 /* Welle und Funken beim neuen Land */

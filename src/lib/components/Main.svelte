@@ -63,11 +63,17 @@
 		if (!t) return;
 		s.side = side;
 		s.nb = panesOf(t);
+		ui.swipeTo = t;
 		s.nb.forEach((el, i) => {
 			const ref = s.cur[Math.min(i, s.cur.length - 1)];
 			el.classList.remove('in-r', 'in-l');
 			el.hidden = false;
 			Object.assign(el.style, { position: 'absolute', left: ref.offsetLeft + 'px', top: ref.offsetTop + 'px', width: ref.offsetWidth + 'px', pointerEvents: 'none' });
+			// Inhalt auf dieselbe Höhe wie den des aktuellen Teils legen: im Fluss ragt der obere Außenabstand des ersten
+			// Kindes aus dem Teil heraus, absolut liegt er innen (sonst sitzt der Nachbar tiefer und springt am Ende)
+			const top = (p: HTMLElement) => (p.firstElementChild?.getBoundingClientRect().top ?? 0) - p.getBoundingClientRect().top;
+			const dy = top(el) - top(ref);
+			if (dy) el.style.top = ref.offsetTop - dy + 'px';
 		});
 	}
 	function hideNeighbor(s: Swipe) {
@@ -77,6 +83,8 @@
 		});
 		s.nb = [];
 		s.side = 0;
+		ui.swipeTo = '';
+		ui.planeHandoff = false;
 	}
 	function place(s: Swipe, x: number, ms = 0) {
 		const w = window.innerWidth;
@@ -171,6 +179,8 @@
 			document.documentElement.classList.remove('swiping');
 			if (go && next) {
 				goTab(next, true, 0); // Nachbar steht schon an seinem Platz: ohne eigene Einblendung (Sichtbarkeit regelt jetzt der Tab)
+				ui.swipeTo = '';
+				ui.planeHandoff = false;
 				s.nb.forEach((el) => el.removeAttribute('style'));
 			} else {
 				hideNeighbor(s);

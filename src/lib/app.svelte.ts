@@ -97,6 +97,10 @@ export const ui = $state({
 	flightsPage: '' as FlightsPage | '',
 	/** zählt hoch, wenn der Globus im Tab „Flüge“ alle (bzw. die gewählten) Strecken ins Bild holen soll */
 	flightsFit: 0,
+	/** Tab, zu dem gerade gewischt wird (Nachbar sichtbar), sonst '' – das Flugzeug im Kopf fliegt dann hinaus */
+	swipeTo: '' as Tab | '',
+	/** Flugzeug im Kopf: Welt hat beim Wischen an die Flüge übergeben (Ende der einen = Anfang der anderen Kurve) */
+	planeHandoff: false,
 	/** Globus auf der Startseite per Tipp aktiviert (Touch): dann drehen, kippen, zoomen statt Seite scrollen */
 	mapActive: false,
 	/** Kontinent, auf dem die Karte gerade steht (per Chip oder Ziehen; null = Startregion, '' = mehrere Kontinente im Bild); nur Ansicht */
