@@ -14,7 +14,7 @@
 	   und ist vor der Sonne eine dunkle Silhouette.
 	   - App-Start (und nach längerer Pause): Rollen, Abheben, Flug bis zum erreichten Punkt –
 	     auf der gemeinsamen Zeitachse (ui.intro), endet gleichzeitig mit Globus und Zählern
-	   - eigenes neues Land: Anschub nur nach vorn, Nachbrenner-Leuchten, Flügelwackeln, Welle, Funken, „+x %“
+	   - eigenes neues Land (Flüge: eigener neuer Flug): Anschub nur nach vorn, Nachbrenner-Leuchten, Flügelwackeln, Welle, Funken, „+x %“
 	   - alle anderen Änderungen (Laden aus dem Konto, Entfernen, Länderliste, Import): ruhig an die neue Stelle
 	   Szene „landing“ (Tab Flüge, Fortsetzung der Geschichte): kommt links in derselben Reiseflughöhe herein, in der die
 	   Kurve der Welt rechts endet (beide Kurven reichen bis in den Seitenrand, beim Wischen gehen sie ineinander über);
@@ -30,6 +30,8 @@
 	const PLANE = 'M34 0c0-3-4-5-8-5H10L-6-28h-9l8 23H-18l-7-9h-7l4 14-4 14h7l7-9H-7l-8 23h9L10 5h16c4 0 8-2 8-5z';
 	const uid = Math.random().toString(36).slice(2, 8);
 	const fmt = (v: number) => v.toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+
+	const fmt2 = (v: number) => v.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 	let w = $state(0);
 	let host: HTMLDivElement;
@@ -209,7 +211,7 @@
 			// Welt im Hintergrund: ohne Animation an die neue Stelle; beim Hinausfliegen (Wischen) erst danach
 			if (!active) return landing ? undefined : jump();
 			if (exited) return;
-			const ownAdd = now > prev && Date.now() - atlas.lastAddedAt < 2000;
+			const ownAdd = now > prev && Date.now() - (landing ? atlas.lastFlightAddedAt : atlas.lastAddedAt) < 2000;
 			const introLeft = introProgress() < 1 ? ui.intro.end - performance.now() : 0;
 			if (introLeft > 0 && !ownAdd) {
 				// während der Start-Animation nachgeladen: Ziel anpassen, aber gleichzeitig mit allem anderen ankommen
@@ -217,7 +219,7 @@
 			} else if (ownAdd && !reduceMotion()) {
 				clearTimeout(boostT);
 				// Nachbrenner: auch ein Stück der Spur hinter dem Flugzeug leuchtet mit
-				boost = { from: Math.max(0, shown - 0.06), key: (boost?.key ?? 0) + 1, label: `+${fmt((now - prev) * 100)} %` };
+				boost = { from: Math.max(0, shown - 0.06), key: (boost?.key ?? 0) + 1, label: `+${landing ? fmt2((now - prev) * 100) : fmt((now - prev) * 100)} %` };
 				boostAlpha = 1;
 				fly(shown, shownPct, { boost: true });
 				boostT = setTimeout(() => (boostAlpha = 0), 1100); // Leuchten geht in die normale Spur über

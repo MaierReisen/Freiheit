@@ -139,6 +139,7 @@ export const atlas = $state<{
 	settings: Settings;
 	flights: Flight[];
 	lastAddedAt: number;
+	lastFlightAddedAt: number;
 	lastAddedCode: string;
 	lastAddedCodes: string[];
 }>({
@@ -149,6 +150,8 @@ export const atlas = $state<{
 	settings: defaultSettings(),
 	/** Zeitpunkt, zu dem zuletzt selbst ein Land hinzugefügt wurde (für die Feier auf der Startseite) */
 	lastAddedAt: 0,
+	/** Zeitpunkt, zu dem zuletzt selbst ein Flug eingetragen wurde (Flugzeug im Kopf der Flüge) */
+	lastFlightAddedAt: 0,
 	lastAddedCode: '',
 	/** alle Länder der letzten Hinzufügen-Aktion (bei mehreren auf einmal), das zuletzt gewählte steht auch in lastAddedCode */
 	lastAddedCodes: []

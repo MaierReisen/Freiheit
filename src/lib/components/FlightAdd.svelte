@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { atlas, putFlights } from '$lib/atlas.svelte';
-	import { closeFlightsPage, closeSheet, hooks, openRoute, toast } from '$lib/app.svelte';
+	import { closeFlightsPage, closeSheet, hooks, toast } from '$lib/app.svelte';
 	import { flag, nameOf } from '$lib/countries';
 	import { fd } from '$lib/flightData.svelte';
 	import { estFlightMin, fmtDuration, fmtInt, gcKm, localToUtc, routeKey, type Flight, type FlightDetail } from '$lib/flights';
@@ -135,15 +135,15 @@
 			return;
 		}
 		const f: Flight = { id, date, from, to, ...(airline ? { airline } : {}), ...(nr ? { no: nr } : {}), d };
+		atlas.lastFlightAddedAt = Date.now();
 		putFlights([f]);
 		toast(`Flug ${from} → ${to} hinzugefügt`);
 		closeSheet();
 		closeFlightsPage(); // aus „Meine Flüge“ heraus: Liste schließen, damit der Globus zu sehen ist
-		// wie beim neuen Land: Globus fliegt zur neuen Strecke, die wächst; darunter die Seite zur Strecke (kompakt)
+		// wie beim neuen Land: Globus fliegt zur neuen Strecke, die wächst; keine Seite öffnet sich
 		fd.year = null;
 		fd.tick();
 		const key = routeKey(from, to);
-		openRoute(key, { peek: true, id });
 		hooks.map?.focusRoute(key);
 	}
 </script>
