@@ -63,13 +63,13 @@ export function buildRoutes(legs: { a: [number, number]; b: [number, number]; pl
 		const dot = Math.max(-1, Math.min(1, ua[0] * ub[0] + ua[1] * ub[1] + ua[2] * ub[2])),
 			w = Math.acos(dot);
 		if (w < 1e-6) continue;
-		const steps = Math.max(2, Math.ceil(w / D2R / STEP)),
+		const steps = Math.max(16, Math.ceil(w / D2R / STEP)),
 			sw = Math.sin(w);
 		const ll = new Float64Array((steps + 1) * 2),
 			u = new Float64Array((steps + 1) * 3),
 			h = new Float32Array(steps + 1);
 		// Scheitelhöhe wächst mit der Strecke; flacher Verlauf oben (Steigflug, Reiseflug, Sinkflug)
-		const top = Math.min(0.2, 0.1 * Math.pow(w, 0.8));
+		const top = Math.min(0.2, 0.03 + 0.1 * Math.pow(w, 0.75));
 		for (let i = 0; i <= steps; i++) {
 			// Kugel-Interpolation (slerp) zwischen den beiden Flughäfen
 			const t = i / steps,
@@ -251,17 +251,8 @@ export function drawRoutes(c: CanvasRenderingContext2D, P: GeoProjection, rs: Ro
 		c.stroke();
 	}
 	c.globalAlpha = 1;
-	// ausgewählte Strecke: helle Linie mit weichem Schein, Bodenspur gestrichelt, Ringe an den Flughäfen
+	// ausgewählte Strecke: helle Linie mit weichem Schein, Ringe an den Flughäfen
 	if (sel.length) {
-		if (front) {
-			c.beginPath();
-			for (const a of sel) trace(a, false);
-			c.setLineDash([2, 5]);
-			c.lineWidth = 1.4;
-			c.strokeStyle = 'rgba(255,246,220,.5)';
-			c.stroke();
-			c.setLineDash([]);
-		}
 		c.beginPath();
 		for (const a of sel) trace(a);
 		c.lineWidth = 8;

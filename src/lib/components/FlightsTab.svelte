@@ -40,6 +40,7 @@
 	const dec1 = (x: number) => x.toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 	const lastLeg = $derived(st?.legs.find((l) => l.done) ?? null);
 	const topAirport = $derived(st?.airports[0]);
+	const topAirline = $derived(st?.airlines[0] ? `${al?.[st.airlines[0].code]?.[0] ?? st.airlines[0].code} · ${st.airlines[0].n}× geflogen` : 'keine Angaben');
 	const topRoute = $derived(st?.routes[0]);
 	// nördlichster / südlichster besuchter Flughafen (nach Breitengrad)
 	const byLat = $derived(ap && st ? st.airports.filter((a) => ap[a.code]).sort((a, b) => ap[b.code][3] - ap[a.code][3]) : []);
@@ -77,7 +78,7 @@
 			<div class="fl-stat">
 				<span class="fl-k">Airlines</span>
 				<b>{st.airlines.length}</b>
-				<span class="fl-s">{st.airlines[0] ? `Meist ${al?.[st.airlines[0].code]?.[0] ?? st.airlines[0].code}` : 'keine Angaben'}</span>
+				<span class="fl-s">{topAirline}</span>
 			</div>
 		</div>
 
@@ -103,22 +104,22 @@
 				<span class="cat-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3.5 8.5a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2v1.9a1.9 1.9 0 0 0 0 3.7v1.9a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2v-1.9a1.9 1.9 0 0 0 0-3.7zM15 7.5v1.2M15 11.4v1.2M15 15.3v1.2M7.5 10.5h4M7.5 13.5h2.5" /></svg></span>
 				<span class="cat-txt">
 					<span class="cat-name">Airlines</span>
-					<span class="cat-sub">{st.airlines[0] ? `Am häufigsten ${al?.[st.airlines[0].code]?.[0] ?? st.airlines[0].code}` : 'keine Angaben'}</span>
+					<span class="cat-sub">{topAirline}</span>
 				</span>
 			</button>
 		</div>
 
 		<h2 class="blocks-h">Rekorde</h2>
 		<ul class="cats fl-rec">
-			{#if st.longest}<li><span class="cat-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 5v14M3 12h18M16.5 7.5 21 12l-4.5 4.5" /></svg></span><span class="cat-txt"><span class="fl-k">Längster Flug</span><b>{route(st.longest)}</b><span class="fl-d">{fmtInt(st.longest.km)} km · {fmtDuration(st.longest.min)}</span></span></li>{/if}
-			{#if st.shortest}<li><span class="cat-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 7v10M16 7v10M8 12h8M11 9.5 8 12l3 2.5M13 9.5l3 2.5-3 2.5" /></svg></span><span class="cat-txt"><span class="fl-k">Kürzester Flug</span><b>{route(st.shortest)}</b><span class="fl-d">{fmtInt(st.shortest.km)} km · {fmtDuration(st.shortest.min)}</span></span></li>{/if}
+			{#if st.longest}<li><span class="fl-k">📏 Längster Flug</span><b>{route(st.longest)}</b><span class="fl-d">{fmtInt(st.longest.km)} km · {fmtDuration(st.longest.min)}</span></li>{/if}
+			{#if st.shortest}<li><span class="fl-k">🤏 Kürzester Flug</span><b>{route(st.shortest)}</b><span class="fl-d">{fmtInt(st.shortest.km)} km · {fmtDuration(st.shortest.min)}</span></li>{/if}
 			{#if topRoute}
 				{@const [a, b] = topRoute.code.split('-')}
-				<li><span class="cat-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 9h14l-3.5-3.5M20 15H6l3.5 3.5" /></svg></span><span class="cat-txt"><span class="fl-k">Häufigste Strecke</span><b>{city(a)} ⇄ {city(b)}</b><span class="fl-d">{a} ⇄ {b} · {topRoute.n}× geflogen</span></span></li>
+				<li><span class="fl-k">🔁 Häufigste Strecke</span><b>{city(a)} ⇄ {city(b)}</b><span class="fl-d">{a} ⇄ {b} · {topRoute.n}× geflogen</span></li>
 			{/if}
-			{#if topAirport}<li><span class="cat-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 21.5s-6.5-5.7-6.5-11a6.5 6.5 0 0 1 13 0c0 5.3-6.5 11-6.5 11zM12 7.8v5.4M9.3 10.5h5.4" /></svg></span><span class="cat-txt"><span class="fl-k">Meistbesuchter Flughafen</span><b>{city(topAirport.code)} ({topAirport.code})</b><span class="fl-d">{topAirport.n} Besuche · {nameOf(ap?.[topAirport.code]?.[2] ?? '')}</span></span></li>{/if}
-			{#if north}<li><span class="cat-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 21V6M6.5 11.5 12 6l5.5 5.5M7 3h10" /></svg></span><span class="cat-txt"><span class="fl-k">Nördlichster Flughafen</span><b>{city(north)} ({north})</b><span class="fl-d">{dec1(Math.abs(ap?.[north]?.[3] ?? 0))}° N · {nameOf(ap?.[north]?.[2] ?? '')}</span></span></li>{/if}
-			{#if south}<li><span class="cat-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3v15M6.5 12.5 12 18l5.5-5.5M7 21h10" /></svg></span><span class="cat-txt"><span class="fl-k">Südlichster Flughafen</span><b>{city(south)} ({south})</b><span class="fl-d">{dec1(Math.abs(ap?.[south]?.[3] ?? 0))}° {(ap?.[south]?.[3] ?? 0) < 0 ? 'S' : 'N'} · {nameOf(ap?.[south]?.[2] ?? '')}</span></span></li>{/if}
+			{#if topAirport}<li><span class="fl-k">📍 Meistbesuchter Flughafen</span><b>{city(topAirport.code)} ({topAirport.code})</b><span class="fl-d">{topAirport.n} Besuche · {nameOf(ap?.[topAirport.code]?.[2] ?? '')}</span></li>{/if}
+			{#if north}<li><span class="fl-k">🧭 Nördlichster Flughafen</span><b>{city(north)} ({north})</b><span class="fl-d">{dec1(Math.abs(ap?.[north]?.[3] ?? 0))}° N · {nameOf(ap?.[north]?.[2] ?? '')}</span></li>{/if}
+			{#if south}<li><span class="fl-k">🐧 Südlichster Flughafen</span><b>{city(south)} ({south})</b><span class="fl-d">{dec1(Math.abs(ap?.[south]?.[3] ?? 0))}° {(ap?.[south]?.[3] ?? 0) < 0 ? 'S' : 'N'} · {nameOf(ap?.[south]?.[2] ?? '')}</span></li>{/if}
 		</ul>
 		{#if st.unknown.length}<p class="note">Ohne Strecke (Flughafen unbekannt): {st.unknown.join(', ')}</p>{/if}
 	{/if}
