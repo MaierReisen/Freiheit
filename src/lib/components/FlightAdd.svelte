@@ -95,7 +95,7 @@
 		return cand[0] ? { airline: cand[0][0], no: nr } : { airline: '', no: `${code} ${nr}` };
 	});
 
-	// Vorschau: Strecke und geschätzte Flugzeit, sobald Von und Nach gewählt sind
+	// Vorschau: Strecke und Flugzeit, sobald Von und Nach gewählt sind
 	const km = $derived(ap && from && to && from !== to && ap[from] && ap[to] ? gcKm(ap[from], ap[to]) : 0);
 	/** Ankunftstag (Ortszeit am Ziel): selber Tag oder – falls das vor dem Abflug läge – einer der nächsten Tage */
 	const arrDay = $derived.by(() => {
@@ -200,7 +200,7 @@
 	{:else}
 		{#if km}
 			<p class="fa-preview">
-				<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 18c3-8 13-8 16 0" /><circle cx="4" cy="18" r="1.6" /><circle cx="20" cy="18" r="1.6" /></svg>{fmtInt(km)} km · {minutes.est ? 'ca. ' : ''}{fmtDuration(minutes.m)}
+				<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 18c3-8 13-8 16 0" /><circle cx="4" cy="18" r="1.6" /><circle cx="20" cy="18" r="1.6" /></svg>{fmtInt(km)} km · {fmtDuration(minutes.m)}
 			</p>
 		{/if}
 		<div class="fa-card">

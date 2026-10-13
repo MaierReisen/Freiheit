@@ -26,7 +26,6 @@
 		const list = done.length ? done : legs;
 		return list.length ? list.reduce((s, l) => s + l.min, 0) / list.length : 0;
 	});
-	const est = $derived((done.length ? done : legs).every((l) => l.est));
 	const day = (d: string) => new Date(d + 'T12:00:00Z').toLocaleDateString('de-DE', { day: 'numeric', month: 'short', timeZone: 'UTC' });
 	const shortDay = (d: string) => new Date(d + 'T12:00:00Z').toLocaleDateString('de-DE', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
 	/** Abflug- und Ankunftszeit (Ortszeit, tatsächlich vor geplant); „+1“, wenn die Ankunft auf einen späteren Tag fällt */
@@ -118,8 +117,8 @@
 			<div>
 				<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" /><path d="M12 7.5V12l3 2" /></svg>
 				<span class="lbl">Flugzeit</span>
-				<b>{avgMin ? `${est ? '≈ ' : ''}${fmtDuration(avgMin)}` : '–'}</b>
-				<span class="sub">{est ? 'geschätzt' : legs.length > 1 ? 'im Schnitt' : 'Gate bis Gate'}</span>
+				<b>{avgMin ? `${fmtDuration(avgMin)}` : '–'}</b>
+				<span class="sub">{legs.length > 1 ? 'im Schnitt' : 'Gate bis Gate'}</span>
 			</div>
 			<div>
 				<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2.5" /><path d="M4 10h16M9 3v4M15 3v4" /></svg>
@@ -146,7 +145,7 @@
 							{#if l.f.d.note}<span>„{l.f.d.note}“</span>{/if}
 						</span>
 						<span class="fl-meta">
-							<span>{l.min ? `${l.est ? '≈ ' : ''}${fmtDuration(l.min)}` : ''}</span>
+							<span>{l.min ? `${fmtDuration(l.min)}` : ''}</span>
 							{#if status(l)}<span class="rs-st">{status(l)}</span>{/if}
 						</span>
 					</button>

@@ -10,6 +10,8 @@ interface Arc {
 	ll: Float64Array;
 	u: Float64Array;
 	n: number;
+	/** Flughöhe je Stützpunkt (Anteil des Globusradius, 0 an den Flughäfen): der Bogen hebt sich auf dem Globus über die Oberfläche */
+	h: Float32Array;
 	planned: boolean;
 	/** Strecke als Flughafen-Paar („FRA-JFK“, alphabetisch): öffnet beim Antippen die Seite zur Strecke */
 	key: string;
@@ -64,7 +66,10 @@ export function buildRoutes(legs: { a: [number, number]; b: [number, number]; pl
 		const steps = Math.max(2, Math.ceil(w / D2R / STEP)),
 			sw = Math.sin(w);
 		const ll = new Float64Array((steps + 1) * 2),
-			u = new Float64Array((steps + 1) * 3);
+			u = new Float64Array((steps + 1) * 3),
+			h = new Float32Array(steps + 1);
+		// Scheitelhöhe wächst mit der Strecke; flacher Verlauf oben (Steigflug, Reiseflug, Sinkflug)
+		const top = Math.min(0.2, 0.1 * Math.pow(w, 0.8));
 		for (let i = 0; i <= steps; i++) {
 			// Kugel-Interpolation (slerp) zwischen den beiden Flughäfen
 			const t = i / steps,
@@ -73,13 +78,14 @@ export function buildRoutes(legs: { a: [number, number]; b: [number, number]; pl
 			const x = ka * ua[0] + kb * ub[0],
 				y = ka * ua[1] + kb * ub[1],
 				z = ka * ua[2] + kb * ub[2];
+			h[i] = top * Math.pow(Math.sin(Math.PI * t), 0.6);
 			u[i * 3] = x;
 			u[i * 3 + 1] = y;
 			u[i * 3 + 2] = z;
 			ll[i * 2] = Math.atan2(y, x) / D2R;
 			ll[i * 2 + 1] = Math.atan2(z, Math.hypot(x, y)) / D2R;
 		}
-		arcs.push({ ll, u, n: r.n, planned: r.planned, key: r.key });
+		arcs.push({ ll, u, h, n: r.n, planned: r.planned, key: r.key });
 	}
 	// selten geflogene zuerst zeichnen, häufige liegen obenauf
 	arcs.sort((a, b) => Number(b.planned) - Number(a.planned) || a.n - b.n);
@@ -119,9 +125,30 @@ export function buildRoutes(legs: { a: [number, number]; b: [number, number]; pl
 	return { arcs, planned: arcs.filter((a) => a.planned), flown: buckets, airports, fit };
 }
 
+/**
+ * Bildschirmpunkt eines Stützpunkts. Auf dem Globus wird er radial angehoben (Orthografie: Abstand zur Mitte × (1 + Höhe));
+ * ein Punkt hinter dem Horizont bleibt sichtbar, solange er dadurch über den Kugelrand ragt. Flache Karte: unverändert.
+ */
+function arcPoint(P: GeoProjection, front: [number, number, number] | null) {
+	const [cx, cy] = P.translate(),
+		R = P.scale();
+	return (a: Arc, i: number, lift: boolean): [number, number] | null => {
+		const p = P([a.ll[i * 2], a.ll[i * 2 + 1]]);
+		if (!p) return null;
+		if (!front) return p;
+		const dot = a.u[i * 3] * front[0] + a.u[i * 3 + 1] * front[1] + a.u[i * 3 + 2] * front[2],
+			k = 1 + (lift ? a.h[i] : 0);
+		const x = cx + (p[0] - cx) * k,
+			y = cy + (p[1] - cy) * k;
+		if (dot < 0.02 && (dot < -0.5 || Math.hypot(x - cx, y - cy) <= R)) return null;
+		return [x, y];
+	};
+}
+
 /** Strecke unter einem Bildschirmpunkt (nächster Bogen im Umkreis r, Rückseite des Globus zählt nicht) mit Abstand in px */
 export function routeAt(P: GeoProjection, rs: RouteSet, view: { globe: [number, number, number] | null; lon0: number }, x: number, y: number, r: number): { key: string; d: number } | null {
 	const front = view.globe;
+	const pointAt = arcPoint(P, front);
 	let best: string | null = null,
 		bestD = r;
 	for (const a of rs.arcs) {
@@ -129,11 +156,7 @@ export function routeAt(P: GeoProjection, rs: RouteSet, view: { globe: [number, 
 			py = NaN,
 			pr = 0;
 		for (let i = 0; i < a.ll.length / 2; i++) {
-			if (front && a.u[i * 3] * front[0] + a.u[i * 3 + 1] * front[1] + a.u[i * 3 + 2] * front[2] < 0.02) {
-				px = NaN;
-				continue;
-			}
-			const p = P([a.ll[i * 2], a.ll[i * 2 + 1]]);
+			const p = pointAt(a, i, true);
 			if (!p) {
 				px = NaN;
 				continue;
@@ -173,16 +196,13 @@ export function drawRoutes(c: CanvasRenderingContext2D, P: GeoProjection, rs: Ro
 	const front = view.globe;
 	// Horizont minimal nach innen, damit der Bogen nicht über den Kugelrand hinaus gezeichnet wird
 	const H = 0.02;
-	const trace = (a: Arc) => {
+	const pointAt = arcPoint(P, front);
+	const trace = (a: Arc, lift = true) => {
 		const last = Math.max(1, Math.round((a.ll.length / 2 - 1) * Math.min(1, t)));
 		let pen = false,
 			pr = 0;
 		for (let i = 0; i <= last; i++) {
-			if (front && a.u[i * 3] * front[0] + a.u[i * 3 + 1] * front[1] + a.u[i * 3 + 2] * front[2] < H) {
-				pen = false;
-				continue;
-			}
-			const p = P([a.ll[i * 2], a.ll[i * 2 + 1]]);
+			const p = pointAt(a, i, lift);
 			if (!p) {
 				pen = false;
 				continue;
@@ -209,7 +229,17 @@ export function drawRoutes(c: CanvasRenderingContext2D, P: GeoProjection, rs: Ro
 		c.stroke();
 		c.setLineDash([]);
 	}
-	// geflogene: weicher Schein, darüber die Linie (häufige Strecken kräftiger)
+	const sel = view.sel ? rs.arcs.filter((a) => a.key === view.sel) : [];
+	// Schatten am Boden (nur Globus): wo der Bogen über der Oberfläche verläuft, hauchdünn
+	if (front && t >= 1) {
+		c.beginPath();
+		for (const { arcs } of rs.flown) for (const a of arcs) trace(a, false);
+		c.lineWidth = 1;
+		c.strokeStyle = sel.length ? 'rgba(246,196,69,.07)' : 'rgba(246,196,69,.16)';
+		c.stroke();
+	}
+	// geflogene: weicher Schein, darüber die Linie (häufige Strecken kräftiger); bei Auswahl treten die übrigen zurück
+	c.globalAlpha = sel.length ? 0.38 : 1;
 	for (const { w, arcs } of rs.flown) {
 		c.beginPath();
 		for (const a of arcs) trace(a);
@@ -220,19 +250,42 @@ export function drawRoutes(c: CanvasRenderingContext2D, P: GeoProjection, rs: Ro
 		c.strokeStyle = ROUTE_COLOR;
 		c.stroke();
 	}
-	// ausgewählte Strecke: weiß mit kräftigem Schein, obenauf
-	if (view.sel) {
-		const sel = rs.arcs.filter((a) => a.key === view.sel);
-		if (sel.length) {
+	c.globalAlpha = 1;
+	// ausgewählte Strecke: helle Linie mit weichem Schein, Bodenspur gestrichelt, Ringe an den Flughäfen
+	if (sel.length) {
+		if (front) {
 			c.beginPath();
-			for (const a of sel) trace(a);
-			c.lineWidth = 9;
-			c.strokeStyle = 'rgba(255,246,220,.3)';
+			for (const a of sel) trace(a, false);
+			c.setLineDash([2, 5]);
+			c.lineWidth = 1.4;
+			c.strokeStyle = 'rgba(255,246,220,.5)';
 			c.stroke();
-			c.lineWidth = 3.2;
-			c.strokeStyle = '#FFF6DC';
-			c.stroke();
+			c.setLineDash([]);
 		}
+		c.beginPath();
+		for (const a of sel) trace(a);
+		c.lineWidth = 8;
+		c.strokeStyle = 'rgba(255,230,160,.2)';
+		c.stroke();
+		c.lineWidth = 4.5;
+		c.strokeStyle = 'rgba(255,230,160,.28)';
+		c.stroke();
+		c.lineWidth = 2.2;
+		c.strokeStyle = '#FFF6DC';
+		c.stroke();
+		if (t >= 1)
+			for (const a of sel)
+				for (const i of [0, a.ll.length / 2 - 1]) {
+					const p = pointAt(a, i, false);
+					if (!p) continue;
+					c.beginPath();
+					c.arc(p[0], p[1], 6, 0, TAU);
+					c.fillStyle = 'rgba(7,20,31,.7)';
+					c.fill();
+					c.lineWidth = 2;
+					c.strokeStyle = '#FFF6DC';
+					c.stroke();
+				}
 	}
 	// Flughäfen: kleiner heller Punkt mit dunklem Rand (erst wenn der Aufbau dort angekommen ist: am Ende sichtbar)
 	if (t >= 1) {

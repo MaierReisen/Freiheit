@@ -75,7 +75,7 @@
 									</span>
 									<span class="fl-meta">
 										<span>{l.f.d.cx ? 'gestrichen' : !l.done ? 'geplant' : l.km ? `${fmtInt(l.km)} km` : ''}</span>
-										<span>{flightNo(l.f, al) || (l.f.airline && al?.[l.f.airline]?.[0]) || ''}{l.done && l.min ? ` · ${l.est ? '≈ ' : ''}${fmtDuration(l.min)}` : ''}</span>
+										<span>{flightNo(l.f, al) || (l.f.airline && al?.[l.f.airline]?.[0]) || ''}{l.done && l.min ? ` · ${fmtDuration(l.min)}` : ''}</span>
 									</span>
 								</button>
 							</SwipeRow>
