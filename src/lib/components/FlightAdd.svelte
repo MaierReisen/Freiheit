@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { atlas, putFlights } from '$lib/atlas.svelte';
-	import { closeFlightsPage, closeSheet, hooks, toast } from '$lib/app.svelte';
+	import { closeFlightsPage, closeSheet, flashRoute, hooks, toast } from '$lib/app.svelte';
 	import { flag, nameOf } from '$lib/countries';
 	import { fd } from '$lib/flightData.svelte';
 	import { estFlightMin, fmtDuration, fmtInt, gcKm, localToUtc, routeKey, type Flight, type FlightDetail } from '$lib/flights';
@@ -145,6 +145,7 @@
 		fd.tick();
 		const key = routeKey(from, to);
 		hooks.map?.focusRoute(key);
+		flashRoute(key);
 	}
 </script>
 

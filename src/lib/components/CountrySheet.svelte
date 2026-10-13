@@ -89,7 +89,9 @@
 		closeSheet();
 		if (!ui.full && window.scrollY > 4) {
 			window.scrollTo({ top: 0, behavior: reduceMotion() ? 'auto' : 'smooth' });
-			await sleep(reduceMotion() ? 0 : 480);
+			// erst hinzufügen, wenn der Kopf wirklich im Bild ist (sonst läuft das Flugzeug unsichtbar ab)
+			for (let i = 0; i < 30 && window.scrollY > 4; i++) await sleep(50);
+			await sleep(reduceMotion() ? 0 : 120);
 		}
 		// Globus war per Halten aktiviert: nach dem Hinzufügen wieder loslassen, damit die Seite wieder scrollt
 		ui.mapActive = false;

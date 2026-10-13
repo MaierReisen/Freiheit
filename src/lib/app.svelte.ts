@@ -101,6 +101,8 @@ export const ui = $state({
 	swipeTo: '' as Tab | '',
 	/** Flugzeug im Kopf: Welt hat beim Wischen an die Flüge übergeben (Ende der einen = Anfang der anderen Kurve) */
 	planeHandoff: false,
+	/** neu eingetragener Flug: Strecke leuchtet kurz auf dem Globus auf (wie ein neues Land), '' = keine */
+	flashRoute: '',
 	/** Globus auf der Startseite per Tipp aktiviert (Touch): dann drehen, kippen, zoomen statt Seite scrollen */
 	mapActive: false,
 	/** Kontinent, auf dem die Karte gerade steht (per Chip oder Ziehen; null = Startregion, '' = mehrere Kontinente im Bild); nur Ansicht */
@@ -216,7 +218,16 @@ export function openAddFlight(from?: string, to?: string) {
 	openSheet({ kind: 'addFlight', from, to });
 }
 /** ausgewählte Strecke auf dem Globus (Seite zur Strecke offen) */
-export const selectedRoute = () => (ui.sheetOpen && ui.sheetView?.kind === 'route' ? ui.sheetView.key : null);
+export const selectedRoute = () => (ui.sheetOpen && ui.sheetView?.kind === 'route' ? ui.sheetView.key : ui.flashRoute || null);
+let flashT: ReturnType<typeof setTimeout> | undefined;
+/** Strecke nach dem Eintragen hervorheben, sobald der Bogen gewachsen ist; nach einigen Sekunden wieder normal */
+export function flashRoute(key: string) {
+	clearTimeout(flashT);
+	flashT = setTimeout(() => {
+		ui.flashRoute = key;
+		flashT = setTimeout(() => (ui.flashRoute = ''), 3200);
+	}, reduceMotion() ? 0 : 1000);
+}
 export function setSheetDetent(d: 'peek' | 'full') {
 	ui.sheetDetent = d;
 }
