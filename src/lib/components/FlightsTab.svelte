@@ -40,7 +40,7 @@
 	const dec1 = (x: number) => x.toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 	const lastLeg = $derived(st?.legs.find((l) => l.done) ?? null);
 	const topAirport = $derived(st?.airports[0]);
-	const topAirline = $derived(st?.airlines[0] ? `${al?.[st.airlines[0].code]?.[0] ?? st.airlines[0].code} · ${st.airlines[0].n}× geflogen` : 'keine Angaben');
+	const topAirline = $derived(st?.airlines[0] ? `${st.airlines.length} Airlines · ${al?.[st.airlines[0].code]?.[0] ?? st.airlines[0].code} ${st.airlines[0].n}× geflogen` : 'keine Angaben');
 	const topRoute = $derived(st?.routes[0]);
 	// nördlichster / südlichster besuchter Flughafen (nach Breitengrad)
 	const byLat = $derived(ap && st ? st.airports.filter((a) => ap[a.code]).sort((a, b) => ap[b.code][3] - ap[a.code][3]) : []);
@@ -69,16 +69,6 @@
 				<span class="fl-k">Flugzeit</span>
 				<b>{fmtDuration(st.min)}</b>
 				<span class="fl-s">Gate bis Gate</span>
-			</div>
-			<div class="fl-stat">
-				<span class="fl-k">Flughäfen</span>
-				<b>{st.airports.length}</b>
-				<span class="fl-s">in {st.countries.length} {st.countries.length === 1 ? 'Land' : 'Ländern'}</span>
-			</div>
-			<div class="fl-stat">
-				<span class="fl-k">Airlines</span>
-				<b>{st.airlines.length}</b>
-				<span class="fl-s">{topAirline}</span>
 			</div>
 		</div>
 
