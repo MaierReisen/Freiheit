@@ -132,12 +132,12 @@ function card(d: FlightShare) {
 	const ty = sy + 312 + 22;
 	const top = rarest(d.tickets).slice(0, 3);
 	const fan: [number, number, number, number][] = [
-		[207, ty + 70, 0.7, -1],
-		[50, ty + 40, 0.6, -5],
-		[459, ty + 52, 0.6, 5]
+		[207, ty + 96, 0.7, -1],
+		[50, ty + 70, 0.6, -5],
+		[459, ty + 80, 0.6, 5]
 	];
 	const tickets = top.length
-		? `<text x="540" y="${ty + 22}" text-anchor="middle" font-family="${FIG}" font-weight="700" font-size="26" letter-spacing="7" fill="${mid}">${top.some((t) => t.t) ? 'SELTENSTE BORDKARTEN' : 'MEINE BORDKARTEN'}</text>` +
+		? `<text x="540" y="${ty + 12}" text-anchor="middle" font-family="${FIG}" font-weight="700" font-size="26" letter-spacing="7" fill="${mid}">${top.some((t) => t.t) ? 'SELTENSTE BORDKARTEN' : 'MEINE BORDKARTEN'}</text>` +
 			top
 				.map((t, i) => ({ t, f: fan[i] }))
 				.reverse()
