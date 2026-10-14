@@ -40,13 +40,13 @@
 	const city = (code: string) => ap?.[code]?.[0] || code;
 	const route = (l: Leg) => `${city(l.f.from)} → ${city(l.to)}`;
 	const dec1 = (x: number) => x.toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
-	// neue Strecken seit dem letzten Öffnen des Flugpasses (bekommen dort ihre Bordkarte aufgeklebt)
+	// Bordkarten = geflogene Strecken; neue seit dem letzten Öffnen des Flugpasses bekommen dort ihre Karte aufgeklebt
+	const cardKeys = $derived(new Set(st?.legs.filter((l) => l.done).map((l) => routeKey(l.f.from, l.to)) ?? []));
 	const fresh = $derived.by(() => {
 		const seen = fpSeen.keys;
-		if (!seen || !st) return 0;
-		const s = new Set(seen),
-			k = new Set(st.legs.filter((l) => l.done).map((l) => routeKey(l.f.from, l.to)));
-		return [...k].filter((x) => !s.has(x)).length;
+		if (!seen) return 0;
+		const s = new Set(seen);
+		return [...cardKeys].filter((x) => !s.has(x)).length;
 	});
 	const lastLeg = $derived(st?.legs.find((l) => l.done) ?? null);
 	const topAirline = $derived(st?.airlines[0] ? `${st.airlines.length} Airlines · ${al?.[st.airlines[0].code]?.[0] ?? st.airlines[0].code} ${st.airlines[0].n}× geflogen` : 'keine Angaben');
@@ -63,7 +63,7 @@
 			<p class="note">Erneutes Einlesen legt nichts doppelt an, neue Flüge kommen dazu. Der Buchungscode wird nicht übernommen.</p>
 		</div>
 	{:else if st}
-<div class="blocks"><FlightPassTile n={st.n} {fresh} /></div>
+		<div class="blocks"><FlightPassTile n={st.n} cards={cardKeys.size} {fresh} /></div>
 		<div class="fl-grid">
 			<div class="fl-stat">
 				<span class="fl-k">Strecke</span>

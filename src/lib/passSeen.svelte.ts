@@ -21,7 +21,8 @@ export function markSeen(codes: string[]) {
 	} catch {}
 }
 
-/* Flugpass: welche Bordkarten (Strecken) schon zu sehen waren – neue bekommen beim nächsten Öffnen die Aufkleben-Animation */
+/* Flugpass: welche Bordkarten (Strecken) schon zu sehen waren, in ihrer Reihenfolge im Pass – neue bekommen beim nächsten Öffnen
+   die Aufkleben-Animation und kommen hinten dran */
 const FP_KEY = 'freiheit-fp-seen';
 function loadFp(): string[] | null {
 	try {

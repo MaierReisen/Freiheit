@@ -61,7 +61,15 @@
 			if (x) x.n++;
 			else m.set(k, { key: k, l, n: 1, nr: m.size + 1, plan: false, t: ticketTier(uid, k),cc: land(l) });
 		}
-		const out = [...m.values()];
+		// Reihenfolge wie im Reisepass: schon gesehene Bordkarten in ihrer gemerkten Folge, neue immer hinten dran
+		// (auch ein nachgetragener älterer Flug); ohne gemerkte Folge (neues Gerät) nach Datum des ersten Flugs
+		const out = [...m.values()],
+			seen = fpSeen.keys;
+		if (seen) {
+			const at = new Map(seen.map((k, i) => [k, i]));
+			out.sort((a, b) => (at.get(a.key) ?? 1e9) - (at.get(b.key) ?? 1e9));
+			out.forEach((t, i) => (t.nr = i + 1));
+		}
 		for (const l of st.legs.filter((l) => !l.done && !l.f.d.cx).reverse()) {
 			// geplante: nur neue Strecken, nächster zuerst
 			const k = routeKey(l.f.from, l.to);
@@ -246,7 +254,7 @@
 	const LEG_ROWS: [Tier, number, string][] = [
 		[0, 1 - CHANCE.rare - CHANCE.epic - CHANCE.legend, 'Normale Bordkarte mit grauem Streifen – so sieht es bei den meisten Strecken aus.'],
 		[1, CHANCE.rare, 'Blauer Streifen, Bild des Ziellands auf der Karte und als kleine Marke am Abriss.'],
-		[2, CHANCE.epic, 'Silberrand und silberner Streifen, breites Bild des Ziellands.'],
+		[2, CHANCE.epic, 'Lila Rand und Streifen, breites Bild des Ziellands.'],
 		[3, CHANCE.legend, 'Nachtblau mit Goldrand, Goldschrift und Funkeln – ganz selten.']
 	];
 
@@ -258,7 +266,7 @@
 		if (pending.length) skip = true;
 	};
 	const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
-	const TIER_C = ['', '#2F7FD8', '#9AA5AF', '#D6A740'];
+	const TIER_C = ['', '#2F7FD8', '#8B5CF6', '#D6A740'];
 	async function play(keys: string[]) {
 		skip = false;
 		const k = keys.length > 3 ? 0.45 : 1; // viele neue: schneller hintereinander

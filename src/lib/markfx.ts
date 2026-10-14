@@ -102,7 +102,7 @@ async function cardSheen(card: HTMLElement, color: string, dur: number) {
 	s.remove();
 }
 
-/** Neue Bordkarte in den Flugpass: Common wird eingesteckt, Rare aufgelegt, Epic schräg hingelegt + Silberglanz,
+/** Neue Bordkarte in den Flugpass: Common wird eingesteckt, Rare aufgelegt, Epic schräg hingelegt + Glanz,
     Legendary schwebt mit Goldschein herab + Funken und Goldglanz. land = Moment des Auflegens (Seite federt, Vibration). */
 export async function cardOn(el: HTMLElement, tier: number, land?: () => void) {
 	const card = el.querySelector<HTMLElement>('.fp-tk') ?? el;
@@ -132,7 +132,7 @@ export async function cardOn(el: HTMLElement, tier: number, land?: () => void) {
 			{ duration: 1200, easing: 'ease-in-out', fill: 'backwards' }
 		).finished;
 		land?.();
-		await cardSheen(card, 'rgba(255,255,255,.75)', 900);
+		await cardSheen(card, 'rgba(225,210,255,.8)', 900);
 	} else if (tier === 1) {
 		await el.animate(
 			[

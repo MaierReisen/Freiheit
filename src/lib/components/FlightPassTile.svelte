@@ -5,7 +5,8 @@
 	/* Flugpass-Kachel: Vielflieger-Karte (Farbe steigt mit dem Status: Blau, Silber, Gold, Platin, Schwarz), Zahl der Flüge,
 	   Status und Fortschritt bis zum nächsten. Im Tab „Flüge“ ein Knopf (öffnet den Flugpass), im Flugpass kompakt als Knopf zu den Stufen. */
 
-	let { n, fresh = 0, inPass = false, onrank }: { n: number; fresh?: number; inPass?: boolean; onrank?: () => void } = $props();
+	// cards: Zahl der Bordkarten (eine je Strecke) – groß auf der Kachel im Tab, im Flugpass selbst steht die Zahl der Flüge (Status)
+	let { n, cards = 0, fresh = 0, inPass = false, onrank }: { n: number; cards?: number; fresh?: number; inPass?: boolean; onrank?: () => void } = $props();
 	const info = $derived(flightRankInfo(n));
 </script>
 
@@ -17,7 +18,7 @@
 		{#if info.card}<small>{CARD_NAME[info.card]}</small>{/if}
 	</span>
 	<span class="pp-tile-txt">
-<span class="pp-tile-n">{n}<small>{n === 1 ? 'Flug' : 'Flüge'}</small>{#if fresh && !inPass}<em class="pp-new">✨ {fresh} neu</em>{/if}</span>
+<span class="pp-tile-n">{inPass ? n : cards}<small>{inPass ? (n === 1 ? 'Flug' : 'Flüge') : cards === 1 ? 'Bordkarte' : 'Bordkarten'}</small>{#if fresh && !inPass}<em class="pp-new">✨ {fresh} neu</em>{/if}</span>
 		{#if info.rank}<span class="pp-rank fp-rank c{info.card}">{info.rank.icon} {info.rank.name}</span>{/if}
 		<span class="pp-bar fp-bar"><i style="width:{info.p * 100}%"></i></span>
 		<span class="pp-bar-t"
@@ -31,5 +32,5 @@
 		>{@render body()}<span class="pp-chev" aria-hidden="true">›</span></button
 	>
 {:else}
-<button type="button" class="pp-tile fp-tile" class:fresh={fresh > 0} aria-label="Flugpass öffnen: {n} {n === 1 ? 'Flug' : 'Flüge'}{fresh ? `, ${fresh} neue Bordkarten` : ''}{info.rank ? `, Status ${info.rank.name}` : ''}" onclick={() => openFlightPass()}>{@render body()}</button>
+<button type="button" class="pp-tile fp-tile" class:fresh={fresh > 0} aria-label="Flugpass öffnen: {cards} {cards === 1 ? 'Bordkarte' : 'Bordkarten'}{fresh ? `, ${fresh} neue Bordkarten` : ''}{info.rank ? `, Status ${info.rank.name}` : ''}" onclick={() => openFlightPass()}>{@render body()}</button>
 {/if}

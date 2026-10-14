@@ -1175,25 +1175,25 @@ button.pp-tile:active{transform:scale(.98)}
 .fp-free:not(.first){opacity:.5}
 .fp-free .fp-tk-stub::before,.fp-free .fp-tk-stub::after{display:none}
 .fp-view .pp-sharebtn{background:var(--fp-acc);color:var(--fp-on)}
-/* Bordkarten mit Seltenheit (seit v1.51.0): eine Karte je Strecke; Streifen links = Stufe (grau, blau, silber, gold), Flugzeug = Kurz/Mittel/Lang.
-   Rare: Rand + Bild des Ziellands (--sc = Stempelfarbe). Epic: Silberrand. Legendary: Nachtblau, Goldrand, Goldglanz + Funkeln nur auf der aufgeschlagenen Seite. */
-.fp-view{--tk0:#A9B6C3;--tk1:#2F7FD8;--tk2:linear-gradient(180deg,#7E8892,#F4F7FA 30%,#9AA5AF 55%,#FFFFFF 75%,#8994A0);--tk3:linear-gradient(180deg,#9C7418,#F2D98A 30%,#B88A1E 55%,#F7E3A1 78%,#A57B16);--tks:#5F6A74}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .fp-view{--tks:#C9D2DA}}
-:root[data-theme="dark"] .fp-view{--tks:#C9D2DA}
+/* Bordkarten mit Seltenheit (seit v1.51.0): eine Karte je Strecke; Streifen links = Stufe (grau, blau, lila, gold), Flugzeug = Kurz/Mittel/Lang.
+   Rare: Rand + Bild des Ziellands (--sc = Stempelfarbe). Epic: lila Rand (seit v1.51.1, vorher Silber – zu nah an Common). Legendary: Nachtblau, Goldrand, Goldglanz + Funkeln nur auf der aufgeschlagenen Seite. */
+.fp-view{--tk0:#A9B6C3;--tk1:#2F7FD8;--tk2:linear-gradient(180deg,#6A3CC8,#C4B0FF 30%,#8B5CF6 55%,#E4DAFF 75%,#7444D8);--tk3:linear-gradient(180deg,#9C7418,#F2D98A 30%,#B88A1E 55%,#F7E3A1 78%,#A57B16);--tks:#7444D8}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .fp-view{--tks:#B9A2FF}}
+:root[data-theme="dark"] .fp-view{--tks:#B9A2FF}
 .fp-bk{position:relative;isolation:isolate}
 .fp-bk.multi{margin-bottom:6px}
 .fp-bk.wait{visibility:hidden}
 .fp-st{position:absolute;inset:0;z-index:-1;border-radius:15px;background:color-mix(in srgb,var(--fp-tk) 85%,#fff);box-shadow:0 3px 8px -4px rgba(0,0,0,.6),inset 0 0 0 1px rgba(255,255,255,.18)}
 .fp-st.s1{transform:translate(4px,6px) rotate(1.2deg);opacity:.75}
 .fp-st.s2{transform:translate(-3px,11px) rotate(-1.3deg);opacity:.45}
-.fp-bk.t2 .fp-st{box-shadow:0 3px 8px -4px rgba(0,0,0,.6),inset 0 0 0 1.5px #9AA5AF}
+.fp-bk.t2 .fp-st{box-shadow:0 3px 8px -4px rgba(0,0,0,.6),inset 0 0 0 1.5px #8B5CF6}
 .fp-bk.t3 .fp-st{background:#1A2C55;box-shadow:0 3px 8px -4px rgba(0,0,0,.6),inset 0 0 0 1.5px #9C7418}
 .fp-bk .fp-tk{overflow:hidden;isolation:isolate;min-height:104px}
 .fp-bk .fp-tk-main{position:relative;z-index:1}
 .fp-bk .fp-tk-stub{z-index:1}
 .fp-tk.t0::before{background:var(--tk0)}.fp-tk.t1::before{background:var(--tk1)}.fp-tk.t2::before{background:var(--tk2)}.fp-tk.t3::before{background:var(--tk3)}
 .fp-tk.t1 .fp-tk-top span:last-child,.fp-bk.t1 .fp-x{color:var(--tk1)}
-.fp-tk.t2 .fp-tk-top span:last-child{color:var(--tks)}
+.fp-tk.t2 .fp-tk-top span:last-child,.fp-bk.t2 .fp-x{color:var(--tks)}
 .fp-tk-top span:last-child{letter-spacing:.12em}
 .fp-bk .fp-tk-top span:last-child{text-shadow:0 0 3px var(--fp-tk),0 0 6px var(--fp-tk)}
 .fp-x{display:inline-block;font:800 12.5px/1 var(--display);font-style:normal;color:var(--hc);padding:3px 5px;margin:-2px 0 -3px -2px;border:2px solid currentColor;border-radius:999px;transform:rotate(-8deg)}
@@ -1201,7 +1201,7 @@ button.pp-tile:active{transform:scale(.98)}
 .fp-pic{width:46px;height:40px;margin-bottom:4px;border-radius:4px;overflow:hidden;color:var(--sc);background:color-mix(in srgb,var(--sc) 16%,var(--fp-tk));box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--sc) 50%,transparent);outline:2px dotted color-mix(in srgb,var(--sc) 35%,transparent);outline-offset:1px}
 .fp-pic svg{display:block;width:100%;height:100%}
 .fp-tk.t1{box-shadow:0 4px 10px -6px rgba(0,0,0,.5),inset 0 0 0 2px color-mix(in srgb,var(--sc) 45%,transparent)}
-.fp-tk.t2{border:3px solid transparent;background:linear-gradient(var(--fp-tk),var(--fp-tk)) padding-box,conic-gradient(from 30deg,#7E8892,#F4F7FA,#9AA5AF,#FFFFFF,#8994A0,#DCE3E9,#7E8892) border-box;box-shadow:0 4px 12px -6px rgba(0,0,0,.6)}
+.fp-tk.t2{border:3px solid transparent;background:linear-gradient(var(--fp-tk),var(--fp-tk)) padding-box,conic-gradient(from 30deg,#6A3CC8,#D9CCFF,#8B5CF6,#F1EBFF,#7444D8,#C4B0FF,#6A3CC8) border-box;box-shadow:0 4px 12px -6px rgba(110,60,210,.55)}
 .fp-tk.t2 .fp-bg{opacity:.32;width:85%}
 .fp-tk.t3{--fp-tk:#0F1E3D;--fp-tk-ink:#F7E3A1;--fp-tk-mut:#C9A960;--fp-perf:#6B5A2E;border:3px solid transparent;background:radial-gradient(120% 140% at 85% 0%,#22386A,#0F1E3D 60%) padding-box,linear-gradient(135deg,#9C7418,#F2D98A 35%,#B88A1E 60%,#F7E3A1 85%,#A57B16) border-box;box-shadow:0 6px 18px -6px rgba(230,180,70,.55)}
 .fp-tk.t3 .fp-bg{color:#E2BE5A;opacity:.42;width:90%}
@@ -1220,6 +1220,7 @@ button.pp-tile:active{transform:scale(.98)}
 .fp-sheen{position:absolute;z-index:3;top:0;bottom:0;left:0;width:40%;pointer-events:none;background:linear-gradient(90deg,transparent,var(--c),transparent)}
 /* Zeile über den Bordkarten: Anzahl Rare/Epic/Legendary, antippen = Legende */
 .fp-view .fp-rar .r1 b{background:color-mix(in srgb,var(--tk1) 18%,transparent);color:var(--tk1)}
+.fp-view .fp-rar .r2 b,.fp-view .pp-leg em.r2{background:linear-gradient(135deg,#7444D8,#C4B0FF 50%,#8B5CF6);color:#fff}
 .fp-view .pp-leg em.r1{background:color-mix(in srgb,var(--tk1) 16%,transparent);color:var(--tk1)}
 /* Legende: kleine Bordkarte je Stufe */
 .fp-mini{--fp-tk:#FFFFFF;flex:none;position:relative;display:flex;align-items:center;justify-content:center;width:78px;height:50px;padding-left:6px;border-radius:9px;background:var(--fp-tk);box-shadow:0 2px 6px -3px rgba(0,0,0,.45),inset 0 0 0 1px var(--line);overflow:hidden;box-sizing:border-box}
@@ -1229,7 +1230,7 @@ button.pp-tile:active{transform:scale(.98)}
 .fp-mini.t0 i{background:repeating-linear-gradient(90deg,#0A1730 0 2px,transparent 2px 4px,#0A1730 4px 5px,transparent 5px 8px);height:18px;width:34px;opacity:.6;border-radius:0}
 .fp-mini i svg{display:block;width:100%;height:100%}
 .fp-mini.t1{box-shadow:0 2px 6px -3px rgba(0,0,0,.45),inset 0 0 0 2px color-mix(in srgb,var(--sc) 45%,transparent)}
-.fp-mini.t2{border:2.5px solid transparent;background:linear-gradient(#fff,#fff) padding-box,conic-gradient(from 30deg,#7E8892,#F4F7FA,#9AA5AF,#FFFFFF,#8994A0,#DCE3E9,#7E8892) border-box}
+.fp-mini.t2{border:2.5px solid transparent;background:linear-gradient(#fff,#fff) padding-box,conic-gradient(from 30deg,#6A3CC8,#D9CCFF,#8B5CF6,#F1EBFF,#7444D8,#C4B0FF,#6A3CC8) border-box}
 .fp-mini.t3{border:2.5px solid transparent;background:radial-gradient(120% 140% at 85% 0%,#22386A,#0F1E3D 60%) padding-box,linear-gradient(135deg,#9C7418,#F2D98A 35%,#B88A1E 60%,#F7E3A1 85%,#A57B16) border-box}
 .fp-mini.t3 i{color:#E2BE5A;background:#1A2C55}
 .fp-leg-h{margin:16px 0 4px;font:800 15px var(--display)}
