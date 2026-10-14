@@ -1143,8 +1143,8 @@ button.pp-tile:active{transform:scale(.98)}
 .fp-tk.plan{background:color-mix(in srgb,var(--fp-tk) 82%,transparent);box-shadow:inset 0 0 0 2px color-mix(in srgb,var(--fp-perf) 80%,transparent)}
 .fp-tk.plan::before{background:repeating-linear-gradient(180deg,var(--hc) 0 6px,transparent 6px 10px)}
 .fp-tk.plan .fp-tk-stub b{color:var(--sun)}
-.fp-nav{justify-content:space-between}
-.fp-nav .pp-pnum{flex:1;margin:0}
+.fp-strip .pp-fill{background:color-mix(in srgb,var(--fp-acc) 70%,var(--chip))}.fp-strip .pp-knob{background:var(--fp-acc);color:var(--fp-on)}
+.fp-broutes{font-size:11.5px!important;line-height:1.35;color:var(--ink)!important;font-variant-numeric:tabular-nums}
 .fp-key{display:inline-flex;align-items:center;gap:4px;margin-right:6px;font-weight:600}
 .fp-key::before{content:"";width:10px;height:10px;border-radius:3px;background:var(--h-kurz)}
 .fp-key.mittel::before{background:var(--h-mittel)}.fp-key.lang::before{background:var(--h-lang)}

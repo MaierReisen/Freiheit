@@ -68,6 +68,12 @@ function place(s: Stamp, x: number, y: number, w: number, h: number, rot: number
 const rarest = (st: ShareStamp[]) => [...st].sort((a, b) => b.sp - a.sp || (a.nr || 1e4) - (b.nr || 1e4));
 /** grobe Textbreite (für Pillen und Umbrüche) */
 export const tw = (s: string, size: number, k = 0.56) => [...s].reduce((w, ch) => w + (/\p{Extended_Pictographic}/u.test(ch) ? 1.15 : /[A-ZÄÖÜ]/.test(ch) ? k * 1.18 : k), 0) * size;
+/** Breite in der Zahlen-Schrift Unbounded 800 (gemessen, sehr breit: Ziffern fast 1 em); mit etwas Reserve */
+const UNB_W: Record<string, number> = { '1': 0.56, '.': 0.33, ',': 0.33, ' ': 0.26, '/': 0.49, '%': 1.34, '×': 0.64, '+': 0.8, '-': 0.6, W: 1.4, M: 1.2 };
+export const twU = (s: string, size: number) =>
+	[...s].reduce((w, ch) => w + (UNB_W[ch] ?? (/\d/.test(ch) ? 0.95 : /[A-ZÄÖÜ]/.test(ch) ? 0.92 : 0.82)), 0) * size;
+/** Schriftgröße, mit der s in Unbounded höchstens w breit ist */
+export const fitU = (s: string, max: number, w: number) => Math.min(max, Math.floor(w / Math.max(0.1, twU(s, 1))));
 
 /* ---------- Weltkarte (Miller, mit Antarktis), bereiste Länder in Gold ---------- */
 /** Miller-Zylinderprojektion (gerade Längengrade, mit Polen), senkrecht um k gestreckt: Maßstab egal, Hauptsache groß */
@@ -122,7 +128,7 @@ function cover(d: ShareData, visited: Set<string>) {
 		[String(d.badges), 'Abzeichen']
 	];
 	const num = String(d.n);
-	const nSize = num.length > 2 ? 280 : 330;
+	const nSize = fitU(num, num.length > 2 ? 280 : 330, 880);
 	// Rang rechts oben wie in der Stempel-Collage
 	const rank = d.rank ? `${d.rank.icon} ${d.rank.name}` : '';
 	const rw = tw(rank, 34) + 56;
@@ -161,7 +167,7 @@ ${wm.at(44, my)}
 ${stats
 	.map(
 		([v, l], i) =>
-			`<g transform="translate(${96 + i * 304} ${sy})"><rect width="280" height="136" rx="26" fill="#fff" fill-opacity=".06" stroke="${G}" stroke-opacity=".3" stroke-width="2"/><text x="140" y="72" text-anchor="middle" font-family="${UNB}" font-weight="800" font-size="${v.length > 4 ? 54 : 62}" fill="#F3DC96">${esc(v)}</text><text x="140" y="112" text-anchor="middle" font-family="${FIG}" font-weight="500" font-size="30" fill="#F4EBD3" fill-opacity=".8">${l}</text></g>`
+			`<g transform="translate(${96 + i * 304} ${sy})"><rect width="280" height="136" rx="26" fill="#fff" fill-opacity=".06" stroke="${G}" stroke-opacity=".3" stroke-width="2"/><text x="140" y="72" text-anchor="middle" font-family="${UNB}" font-weight="800" font-size="${fitU(v, 62, 252)}" fill="#F3DC96">${esc(v)}</text><text x="140" y="112" text-anchor="middle" font-family="${FIG}" font-weight="500" font-size="30" fill="#F4EBD3" fill-opacity=".8">${l}</text></g>`
 	)
 	.join('')}
 ${top.length ? `<text x="540" y="${sy + 200}" text-anchor="middle" font-family="${FIG}" font-weight="700" font-size="28" letter-spacing="7" fill="${G}">${top.some((s) => s.sp) ? 'SELTENSTE STEMPEL' : 'MEINE STEMPEL'}</text>` : ''}
@@ -187,7 +193,7 @@ function collage(d: ShareData) {
 	const rw = tw(rank, 34) + 56;
 	// große Zahl über dem „Horizont“ wie auf der Startseite
 	const num = String(n);
-	const nSize = num.length > 2 ? 270 : 320;
+	const nSize = fitU(num, num.length > 2 ? 270 : 320, 940);
 	// Kontinente als Chips wie auf der Startseite: „12 Europa“ (nur bereiste, nach Anzahl)
 	const per = new Map<ContinentCode, number>();
 	for (const c of d.conts) per.set(c, d.stamps.filter((s) => CONT[s.code] === c).length);
@@ -207,7 +213,7 @@ function collage(d: ShareData) {
 	}
 	// unter dem Horizont: zwei Werte-Kacheln nebeneinander (Platz für jede Länderzahl)
 	const tile = (tx: number, v: string, l: string) =>
-		`<g transform="translate(${tx} 594)"><rect width="468" height="112" rx="30" fill="#fff" fill-opacity=".72" stroke="${LINE}" stroke-width="2"/><rect x="18" y="18" width="10" height="76" rx="5" fill="${SUN}"/><text x="50" y="74" font-family="${UNB}" font-weight="800" font-size="46" fill="${INK}">${esc(v)}<tspan font-family="${FIG}" font-weight="600" font-size="30" fill="${MUTED}" dx="16">${esc(l)}</tspan></text></g>`;
+		`<g transform="translate(${tx} 594)"><rect width="468" height="112" rx="30" fill="#fff" fill-opacity=".72" stroke="${LINE}" stroke-width="2"/><rect x="18" y="18" width="10" height="76" rx="5" fill="${SUN}"/><text x="50" y="74" font-family="${UNB}" font-weight="800" font-size="${fitU(v, 46, 384 - tw(l, 30))}" fill="${INK}">${esc(v)}<tspan font-family="${FIG}" font-weight="600" font-size="30" fill="${MUTED}" dx="16">${esc(l)}</tspan></text></g>`;
 	const tiles = tile(64, `${d.wonders}/${d.wondersAll}`, 'Weltwunder') + tile(548, String(d.badges), 'Abzeichen');
 	// Passseite mit den Stempeln bis fast an den unteren Rand
 	const px = 48,
@@ -236,7 +242,7 @@ function collage(d: ShareData) {
 			rr = Math.min(cw, ch) * 0.45;
 		// Zahl passt auch dreistellig („+235“) in den Kreis, „weitere“ darunter ebenfalls innen
 		const label = `+${more}`,
-			fs = Math.min(rr * 0.56, (rr * 1.5) / (label.length * 0.82)),
+			fs = fitU(label, rr * 0.56, rr * 1.5),
 			ws = rr * 0.3;
 		cells.push(
 			`<circle cx="${r1(cx)}" cy="${r1(cy)}" r="${r1(rr)}" fill="#fff" fill-opacity=".6" stroke="${LINE}" stroke-width="5" stroke-dasharray="14 10"/><text x="${r1(cx)}" y="${r1(cy + fs * 0.22)}" text-anchor="middle" font-family="${UNB}" font-weight="800" font-size="${r1(fs)}" fill="${PRIMARY}">${label}</text><text x="${r1(cx)}" y="${r1(cy + rr * 0.5)}" text-anchor="middle" font-family="${FIG}" font-weight="600" font-size="${r1(ws)}" fill="${MUTED}">weitere</text>`

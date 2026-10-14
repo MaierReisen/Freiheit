@@ -79,9 +79,44 @@
 	function goPage(i: number, smooth = true) {
 		if (!book) return;
 		i = Math.max(0, Math.min(pages.length - 1, i));
-		book.scrollTo({ left: i * (book.clientWidth + GAP), behavior: smooth && !reduceMotion() ? 'smooth' : 'auto' });
-		if (!smooth) cur = i;
+		const x = i * (book.clientWidth + GAP);
+		// Nachbarseite: sanft blättern. Weiter weg (Jahr, Regler): sanftes Scrollen über mehrere einrastende Seiten bleibt
+		// in Safari hängen – also direkt hinspringen und die Seite kurz hereingleiten lassen.
+		if (smooth && Math.abs(i - cur) === 1 && !reduceMotion()) return book.scrollTo({ left: x, behavior: 'smooth' });
+		const from = cur;
+		book.scrollLeft = x;
+		cur = i;
+		if (smooth && i !== from && !reduceMotion())
+			book.animate([{ opacity: 0.2, transform: `translateX(${i > from ? 28 : -28}px)` }, { opacity: 1, transform: 'none' }], { duration: 260, easing: 'cubic-bezier(.2,.8,.2,1)' });
 	}
+	/* Seitenwahl als Regler wie im Reisepass: Knopf ziehen oder auf die Leiste tippen; beim Ziehen zeigt eine Blase Seite,
+	   Jahre und Strecken – gesprungen wird erst beim Loslassen. */
+	const KNOB = 40;
+	let strip = $state<HTMLDivElement>();
+	let slide = $state<{ i: number; f: number; x0: number; moved: boolean; w: number } | null>(null);
+	function dragAt(x: number, d: { x0: number; moved: boolean }) {
+		if (!strip) return;
+		const r = strip.getBoundingClientRect(),
+			f = Math.max(0, Math.min(1, (x - r.left - KNOB / 2) / (r.width - KNOB))),
+			i = Math.round(f * (pages.length - 1));
+		if (slide && i !== slide.i) navigator.vibrate?.(4);
+		slide = { ...d, i, f, w: r.width };
+	}
+	function nDown(e: PointerEvent) {
+		if (e.button > 0 || pages.length < 2) return;
+		try { strip?.setPointerCapture(e.pointerId); } catch { /* egal */ }
+		dragAt(e.clientX, { x0: e.clientX, moved: false });
+	}
+	function nMove(e: PointerEvent) {
+		if (slide) dragAt(e.clientX, { x0: slide.x0, moved: slide.moved || Math.abs(e.clientX - slide.x0) > 6 });
+	}
+	function nUp(e: PointerEvent) {
+		const d = slide;
+		slide = null;
+		if (d && e.type === 'pointerup') goPage(d.i);
+	}
+	const knobF = $derived(slide ? slide.f : pages.length > 1 ? cur / (pages.length - 1) : 0);
+	const preview = $derived(slide?.moved ? { ...pages[slide.i], routes: pages[slide.i].t.map((x) => `${x.l.f.from}–${x.l.to}`).join(' · ') } : null);
 	const curYear = $derived(pages[cur]?.y0 ?? 0);
 	let chips = $state<HTMLDivElement>();
 	// gewähltes Jahr in der Leiste sichtbar halten
@@ -306,7 +341,7 @@
 </script>
 
 <!-- svelte-ignore a11y_no_noninteractive_element_to_interactive_role -->
-<section class="ov pp-view fp-view" id="flightPassView" role="dialog" aria-modal="true" aria-labelledby="fpTitle" hidden={!ui.fpOpen} use:swipeClose={{ onclose: () => closeFlightPass(false) }}>
+<section class="ov pp-view fp-view" id="flightPassView" role="dialog" aria-modal="true" aria-labelledby="fpTitle" hidden={!ui.fpOpen} use:swipeClose={{ onclose: () => closeFlightPass(false), skip: (t) => !!t.closest('.pp-strip') }}>
 	<div class="ov-head">
 		<button type="button" class="ov-close" id="fpClose" aria-label="Flugpass schließen" onclick={() => closeFlightPass(false)}
 			><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg></button
@@ -383,11 +418,39 @@
 						{/each}
 					</div>
 					{#if pages.length > 1}
-						<div class="pp-nav fp-nav">
+						<div class="pp-nav">
 							<button type="button" class="pp-arrow" aria-label="Vorherige Seite" disabled={cur <= 0} onclick={() => goPage(cur - 1)}>‹</button>
-							<p class="pp-pnum">Seite {cur + 1} von {pages.length}</p>
+							<div
+								class="pp-strip fp-strip"
+								class:drag={!!slide}
+								bind:this={strip}
+								role="slider"
+								tabindex="0"
+								aria-label="Seite wählen"
+								aria-valuemin={1}
+								aria-valuemax={pages.length}
+								aria-valuenow={cur + 1}
+								aria-valuetext="Seite {cur + 1} von {pages.length}"
+								style="--f:{knobF}"
+								onpointerdown={nDown}
+								onpointermove={nMove}
+								onpointerup={nUp}
+								onpointercancel={nUp}
+								onkeydown={(e) => { if (e.key === 'ArrowRight') goPage(cur + 1); else if (e.key === 'ArrowLeft') goPage(cur - 1); }}
+							>
+								<i class="pp-track"><i class="pp-fill"></i>{#if pages.length <= 30}{#each pages as _, pi (pi)}<u style="--p:{pi / (pages.length - 1)}" class:on={pi <= (slide ? slide.i : cur)}></u>{/each}{/if}</i>
+								<b class="pp-knob">{(slide ? slide.i : cur) + 1}</b>
+								{#if slide && preview}
+									<div class="pp-bubble" aria-hidden="true" style="left:{Math.max(90, Math.min(slide.w - 90, KNOB / 2 + slide.f * (slide.w - KNOB)))}px">
+										<b>Seite {slide.i + 1} <small>von {pages.length}</small></b>
+										<span>{preview.years}</span>
+										<span class="fp-broutes">{preview.routes}</span>
+									</div>
+								{/if}
+							</div>
 							<button type="button" class="pp-arrow" aria-label="Nächste Seite" disabled={cur >= pages.length - 1} onclick={() => goPage(cur + 1)}>›</button>
 						</div>
+						<p class="pp-pnum">Seite {cur + 1} von {pages.length}</p>
 					{/if}
 					<p class="note">Bordkarte antippen öffnet die Strecke. Farbe des Streifens: <span class="fp-key kurz">Kurz</span> <span class="fp-key mittel">Mittel</span> <span class="fp-key lang">Langstrecke</span></p>
 				{/if}

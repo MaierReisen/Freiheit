@@ -1,6 +1,6 @@
 import { geoPath } from 'd3-geo';
 import { getLod } from './map/geo';
-import { FIG, H, UNB, W, esc, miller, r1, tw, withFonts } from './sharecard';
+import { FIG, H, UNB, W, esc, fitU, miller, r1, tw, withFonts } from './sharecard';
 
 /* Teilen-Bild des Flugpasses (1080 × 1920, ohne Namen): Nachtblau wie eine Vielflieger-Karte, Akzentfarbe nach Status
    (Blau, Silber, Gold, Platin, Schwarz), große Zahl der Flüge, Weltkarte mit allen Flugbögen, sechs Werte und der
@@ -80,7 +80,7 @@ function card(d: FlightShare) {
 	const rank = d.rank ? `${d.rank.icon} ${d.rank.name}` : '';
 	const rw = tw(rank, 34) + 56;
 	const num = String(d.n);
-	const nSize = num.length > 3 ? 240 : num.length > 2 ? 290 : 330;
+	const nSize = fitU(num, num.length > 3 ? 240 : num.length > 2 ? 290 : 330, 880);
 	const sub = d.year ? `MEIN FLUGJAHR ${d.year}` : d.since ? `ALLE FLÜGE SEIT ${d.since}` : 'ALLE FLÜGE';
 	const m = flightMap(d, 992, 470, hi);
 	const my = 660,
@@ -97,7 +97,7 @@ function card(d: FlightShare) {
 		.map(([v, l], i) => {
 			const x = 64 + (i % 3) * 324,
 				y = sy + Math.floor(i / 3) * 156,
-				fs = Math.min(58, (272 / Math.max(1, tw(v, 1, 0.62))) | 0);
+				fs = fitU(v, 58, 264);
 			return `<g transform="translate(${x} ${y})"><rect width="304" height="138" rx="24" fill="#fff" fill-opacity=".06" stroke="${mid}" stroke-opacity=".35" stroke-width="2"/><text x="152" y="${r1(66 + fs * 0.12)}" text-anchor="middle" font-family="${UNB}" font-weight="800" font-size="${fs}" fill="${hi}">${esc(v)}</text><text x="152" y="112" text-anchor="middle" font-family="${FIG}" font-weight="500" font-size="28" fill="#E8EEF5" fill-opacity=".78">${l}</text></g>`;
 		})
 		.join('');
@@ -115,7 +115,7 @@ function card(d: FlightShare) {
 <path d="M253 96H473" stroke="${lo}" stroke-width="3" stroke-dasharray="4 10" stroke-linecap="round"/><g transform="translate(363 96) rotate(90) scale(2.6) translate(-12 -12)"><path d="M21 15.5v-1.6l-8-5V3.6a1.5 1.5 0 0 0-3 0v5.3l-8 5v1.6l8-2.4v5.1l-2 1.5V21l3.5-1 3.5 1v-1.3l-2-1.5v-5.1z" fill="#0A1730" stroke="#F7F9FC" stroke-width="2.5" paint-order="stroke"/></g>
 <text x="36" y="156" font-family="${FIG}" font-weight="600" font-size="26" fill="#3C4F63">${esc(L.ca)}</text>
 <text x="690" y="156" text-anchor="end" font-family="${FIG}" font-weight="600" font-size="26" fill="#3C4F63">${esc(L.cb)}</text>
-<text x="840" y="84" text-anchor="middle" font-family="${UNB}" font-weight="800" font-size="40" fill="#0A1730">${esc(L.km)}</text>
+<text x="840" y="84" text-anchor="middle" font-family="${UNB}" font-weight="800" font-size="${fitU(L.km, 40, 184)}" fill="#0A1730">${esc(L.km)}</text>
 <text x="840" y="122" text-anchor="middle" font-family="${FIG}" font-weight="600" font-size="24" fill="#6A7C8E">Kilometer</text>
 </g>`
 		: '';
