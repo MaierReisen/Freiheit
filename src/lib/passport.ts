@@ -2107,7 +2107,7 @@ export const TIER_LABEL = ['', 'RARE', 'EPIC', 'LEGENDARY'];
 const TIER_INK = ['', 'var(--rc1,#2F7FD8)', 'var(--rc2,#7444D8)', 'var(--rc3,#A57B16)'];
 /** Stufe unter dem Namen: Beschriftung und Sterne in der Farbe der Stufe */
 const tierLine = (x: number, y: number, label: string, fs: number, tier: number, sx: number) =>
-	`<g style="fill:${TIER_INK[tier]};color:${TIER_INK[tier]}">${small(x, y, label, fs)}${star(x - sx, y - 4, 5)}${star(x + sx, y - 4, 5)}</g>`;
+	`<g style="color:${TIER_INK[tier]}">${small(x, y, label, fs)}${star(x - sx, y - 4, 5)}${star(x + sx, y - 4, 5)}</g>`;
 /** Briefmarke statt Stempel: gezähntes Papier, farbig bedrucktes Bild (Szene oder sonst das Stempelmotiv), Länder-Nr. als Nennwert,
     darunter Name und Stufe (in der Farbe der Stufe); Rare mit blauem Rand, Epic mit metallischem lila Rand, Legendary mit Goldrand. Ohne Tinten-Filter: gedruckt, nicht gestempelt. */
 function markFrame(t: Txt, scene: string | null, m: Motif, tier: number, nr: number, wide?: string): [string, string] {

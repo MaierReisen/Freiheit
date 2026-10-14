@@ -752,20 +752,23 @@ button.pp-tile:active{transform:scale(.98)}
 .pp-empty{width:112px;height:112px;border-radius:50%;border:2.5px dashed var(--line);display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--muted);text-align:center;font-size:11.5px;font-weight:600;line-height:1.25}
 .pp-empty b{font:800 30px/1 var(--display);color:var(--sun);margin-bottom:4px}
 .pp-slot.sp{z-index:1}
-/* Rare/Epic/Legendary: eingeklebte Briefmarke (gedruckt, nicht gestempelt) – Papier --stp, Blauer Rand --srb (Rare), lila Rand --sv1–3 (Epic), Farbe der Stufen-Beschriftung --rc1–3 – alles wie bei den Bordkarten, Goldrand --stg */
-:root{--stp:#FFFFFF;--stg:#D6A740;--stt:16%;--sv1:#6A3CC8;--sv2:#C4B0FF;--sv3:#F1EBFF;--srb:#2F7FD8;--rc1:#2F7FD8;--rc2:#7444D8;--rc3:#A57B16}@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--stp:#26404A;--stg:#B48A33;--stt:30%;--sv1:#5B34B0;--sv2:#A58EEB;--sv3:#DCD0FF;--srb:#2F7FD8;--rc1:#7DB2F0;--rc2:#BBA6FF;--rc3:#E6C068}}:root[data-theme="dark"]{--stp:#26404A;--stg:#B48A33;--stt:30%;--sv1:#5B34B0;--sv2:#A58EEB;--sv3:#DCD0FF;--srb:#2F7FD8;--rc1:#7DB2F0;--rc2:#BBA6FF;--rc3:#E6C068}
-.pp-stamp.sp{transform-origin:50% 90%;width:auto;height:140px;max-height:none;mix-blend-mode:normal;opacity:1;filter:drop-shadow(0 1px 1.5px rgba(13,43,58,.3))}
+/* Rare/Epic/Legendary: eingeklebte Briefmarke (gedruckt, nicht gestempelt) – Papier --stp, blauer Rand --tk1 (Rare), lila Rand --sv1–3 (Epic), Farbe der Stufen-Beschriftung und Zähler --rc1–3 – alles wie bei den Bordkarten, Goldrand --stg */
+:root{--stp:#FFFFFF;--stg:#D6A740;--stt:16%;--sv1:#6A3CC8;--sv2:#C4B0FF;--sv3:#F1EBFF;--tk1:#2F7FD8;--rc1:#2F7FD8;--rc2:#7444D8;--rc3:#A57B16}@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--stp:#26404A;--stg:#B48A33;--stt:30%;--sv1:#5B34B0;--sv2:#A58EEB;--sv3:#DCD0FF;--tk1:#2F7FD8;--rc1:#7DB2F0;--rc2:#BBA6FF;--rc3:#E6C068}}:root[data-theme="dark"]{--stp:#26404A;--stg:#B48A33;--stt:30%;--sv1:#5B34B0;--sv2:#A58EEB;--sv3:#DCD0FF;--tk1:#2F7FD8;--rc1:#7DB2F0;--rc2:#BBA6FF;--rc3:#E6C068}
+.pp-stamp.sp{transform-origin:50% 90%;width:auto;height:140px;max-height:none;mix-blend-mode:normal;opacity:1;--glow:drop-shadow(0 0 0 transparent);filter:drop-shadow(0 1px 1.5px rgba(13,43,58,.3)) var(--glow)}
 .pp-stamp.sp.wd{width:108%;max-width:none;height:auto;max-height:140px;flex:none}
 .pp-stamp .pp{fill:var(--stp);stroke:none}
 .pp-stamp .gd{fill:var(--stg);stroke:none}
-.pp-stamp .rb{fill:var(--srb,#2F7FD8);stroke:none}
-/* seltene Marken leuchten leicht in der Farbe ihrer Stufe; Legendary schimmert auf der offenen Seite immer wieder golden */
-.pp-stamp.sp.r1{filter:drop-shadow(0 1px 1.5px rgba(13,43,58,.3)) drop-shadow(0 0 6px rgba(47,127,216,.4))}
-.pp-stamp.sp.r2{filter:drop-shadow(0 1px 1.5px rgba(13,43,58,.3)) drop-shadow(0 0 7px rgba(139,92,246,.5))}
-.pp-stamp.sp.r3{filter:drop-shadow(0 1px 1.5px rgba(13,43,58,.3)) drop-shadow(0 0 8px rgba(214,167,64,.55))}
-.pp-page.on .pp-stamp.sp.r3{animation:ppGold 4.5s ease-in-out infinite}
-@keyframes ppGold{0%,60%,100%{filter:drop-shadow(0 1px 1.5px rgba(13,43,58,.3)) drop-shadow(0 0 8px rgba(214,167,64,.55))}80%{filter:drop-shadow(0 1px 1.5px rgba(13,43,58,.3)) drop-shadow(0 0 16px rgba(240,200,90,.95)) brightness(1.08)}}
-[data-motion="reduce"] .pp-page.on .pp-stamp.sp.r3{animation:none}
+.pp-stamp .rb{fill:var(--tk1);stroke:none}
+/* seltene Marken leuchten leicht in der Farbe ihrer Stufe (Teilen-Bilder: scG1–3 in sharecard.ts) */
+.pp-stamp.sp.r1{--glow:drop-shadow(0 0 6px rgba(47,127,216,.4))}
+.pp-stamp.sp.r2{--glow:drop-shadow(0 0 7px rgba(139,92,246,.5))}
+.pp-stamp.sp.r3{--glow:drop-shadow(0 0 8px rgba(214,167,64,.55))}
+/* Legendary: auf der offenen Seite immer wieder ein goldener Schein hinter der Marke – nur Deckkraft animiert (läuft auf der Grafikkarte, Marke wird nicht neu gezeichnet) */
+.pp-slot.r3::before{content:"";position:absolute;z-index:-1;inset:4% 10%;border-radius:20px;background:radial-gradient(closest-side,rgba(240,200,90,.7),rgba(240,200,90,0));opacity:0;pointer-events:none}
+.pp-page.on .pp-slot.r3::before{animation:ppGold 4.5s ease-in-out infinite}
+.pp-slot.r3.wait::before{display:none}
+@keyframes ppGold{0%,55%,100%{opacity:0}78%{opacity:1}}
+[data-motion="reduce"] .pp-page.on .pp-slot.r3::before{animation:none}
 .pp-stamp .pic{--paper:color-mix(in srgb,currentColor var(--stt),var(--stp))}
 .pp-stamp .bg{fill:var(--paper);stroke:none}
 .pp-stamp .v{font-family:var(--display);font-weight:800;fill:currentColor;stroke:var(--paper);stroke-width:6px;paint-order:stroke}
@@ -782,7 +785,8 @@ button.pp-tile:active{transform:scale(.98)}
   --gdg:conic-gradient(from 30deg,#8A6514,#F2D98A,#B0841C,#FFF0B8,#9C7418,#E2BE5A,#8A6514);
   --gdl:linear-gradient(135deg,#9C7418,#F2D98A 35%,#B88A1E 60%,#F7E3A1 85%,#A57B16);
   --bzl:linear-gradient(135deg,#7A4520,#E8A874 35%,#9C5A2B 60%,#F0B98A 85%,#8A4E25);
-  --svl:linear-gradient(135deg,#7E8892,#F4F7FA 35%,#9AA5AF 60%,#FFFFFF 85%,#8994A0)}
+  --svl:linear-gradient(135deg,#7E8892,#F4F7FA 35%,#9AA5AF 60%,#FFFFFF 85%,#8994A0);
+  --rpl:linear-gradient(135deg,#7444D8,#C4B0FF 50%,#8B5CF6)}
 .pp-visa{margin-bottom:16px;padding:16px 10px 14px;background:var(--paper);border:1px solid var(--line);border-radius:var(--r-lg)}
 .pp-wgrid{grid-template-rows:none;grid-auto-rows:150px}
 .pp-wonders .pp-empty{width:124px;height:136px;border-radius:var(--r-md);gap:2px;padding:8px;box-sizing:border-box}
@@ -917,8 +921,8 @@ button.pp-tile:active{transform:scale(.98)}
 .pp-rar:active{opacity:.7}
 .pp-rar span{display:inline-flex;align-items:center;gap:5px;padding:4px 10px 4px 5px;border-radius:99px;background:var(--chip)}
 .pp-rar span b{display:grid;place-items:center;min-width:20px;height:20px;padding:0 5px;border-radius:99px;font:800 11.5px var(--text)}
-.pp-rar .r1 b{background:color-mix(in srgb,#2F7FD8 18%,transparent);color:#2F7FD8}
-.pp-rar .r2 b{background:linear-gradient(135deg,#7444D8,#C4B0FF 50%,#8B5CF6);color:#fff}
+.pp-rar .r1 b{background:color-mix(in srgb,var(--rc1) 18%,transparent);color:var(--rc1)}
+.pp-rar .r2 b{background:var(--rpl);color:#fff}
 .pp-rar .r3 b{background:var(--gdl);color:#3A2A05}
 .pp-rar svg{flex:none;width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
 .pp-leg{max-height:calc(100% - 48px - env(safe-area-inset-top,0px));padding-bottom:0;gap:0}
@@ -934,8 +938,8 @@ button.pp-tile:active{transform:scale(.98)}
 .pp-leg-st{flex:none;display:grid;place-items:center;width:78px;height:86px}
 .pp-leg-st .pp-stamp,.pp-leg-st .pp-stamp.sp{width:auto;height:auto;max-width:78px;max-height:86px;animation:none}
 .pp-leg em{font:700 11.5px var(--text);font-style:normal;padding:2px 8px;border-radius:99px;background:var(--chip);color:var(--muted)}
-.pp-leg em.r1{background:color-mix(in srgb,#2F7FD8 16%,transparent);color:#2F7FD8}
-.pp-leg em.r2{background:linear-gradient(135deg,#7444D8,#C4B0FF 50%,#8B5CF6);color:#fff}
+.pp-leg em.r1{background:color-mix(in srgb,var(--rc1) 16%,transparent);color:var(--rc1)}
+.pp-leg em.r2{background:var(--rpl);color:#fff}
 .pp-leg em.r3{background:var(--gdl);color:#3A2A05}
 
 /* Länderseite: Einreisedatum */
@@ -1185,7 +1189,7 @@ button.pp-tile:active{transform:scale(.98)}
 .fp-view .pp-sharebtn{background:var(--fp-acc);color:var(--fp-on)}
 /* Bordkarten mit Seltenheit (seit v1.51.0): eine Karte je Strecke; Streifen links = Stufe (grau, blau, lila, gold), Flugzeug = Kurz/Mittel/Lang.
    Rare: Rand + Bild des Ziellands (--sc = Stempelfarbe). Epic: lila Rand (seit v1.51.1, vorher Silber – zu nah an Common). Legendary: Nachtblau, Goldrand, Goldglanz + Funkeln nur auf der aufgeschlagenen Seite. */
-.fp-view{--tk0:#A9B6C3;--tk1:#2F7FD8;--tk2:linear-gradient(180deg,#6A3CC8,#C4B0FF 30%,#8B5CF6 55%,#E4DAFF 75%,#7444D8);--tk3:linear-gradient(180deg,#9C7418,#F2D98A 30%,#B88A1E 55%,#F7E3A1 78%,#A57B16);--tks:#7444D8}
+.fp-view{--tk0:#A9B6C3;--tk2:linear-gradient(180deg,#6A3CC8,#C4B0FF 30%,#8B5CF6 55%,#E4DAFF 75%,#7444D8);--tk3:linear-gradient(180deg,#9C7418,#F2D98A 30%,#B88A1E 55%,#F7E3A1 78%,#A57B16);--tks:#7444D8}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .fp-view{--tks:#B9A2FF}}
 :root[data-theme="dark"] .fp-view{--tks:#B9A2FF}
 .fp-bk{position:relative;isolation:isolate}
@@ -1194,6 +1198,7 @@ button.pp-tile:active{transform:scale(.98)}
 .fp-st{position:absolute;inset:0;z-index:-1;border-radius:15px;background:color-mix(in srgb,var(--fp-tk) 85%,#fff);box-shadow:0 3px 8px -4px rgba(0,0,0,.6),inset 0 0 0 1px rgba(255,255,255,.18)}
 .fp-st.s1{transform:translate(4px,6px) rotate(1.2deg);opacity:.75}
 .fp-st.s2{transform:translate(-3px,11px) rotate(-1.3deg);opacity:.45}
+.fp-bk.t1 .fp-st{box-shadow:0 3px 8px -4px rgba(0,0,0,.6),inset 0 0 0 1.5px var(--tk1)}
 .fp-bk.t2 .fp-st{box-shadow:0 3px 8px -4px rgba(0,0,0,.6),inset 0 0 0 1.5px #8B5CF6}
 .fp-bk.t3 .fp-st{background:#1A2C55;box-shadow:0 3px 8px -4px rgba(0,0,0,.6),inset 0 0 0 1.5px #9C7418}
 .fp-bk .fp-tk{overflow:hidden;isolation:isolate;min-height:104px}

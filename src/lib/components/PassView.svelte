@@ -858,6 +858,7 @@
 											data-stamp={sl.st.code}
 											class:wait={pending.includes(sl.st.code)}
 											class:sp={sl.st.sp > 0}
+											class:r3={sl.st.sp === 3}
 											style="transform:translateY({sl.st.s.dy}px) rotate({sl.st.s.rot}deg);--c:{sl.st.s.color};--w:{sl.st.s.w}%"
 											aria-label="{sl.st.name}, {sl.st.nr ? `Land Nr. ${sl.st.nr}` : 'Gebiet'}{sl.st.sp ? `, Briefmarke ${TIER_NAME[sl.st.sp]}` : ''}"
 											onclick={() => openCountry(sl.st.code)}>{@html sl.st.s.svg}</button

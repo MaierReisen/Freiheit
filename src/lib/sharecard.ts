@@ -34,13 +34,13 @@ export const UNB = `'Unbounded','Arial Black',system-ui,sans-serif`,
 export const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 export const r1 = (v: number) => Math.round(v * 10) / 10;
 /** Stempel immer in den hellen Farben (unabhängig vom Dunkelmodus) */
-const STYLE = `.sc{--paper:#FFFDF8;--st-teal:#0E6E74;--st-coral:#D9573B;--st-gold:#B07800;--st-blue:#2F6FB5;--st-plum:#7A3E8E;--st-green:#2E7D4F;--st-red:#C0392B;--st-navy:#1F3F6E;--st-brown:#9A4F1E;--stp:#FFFFFF;--stg:#D6A740;--stt:16%;--sv1:#6A3CC8;--sv2:#C4B0FF;--sv3:#F1EBFF;--srb:#2F7FD8;--rc1:#2F7FD8;--rc2:#7444D8;--rc3:#A57B16}
+const STYLE = `.sc{--paper:#FFFDF8;--st-teal:#0E6E74;--st-coral:#D9573B;--st-gold:#B07800;--st-blue:#2F6FB5;--st-plum:#7A3E8E;--st-green:#2E7D4F;--st-red:#C0392B;--st-navy:#1F3F6E;--st-brown:#9A4F1E;--stp:#FFFFFF;--stg:#D6A740;--stt:16%;--sv1:#6A3CC8;--sv2:#C4B0FF;--sv3:#F1EBFF;--tk1:#2F7FD8;--rc1:#2F7FD8;--rc2:#7444D8;--rc3:#A57B16}
 .sc-st .d{font-family:${UNB};font-weight:800;fill:currentColor;stroke:none}
 .sc-st .t{font-family:${FIG};font-weight:700;fill:currentColor;stroke:none}
 .sc-st .k{font-family:${FIG};font-weight:700;fill:var(--paper);stroke:none}
 .sc-st .pp{fill:var(--stp);stroke:none}
 .sc-st .gd{fill:var(--stg);stroke:none}
-.sc-st .rb{fill:var(--srb);stroke:none}
+.sc-st .rb{fill:var(--tk1);stroke:none}
 .sc-st .pic{--paper:color-mix(in srgb,currentColor var(--stt),var(--stp))}
 .sc-st .bg{fill:var(--paper);stroke:none}
 .sc-st .v{font-family:${UNB};font-weight:800;fill:currentColor;stroke:var(--paper);stroke-width:6px;paint-order:stroke}`;
@@ -60,10 +60,16 @@ function xml(svg: string) {
 	return out;
 }
 
+/** Schein seltener Marken wie im Pass (.pp-stamp.sp.r1–r3 in app.css): Rare blau, Epic lila, Legendary gold; Größe relativ zur Marke */
+const GLOW_FILTERS = ([['2F7FD8', 0.45], ['8B5CF6', 0.55], ['D6A740', 0.6]] as const)
+	.map(([c, o], i) => `<filter id="scG${i + 1}" x="-25%" y="-25%" width="150%" height="150%" primitiveUnits="objectBoundingBox"><feDropShadow dx="0" dy="0" stdDeviation=".035" flood-color="#${c}" flood-opacity="${o}"/></filter>`)
+	.join('');
 /** Stempel in ein Feld (x, y, w, h) setzen, gedreht um seine Mitte */
 function place(s: Stamp, x: number, y: number, w: number, h: number, rot: number, shadow = false) {
-	const svg = xml(s.svg).replace(/^<svg class="pp-stamp([^"]*)"/, `<svg x="${r1(x)}" y="${r1(y)}" width="${r1(w)}" height="${r1(h)}" class="sc-st$1"`);
-	return `<g transform="rotate(${rot} ${r1(x + w / 2)} ${r1(y + h / 2)})" style="color:${s.color}"${shadow ? ' filter="url(#scSh)"' : ''}>${svg}</g>`;
+	const svg = xml(s.svg).replace(/^<svg class="pp-stamp([^"]*)"/, `<svg x="${r1(x)}" y="${r1(y)}" width="${r1(w)}" height="${r1(h)}" class="sc-st$1"`),
+		tier = /^<svg class="pp-stamp sp r([123])/.exec(s.svg)?.[1],
+		inner = tier ? `<g filter="url(#scG${tier})">${svg}</g>` : svg;
+	return `<g transform="rotate(${rot} ${r1(x + w / 2)} ${r1(y + h / 2)})" style="color:${s.color}"${shadow ? ' filter="url(#scSh)"' : ''}>${inner}</g>`;
 }
 /** seltenste zuerst (Legendary, Epic, Rare), danach in Reihenfolge der Länder */
 const rarest = (st: ShareStamp[]) => [...st].sort((a, b) => b.sp - a.sp || (a.nr || 1e4) - (b.nr || 1e4));
@@ -150,7 +156,7 @@ function cover(d: ShareData, visited: Set<string>) {
 	];
 	const order = top.map((s, i) => ({ s, f: fan[top.length === 1 ? 0 : i] })).reverse();
 	return `<svg class="sc" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">
-<defs>${INK_FILTERS}
+<defs>${INK_FILTERS}${GLOW_FILTERS}
 <linearGradient id="scBg" x1="0" y1="0" x2=".35" y2="1"><stop offset="0" stop-color="#1D4D55"/><stop offset=".72" stop-color="#0B242B"/></linearGradient>
 <radialGradient id="scHi" cx=".2" cy="0" r=".7"><stop offset="0" stop-color="#fff" stop-opacity=".12"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
 <linearGradient id="scGd" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F6E3A2"/><stop offset=".6" stop-color="${G}"/><stop offset="1" stop-color="#A9822E"/></linearGradient>
@@ -254,7 +260,7 @@ function collage(d: ShareData) {
 		rr2 = 48;
 	const page = `M${px + rl} ${py}H${px + pw - rr2}A${rr2} ${rr2} 0 0 1 ${px + pw} ${py + rr2}V${py + ph - rr2}A${rr2} ${rr2} 0 0 1 ${px + pw - rr2} ${py + ph}H${px + rl}A${rl} ${rl} 0 0 1 ${px} ${py + ph - rl}V${py + rl}A${rl} ${rl} 0 0 1 ${px + rl} ${py}Z`;
 	return `<svg class="sc" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">
-<defs>${INK_FILTERS}
+<defs>${INK_FILTERS}${GLOW_FILTERS}
 <pattern id="scDot" width="32" height="32" patternUnits="userSpaceOnUse"><circle cx="16" cy="16" r="2" fill="${LINE}"/></pattern>
 <linearGradient id="scBund" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="${INK}" stop-opacity=".2"/><stop offset="1" stop-color="${INK}" stop-opacity="0"/></linearGradient>
 <clipPath id="scPg"><path d="${page}"/></clipPath>
