@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { TABS, closeContinents, reduceMotion, closeFlightsPage, closePass, closePlaces, closeSettings, closeSheet, goTab, initFromHash, onHashChange, setFull, startIntro, ui } from '$lib/app.svelte';
+	import { TABS, closeContinents, reduceMotion, closeFlightsPage, closeFlightPass, closePass, closePlaces, closeSettings, closeSheet, goTab, initFromHash, onHashChange, setFull, startIntro, ui } from '$lib/app.svelte';
 	import ContinentChips from './ContinentChips.svelte';
 	import Hero from './Hero.svelte';
 	import SettingsView from './SettingsView.svelte';
@@ -17,6 +17,7 @@
 	import WorldMap from './WorldMap.svelte';
 	import FlightsTab from './FlightsTab.svelte';
 	import FlightsHero from './FlightsHero.svelte';
+	import FlightPassView from './FlightPassView.svelte';
 
 	function onKeydown(e: KeyboardEvent) {
 		if (e.key !== 'Escape') return;
@@ -39,6 +40,10 @@
 		}
 		if (ui.passOpen && !ui.sheetOpen) {
 			closePass(false);
+			return;
+		}
+		if (ui.fpOpen && !ui.sheetOpen) {
+			closeFlightPass(false);
 			return;
 		}
 		if (ui.full && !ui.sheetOpen) setFull(false);
@@ -106,7 +111,7 @@
 	}
 	function onTouchStart(e: TouchEvent) {
 		if (swipe || settling) return;
-		if (TABS.length < 2 || e.touches.length !== 1 || ui.full || ui.flightsPage || ui.placesOpen || ui.continentsOpen || ui.sheetOpen || ui.settingsOpen || ui.passOpen) return;
+		if (TABS.length < 2 || e.touches.length !== 1 || ui.full || ui.flightsPage || ui.placesOpen || ui.continentsOpen || ui.sheetOpen || ui.settingsOpen || ui.passOpen || ui.fpOpen) return;
 		const target = e.target as Element | null;
 		if (!target?.closest?.('#appMain') || target.closest('input,textarea,select,.continents,.chips,.sheet')) return;
 		if (ui.mapActive && target.closest('#mapBox')) return;
@@ -217,6 +222,7 @@
 			closeSheet();
 			if (ui.settingsOpen) closeSettings(true);
 			if (ui.passOpen) closePass(true);
+			if (ui.fpOpen) closeFlightPass(true);
 			ui.focusContinent = null;
 			if (ui.full) setFull(false, true);
 			if (ui.placesOpen) closePlaces(true);
@@ -258,6 +264,7 @@
 {#if TABS.length > 1}<TabBar />{/if}
 <SettingsView />
 <PassView />
+<FlightPassView />
 <PlacesView />
 <ContinentsView />
 <Sheet />

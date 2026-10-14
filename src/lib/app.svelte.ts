@@ -93,6 +93,10 @@ export const ui = $state({
 	settingsOpen: false,
 	/** Reisepass (Vollbild, über die Kachel in der Länderliste) */
 	passOpen: false,
+	/** Flugpass (Vollbild, über die Kachel im Tab „Flüge“) */
+	fpOpen: false,
+	/** Flug-Abzeichen, das der Flugpass nach dem Öffnen zeigen soll (Tipp auf die Feier-Karte) */
+	fpBadge: '',
 	/** Seite im Tab „Flüge“ (Vollbild, '' = zu) */
 	flightsPage: '' as FlightsPage | '',
 	/** zählt hoch, wenn der Globus im Tab „Flüge“ alle (bzw. die gewählten) Strecken ins Bild holen soll */
@@ -113,8 +117,6 @@ export const ui = $state({
 	unlock: { key: 0, cont: '', n: 0, rank: '', badge: '', badgeId: '', icon: '', sub: '', added: '', area: '' },
 	/** Abzeichen, das der Pass nach dem Öffnen (per Tipp auf die Meldung) zeigen soll */
 	passBadge: '',
-	/** Abzeichen-Gruppe, die der Pass nach dem Öffnen zeigen soll (z. B. 'flug' vom Tab „Flüge“) */
-	passGroup: '',
 	/** Pass soll nach dem Öffnen die Rangübersicht zeigen (Tipp auf die Rang-Meldung) */
 	passRanks: false,
 	toastMsg: '',
@@ -326,6 +328,7 @@ export function openPass(fromHash = false) {
 	if (ui.full) setFull(false, true);
 	if (ui.placesOpen) closePlaces(true);
 	if (ui.continentsOpen) closeContinents(true);
+	if (ui.fpOpen) closeFlightPass(true);
 	passReturnFocus = document.activeElement;
 	ui.passOpen = true;
 	document.body.classList.add('noscroll');
@@ -337,6 +340,29 @@ export function closePass(fromHash = false) {
 	if (ui.sheetOpen) closeSheet();
 	if (!ui.settingsOpen) document.body.classList.remove('noscroll');
 	if (passReturnFocus instanceof HTMLElement) passReturnFocus.focus({ preventScroll: true });
+}
+
+/* ---------- Flugpass (Vollbild, wie der Reisepass) ---------- */
+let fpReturnFocus: Element | null = null;
+export function openFlightPass(fromHash = false) {
+	if (ui.fpOpen) return;
+	if (ui.sheetOpen) closeSheet();
+	if (ui.full) setFull(false, true);
+	if (ui.passOpen) closePass(true);
+	if (ui.placesOpen) closePlaces(true);
+	if (ui.continentsOpen) closeContinents(true);
+	closeFlightsPage();
+	fpReturnFocus = document.activeElement;
+	ui.fpOpen = true;
+	document.body.classList.add('noscroll');
+	tick().then(() => document.getElementById('fpClose')?.focus({ preventScroll: true }));
+}
+export function closeFlightPass(fromHash = false) {
+	if (!ui.fpOpen) return;
+	ui.fpOpen = false;
+	if (ui.sheetOpen) closeSheet();
+	if (!ui.settingsOpen && !ui.passOpen) document.body.classList.remove('noscroll');
+	if (fpReturnFocus instanceof HTMLElement) fpReturnFocus.focus({ preventScroll: true });
 }
 
 /* ---------- Flüge: Listen (Vollbild, wie „Meine Länder“) ---------- */
@@ -351,7 +377,7 @@ export function openFlightsPage(p: FlightsPage) {
 export function closeFlightsPage() {
 	if (!ui.flightsPage) return;
 	ui.flightsPage = '';
-	if (!ui.settingsOpen && !ui.passOpen && !ui.placesOpen && !ui.continentsOpen) document.body.classList.remove('noscroll');
+	if (!ui.settingsOpen && !ui.passOpen && !ui.fpOpen && !ui.placesOpen && !ui.continentsOpen) document.body.classList.remove('noscroll');
 	if (flightsReturnFocus instanceof HTMLElement) flightsReturnFocus.focus({ preventScroll: true });
 }
 
@@ -378,6 +404,7 @@ export function goTab(tab: string, push = true, dir?: number) {
 	if (ui.continentsOpen) closeContinents(true);
 	if (ui.settingsOpen) closeSettings(true);
 	if (ui.passOpen) closePass(true);
+	if (ui.fpOpen) closeFlightPass(true);
 	closeFlightsPage();
 	if (dir === undefined) dir = Math.sign(TABS.indexOf(t) - TABS.indexOf(ui.tab));
 	const same = t === ui.tab;
@@ -407,6 +434,9 @@ export function initFromHash() {
 	} else if (h === 'pass') {
 		showTab('home', 0);
 		openPass(true);
+	} else if (h === 'flugpass') {
+		showTab('flights', 0);
+		openFlightPass(true);
 	} else goTab(h || 'home', false, 0);
 	requestAnimationFrame(() => hooks.map?.resize());
 }
@@ -426,6 +456,11 @@ export function onHashChange() {
 		if (ui.placesOpen) closePlaces(true);
 		if (ui.full) setFull(false, true);
 		openPass(true);
+	} else if (h === 'flugpass') {
+		if (ui.settingsOpen) closeSettings(true);
+		if (ui.full) setFull(false, true);
+		if (ui.tab !== 'flights') showTab('flights', 0);
+		openFlightPass(true);
 	} else if (h === 'laender' || h === 'places') {
 		if (ui.settingsOpen) closeSettings(true);
 		if (ui.full) setFull(false, true);
@@ -442,6 +477,7 @@ export function onHashChange() {
 		if (ui.continentsOpen) closeContinents(true);
 		if (ui.settingsOpen) closeSettings(true);
 		if (ui.passOpen) closePass(true);
+		if (ui.fpOpen) closeFlightPass(true);
 		if (h !== ui.tab && !(h === '' && ui.tab === 'home')) goTab(h, false);
 	}
 }

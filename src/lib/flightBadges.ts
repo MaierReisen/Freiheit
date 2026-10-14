@@ -2,7 +2,7 @@ import { evalDefs, num, type Badge, type BadgeDetail, type Def, type DetailItem 
 import { CONT, CONT_NAMES, nameOf, type ContinentCode } from './countries';
 import { EARTH_KM, MOON_KM, fmtDuration, fmtInt, type Airlines, type Airports, type FlightStats, type Leg } from './flights';
 
-/* Flug-Abzeichen (Gruppe „Flüge“ in der Abzeichen-Übersicht des Passes): aus der Flug-Statistik (flightStats),
+/* Flug-Abzeichen (Reiter „Abzeichen“ im Flugpass): aus der Flug-Statistik (flightStats),
    gezählt werden nur geflogene Flüge – gleiche Regeln wie im Tab „Flüge“ (wie Flighty). */
 
 export interface FlightCtx {
@@ -240,6 +240,8 @@ const LIST: Def<FlightCtx>[] = [
 	}
 ];
 const DEFS = LIST.map((d) => ({ ...d, tiers: [...new Set(d.tiers)] }));
+/** Kennungen der Flug-Abzeichen (Feier-Karte öffnet dafür den Flugpass statt des Reisepasses) */
+export const FLIGHT_BADGE_IDS = new Set(LIST.map((d) => d.id));
 
 /** Flug-Abzeichen mit Stand (ohne Flug-Daten: leer) */
 export const flightBadges = (x: FlightCtx | null): Badge[] => (x ? evalDefs(DEFS, x) : []);

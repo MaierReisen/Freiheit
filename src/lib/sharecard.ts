@@ -27,12 +27,12 @@ export interface ShareData {
 }
 export type Variant = 'cover' | 'collage';
 
-const W = 1080,
+export const W = 1080,
 	H = 1920;
-const UNB = `'Unbounded','Arial Black',system-ui,sans-serif`,
+export const UNB = `'Unbounded','Arial Black',system-ui,sans-serif`,
 	FIG = `'Figtree',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif`;
-const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-const r1 = (v: number) => Math.round(v * 10) / 10;
+export const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+export const r1 = (v: number) => Math.round(v * 10) / 10;
 /** Stempel immer in den hellen Farben (unabhängig vom Dunkelmodus) */
 const STYLE = `.sc{--paper:#FFFDF8;--st-teal:#0E6E74;--st-coral:#D9573B;--st-gold:#B07800;--st-blue:#2F6FB5;--st-plum:#7A3E8E;--st-green:#2E7D4F;--st-red:#C0392B;--st-navy:#1F3F6E;--st-brown:#9A4F1E;--stp:#FFFFFF;--stg:#D6A740;--stt:16%;--sv1:#7E8892;--sv2:#DCE3E9;--sv3:#FFFFFF}
 .sc-st .d{font-family:${UNB};font-weight:800;fill:currentColor;stroke:none}
@@ -67,11 +67,11 @@ function place(s: Stamp, x: number, y: number, w: number, h: number, rot: number
 /** seltenste zuerst (Legendary, Epic, Rare), danach in Reihenfolge der Länder */
 const rarest = (st: ShareStamp[]) => [...st].sort((a, b) => b.sp - a.sp || (a.nr || 1e4) - (b.nr || 1e4));
 /** grobe Textbreite (für Pillen und Umbrüche) */
-const tw = (s: string, size: number, k = 0.56) => [...s].reduce((w, ch) => w + (/\p{Extended_Pictographic}/u.test(ch) ? 1.15 : /[A-ZÄÖÜ]/.test(ch) ? k * 1.18 : k), 0) * size;
+export const tw = (s: string, size: number, k = 0.56) => [...s].reduce((w, ch) => w + (/\p{Extended_Pictographic}/u.test(ch) ? 1.15 : /[A-ZÄÖÜ]/.test(ch) ? k * 1.18 : k), 0) * size;
 
 /* ---------- Weltkarte (Miller, mit Antarktis), bereiste Länder in Gold ---------- */
 /** Miller-Zylinderprojektion (gerade Längengrade, mit Polen), senkrecht um k gestreckt: Maßstab egal, Hauptsache groß */
-const miller = (k = 1) => geoProjection((l: number, p: number) => [l, k * 1.25 * Math.log(Math.tan(Math.PI / 4 + 0.4 * p))]);
+export const miller = (k = 1) => geoProjection((l: number, p: number) => [l, k * 1.25 * Math.log(Math.tan(Math.PI / 4 + 0.4 * p))]);
 const MAP_H = 640; // Zielhöhe bei 992 Breite
 const SOUTH = -73; // Antarktis nur als Küstenstreifen andeuten
 const mapCache = new Map<string, { h: number; y0: number; inner: string }>();
@@ -318,11 +318,14 @@ const textOf = (svg: string) =>
 		.replace(/&lt;/g, '<')
 		.replace(/&gt;/g, '>') ?? '';
 
-/** fertiges SVG der Karte (mit eingebetteten Schriften) */
-export async function cardSvg(d: ShareData, v: Variant) {
-	const svg = v === 'cover' ? cover(d, new Set(d.stamps.map((s) => s.code))) : collage(d);
+/** Schriften für die Zeichen im Bild einbetten (SVG braucht ein <style>) */
+export async function withFonts(svg: string) {
 	const css = await fontCss(textOf(svg));
 	return css ? svg.replace('<style>', `<style>${css}`) : svg;
+}
+/** fertiges SVG der Karte (mit eingebetteten Schriften) */
+export function cardSvg(d: ShareData, v: Variant) {
+	return withFonts(v === 'cover' ? cover(d, new Set(d.stamps.map((s) => s.code))) : collage(d));
 }
 
 /** SVG → PNG (1080 × 1920) */
@@ -348,8 +351,8 @@ export async function toPng(svg: string): Promise<Blob> {
 }
 
 /** Teilen-Menü des Handys; wo das nicht geht: Bild speichern */
-export async function shareImage(png: Blob): Promise<'shared' | 'saved' | 'cancel'> {
-	const file = new File([png], 'freiheit-reisepass.png', { type: 'image/png' });
+export async function shareImage(png: Blob, name = 'freiheit-reisepass.png'): Promise<'shared' | 'saved' | 'cancel'> {
+	const file = new File([png], name, { type: 'image/png' });
 	if (navigator.canShare?.({ files: [file] })) {
 		try {
 			await navigator.share({ files: [file] });

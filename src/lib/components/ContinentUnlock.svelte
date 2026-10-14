@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { CONT_NAMES, flag, nameOf } from '$lib/countries';
 	import { areaLabel } from '$lib/scope';
-	import { openContinents, openPass, reduceMotion, ui } from '$lib/app.svelte';
+	import { openContinents, openFlightPass, openPass, reduceMotion, ui } from '$lib/app.svelte';
+	import { FLIGHT_BADGE_IDS } from '$lib/flightBadges';
 
 	/* Neuer Kontinent freigeschaltet, neuer Rang im Reisepass oder neues Gebiet (Zahl bleibt gleich, Stempel wartet im Pass): Karte gleitet von oben herein, Sonnen-Medaille mit Strahlenkranz
 	   und kurzem Konfetti. Verschwindet von selbst oder per Tipp. */
@@ -43,7 +44,10 @@
 		const area = !!shown?.area;
 		dismiss();
 		if (area) openPass(); // neues Gebiet: im Pass wartet der Stempel
-		else if (id || rank) {
+		else if (id && FLIGHT_BADGE_IDS.has(id)) {
+			ui.fpBadge = id; // Flug-Abzeichen stehen im Flugpass
+			openFlightPass();
+		} else if (id || rank) {
 			if (id) ui.passBadge = id;
 			else ui.passRanks = true;
 			openPass();
@@ -59,7 +63,7 @@
 {#if shown}
 	{#key shown.key}
 		<div class="unlock" class:leaving role="status" aria-live="polite">
-			<button type="button" class="unlock-card" onclick={onTap} aria-label="{shown.area ? `Neuer Stempel: ${areas.map(nameOf).join(', ')}` : shown.added ? `${shown.sub} neue Länder` : shown.badge ? `Neues Abzeichen: ${shown.badge}` : shown.rank ? `Neuer Rang: ${shown.rank}` : `Neuer Kontinent: ${shown.cont}`}. {shown.area || shown.badgeId || shown.rank ? 'Im Reisepass öffnen' : shown.cont && !shown.added && !shown.badge ? 'Meine Kontinente öffnen' : 'Schließen'}">
+			<button type="button" class="unlock-card" onclick={onTap} aria-label="{shown.area ? `Neuer Stempel: ${areas.map(nameOf).join(', ')}` : shown.added ? `${shown.sub} neue Länder` : shown.badge ? `Neues Abzeichen: ${shown.badge}` : shown.rank ? `Neuer Rang: ${shown.rank}` : `Neuer Kontinent: ${shown.cont}`}. {shown.badgeId && FLIGHT_BADGE_IDS.has(shown.badgeId) ? 'Im Flugpass öffnen' : shown.area || shown.badgeId || shown.rank ? 'Im Reisepass öffnen' : shown.cont && !shown.added && !shown.badge ? 'Meine Kontinente öffnen' : 'Schließen'}">
 				<span class="unlock-medal" aria-hidden="true">
 					<span class="unlock-rays"></span>
 					<span class="unlock-disc" class:emo={!!shown.badge || !!shown.area}>{shown.area ? flag(areas[0]) : shown.badge ? shown.icon : shown.n}</span>
@@ -81,7 +85,7 @@
 					</span>
 				{:else if shown.badge}
 					<span class="unlock-txt">
-						<small>Neues Abzeichen im Reisepass</small>
+						<small>Neues Abzeichen im {shown.badgeId && FLIGHT_BADGE_IDS.has(shown.badgeId) ? 'Flugpass' : 'Reisepass'}</small>
 						<strong>{shown.badge}</strong>
 						<span>{shown.sub}</span>
 					</span>

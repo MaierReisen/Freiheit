@@ -6,10 +6,7 @@
 	import { CONT, flag, nameOf } from '$lib/countries';
 	import { INK_FILTERS, loadScenes, rankIndex, ranks, scenesLoaded, stamp, TIER_LABEL, wonderStamp, yearOf } from '$lib/passport';
 	import { WONDERS, type Wonder } from '$lib/wonders';
-	import { BADGE_GROUPS, badgeLevels, badges, tierName, type Badge, type BadgeGroup, type DetailItem } from '$lib/badges';
-	import { flightBadges } from '$lib/flightBadges';
-	import { fd } from '$lib/flightData.svelte';
-	import { flightStats } from '$lib/flights';
+	import { BADGE_GROUPS, badgeLevels, badges, tierCls, type BadgeGroup } from '$lib/badges';
 	import { loadFacts, type Facts } from '$lib/facts';
 	import { countsForContinent, scopeTotal } from '$lib/scope';
 	import { ALL } from '$lib/map/geo';
@@ -17,6 +14,8 @@
 	import { stickOn } from '$lib/markfx';
 	import { CHANCE, specialLevel, rollSpecials, type Tier } from '$lib/special.svelte';
 	import PassTile from './PassTile.svelte';
+	import BadgeTile from './BadgeTile.svelte';
+	import BadgeSheet from './BadgeSheet.svelte';
 
 	/* Reisepass (Vollbild): Seiten zum Blättern mit je 6 Stempeln in der Reihenfolge „Land Nr. X“, danach „?“-Plätze für
 	   Wunschziele. Neue Länder seit dem letzten Öffnen werden beim Öffnen sichtbar gestempelt (alle; bei vielen schneller,
@@ -392,34 +391,20 @@
 	let facts = $state.raw<Record<string, Facts> | null>(null);
 	$effect(() => {
 		if (ui.passOpen && !facts) loadFacts().then((f) => (facts = f));
-		if (ui.passOpen && atlas.flights.length) untrack(() => fd.load()); // Flughafen-Liste für die Flug-Abzeichen
 	});
-	// Flug-Abzeichen: ohne Flüge alle bei 0, mit Flügen erst, wenn die Flughafen-Liste geladen ist
-	const flCtx = $derived(atlas.flights.length ? (fd.st && fd.ap ? { st: fd.st, ap: fd.ap, al: fd.al } : null) : { st: flightStats([], {}), ap: {}, al: null });
+	// Flug-Abzeichen stehen im Flugpass (Tab „Flüge“)
 	const bs = $derived(
-		facts
-			? [
-					...badges({ codes: contStamps.map((s) => s.code), facts, entered: Object.fromEntries(contStamps.map((s) => [s.code, s.entered])) }, atlas.settings.countryScope),
-					...flightBadges(flCtx)
-				]
-			: []
+		facts ? badges({ codes: contStamps.map((s) => s.code), facts, entered: Object.fromEntries(contStamps.map((s) => [s.code, s.entered])) }, atlas.settings.countryScope) : []
 	);
 	let picked = $state<string | null>(null);
 	const pick = $derived(bs.find((b) => b.id === picked) ?? null);
-	// Stufen-Klasse t1–t3 (Bronze/Silber/Gold) zu Stufe 1..n des Abzeichens
-	const tc = (b: Badge, level: number) => (level > 0 && level <= b.tiers.length ? 't' + (level + 3 - b.tiers.length) : '');
-	const tierClass = (b: Badge) => tc(b, b.level);
-	/* Details als Blatt von unten; erneutes Antippen, Runterwischen (auch aufgeklappt) oder Tippen daneben schließt, Hochwischen klappt die Liste auf
-	   (was zählt schon, was fehlt noch) */
+	const tierClass = (b: { tiers: number[]; level: number }) => tierCls(b, b.level);
+	// Details als Blatt von unten (BadgeSheet); Platz unten freihalten, solange es offen ist
 	let sheet = $state<HTMLDivElement>();
-	let list = $state<HTMLDivElement>();
 	let sheetH = $state(0);
-	let open = $state(false);
-	const det = $derived(open && pick ? pick.detail() : null);
-	let sOff = 0; // aktuelle Zieh-Verschiebung (für das Wegschieben ab dieser Stelle)
+	let sOff = 0; // Zieh-Verschiebung des Blatts für Legende/Ränge/Teilen (Wegschieben ab dieser Stelle)
 	async function choose(id: string | null) {
 		sOff = 0;
-		open = false;
 		picked = id;
 		if (!id) return;
 		await tick();
@@ -432,85 +417,11 @@
 		const over = btn.getBoundingClientRect().bottom + 12 - (window.innerHeight - sheet.offsetHeight);
 		if (over > 0) body.scrollBy({ top: over, behavior: reduceMotion() ? 'auto' : 'smooth' });
 	}
-	/* Auf-/Zuklappen: Höhe springt, die Verschiebung gleicht das aus und läuft weich auf 0 (ab der Zieh-Position) */
-	async function setOpen(v: boolean, from = 0) {
-		if (!sheet) return;
-		const h0 = sheet.offsetHeight;
-		open = v;
-		await tick();
-		if (!sheet) return;
-		if (!v && list) list.scrollTop = 0;
-		const h1 = sheet.offsetHeight;
-		sheet.style.transition = 'none';
-		sheet.style.transform = '';
-		if (!reduceMotion()) sheet.animate([{ transform: `translateY(${h1 - h0 + from}px)` }, { transform: 'translateY(0)' }], { duration: 300, easing: 'cubic-bezier(.2,.8,.2,1)' });
-	}
 	function slideUp(node: HTMLElement) {
 		const h = node.offsetHeight + 24,
 			o = sOff;
 		return { duration: reduceMotion() ? 0 : o ? 160 : 240, css: (t: number) => `transform:translateY(${o + (1 - t) * (h - o)}px)`, easing: (t: number) => 1 - (1 - t) ** 3 };
 	}
-	$effect(() => {
-		const el = sheet;
-		if (!el) return;
-		// mode: 0 = noch offen (Antippen), 1 = Blatt ziehen, 2 = Liste scrollt selbst
-		let d: { y0: number; ly: number; lt: number; vy: number; dy: number; mode: 0 | 1 | 2 } | null = null;
-		const ts = (e: TouchEvent) => {
-			e.stopPropagation();
-			if (e.touches.length !== 1) return (d = null);
-			const y = e.touches[0].clientY;
-			d = { y0: y, ly: y, lt: e.timeStamp, vy: 0, dy: 0, mode: 0 };
-		};
-		const tm = (e: TouchEvent) => {
-			e.stopPropagation();
-			if (!d) return;
-			const y = e.touches[0].clientY,
-				raw = y - d.y0;
-			if (!d.mode) d.mode = open && list?.contains(e.target as Node) && (list.scrollTop > 0 || raw < 0) ? 2 : 1;
-			if (d.mode === 2) return;
-			e.preventDefault();
-			const dt = e.timeStamp - d.lt;
-			if (dt >= 12) {
-				d.vy = 0.6 * ((y - d.ly) / dt) + 0.4 * d.vy;
-				d.ly = y;
-				d.lt = e.timeStamp;
-			}
-			d.dy = raw;
-			// zugeklappt nach oben: mit Widerstand, aufgeklappt nur nach unten
-			const shown = raw >= 0 ? raw : open ? 0 : Math.max(-60, raw * 0.35);
-			el.style.transition = 'none';
-			el.style.transform = `translateY(${shown}px)`;
-		};
-		const te = (e: TouchEvent) => {
-			e.stopPropagation();
-			if (!d) return;
-			const { dy, vy, mode } = d;
-			d = null;
-			if (mode !== 1) return;
-			if (!open && (dy < -40 || (vy < -0.3 && dy < -10))) {
-				setOpen(true, Math.max(-60, dy * 0.35));
-			} else if (dy > 70 || (vy > 0.5 && dy > 20)) {
-				// auch aufgeklappt: Runterwischen schließt das ganze Blatt (wie die Länderseite)
-				sOff = dy;
-				picked = null;
-				open = false;
-			} else {
-				el.style.transition = 'transform .2s cubic-bezier(.2,.8,.2,1)';
-				el.style.transform = '';
-			}
-		};
-		el.addEventListener('touchstart', ts, { passive: true });
-		el.addEventListener('touchmove', tm, { passive: false });
-		el.addEventListener('touchend', te);
-		el.addEventListener('touchcancel', te);
-		return () => {
-			el.removeEventListener('touchstart', ts);
-			el.removeEventListener('touchmove', tm);
-			el.removeEventListener('touchend', te);
-			el.removeEventListener('touchcancel', te);
-		};
-	});
-
 	/* ---------- Stempel-Animation beim Öffnen ---------- */
 	// Stempel, die gerade noch auf ihren Auftritt warten (unsichtbar)
 	let pending = $state<string[]>([]);
@@ -519,7 +430,6 @@
 		if (!ui.passOpen) {
 			opened = false;
 			picked = null;
-			open = false;
 			leaf = null;
 			return;
 		}
@@ -730,16 +640,6 @@
 			if (tab !== 'ab') pickTab('ab');
 			bGroup = 'all';
 			tick().then(() => choose(id).then(() => body?.querySelector<HTMLElement>(`[data-badge="${id}"]`)?.scrollIntoView({ block: 'center', behavior: 'auto' })));
-		});
-	});
-	// Tipp auf „Abzeichen“ im Tab „Flüge“: Pass öffnet bei dieser Gruppe
-	$effect(() => {
-		const g = ui.passGroup as BadgeGroup;
-		if (!g || !ui.passOpen) return;
-		untrack(() => {
-			ui.passGroup = '';
-			if (tab !== 'ab') pickTab('ab');
-			bGroup = g;
 		});
 	});
 	$effect(() => {
@@ -1070,7 +970,7 @@
 						{#if bGroup === 'all' || bGroup === g.id}
 							<div class="pp-visa">
 								<div class="pp-page-h"><span>{g.icon} {g.name}</span><span>{g.have} / {g.all}</span></div>
-								<div class="pp-badges">{#each g.list as b (b.id)}{@render badge(b)}{/each}</div>
+								<div class="pp-badges">{#each g.list as b (b.id)}<BadgeTile {b} sel={picked === b.id} onpick={() => choose(picked === b.id ? null : b.id)} />{/each}</div>
 							</div>
 						{/if}
 					{/each}
@@ -1078,83 +978,7 @@
 			</div>
 		{/if}
 	</div>
-	{#snippet badge(b: Badge)}
-		{@const max = b.level >= b.tiers.length}
-		<button
-			type="button"
-			class="pp-badge {tierClass(b)}"
-			class:max
-			class:sel={picked === b.id}
-			data-badge={b.id}
-			aria-pressed={picked === b.id}
-			aria-label="{b.name}: {max ? tierName(b, b.level) + ' erreicht' : `${b.prog}, noch ${b.fmt(b.tiers[b.level] - b.v)} bis ${tierName(b, b.level + 1)}`}"
-			onclick={() => choose(picked === b.id ? null : b.id)}
-		>
-			<span class="pp-medal" aria-hidden="true"><span><i>{b.icon}</i></span></span>
-			<b>{b.name}</b>
-			<span class="pp-steps" aria-hidden="true">{#each b.seg as f, i (i)}<i class={tc(b, i + 1)} style="--f:{f}"></i>{/each}</span>
-			<small aria-hidden="true"
-				>{#if max}{tierName(b, b.level)} ✓{:else}noch {b.fmt(b.tiers[b.level] - b.v).replace(' ', ' ')} bis <em class={tc(b, b.level + 1)}>{tierName(b, b.level + 1)}</em>{/if}</small
-			>
-		</button>
-	{/snippet}
-	{#snippet row(it: DetailItem)}
-		{#if it.code}
-			{@const code = it.code}
-			<button type="button" class="pp-it" onclick={() => openCountry(code)}
-				><span class="pp-it-i">{flag(code)}</span><span><b>{it.label}</b>{#if it.sub}<small>{it.sub}</small>{/if}</span></button
-			>
-		{:else}
-			<div class="pp-it"><span class="pp-it-i">{it.icon}</span><span><b>{it.label}</b>{#if it.sub}<small>{it.sub}</small>{/if}</span></div>
-		{/if}
-	{/snippet}
-	{#if pick && open}
-		<button type="button" class="pp-scrim" aria-label="Details schließen" onclick={() => choose(null)} transition:fade={{ duration: reduceMotion() ? 0 : 200 }}></button>
-	{/if}
-	{#if pick}
-		{@const max = pick.level >= pick.tiers.length}
-		<div class="pp-sheet {tierClass(pick)}" class:max class:open bind:this={sheet} transition:slideUp role="status">
-			<button type="button" class="pp-grab" aria-label="Details schließen" onclick={() => choose(null)}><i></i></button>
-			<div class="pp-sh-top">
-				<span class="pp-medal" aria-hidden="true"><span><i>{pick.icon}</i></span></span>
-				<div>
-					<b>{pick.name}</b>
-					<span>{pick.fmt(pick.v)} {pick.what}</span>
-				</div>
-			</div>
-			{#if !max}
-				<div class="pp-next {tc(pick, pick.level + 1)}">
-					<div class="pp-next-t"><span>Noch {pick.fmt(pick.tiers[pick.level] - pick.v)} bis <b>{tierName(pick, pick.level + 1)}</b></span><span>{Math.floor(pick.p * 100)} %</span></div>
-					<div class="pp-bar"><i style="width:{Math.max(3, pick.p * 100)}%"></i></div>
-				</div>
-			{:else}
-				<p class="pp-done">Höchste Stufe erreicht 🎉</p>
-			{/if}
-			<span class="pp-tiers"
-				>{#each pick.tiers as t, i (t)}<i class:on={pick.level > i} class={tc(pick, i + 1)}>{pick.level > i ? '✓ ' : ''}{tierName(pick, i + 1)}: {pick.fmt(t)}</i>{/each}</span
-			>
-			{#if det}
-				<div class="pp-list" bind:this={list}>
-					{#if det.have.length}
-						<h4>{det.haveT} <span>{det.have.length}</span></h4>
-						<div class="pp-its">{#each det.have as it, i (i)}{@render row(it)}{/each}</div>
-					{/if}
-					{#if det.miss.length && !max}
-						<h4>{det.missT} <span>{det.miss.length + (det.missMore ?? 0)}</span></h4>
-						{#if det.note}<p class="pp-lnote">{det.note}</p>{/if}
-						<div class="pp-its miss">{#each det.miss as it, i (i)}{@render row(it)}{/each}</div>
-						{#if det.missMore}<p class="pp-lnote">… und {det.missMore} weitere</p>{/if}
-					{:else if det.note}
-						<p class="pp-lnote">{det.note}</p>
-					{:else if !max && det.missT}
-						<p class="pp-lnote">Alles dabei 🎉</p>
-					{/if}
-				</div>
-			{:else}
-				<button type="button" class="pp-more" onclick={() => setOpen(true)}><i aria-hidden="true"></i>Was zählt – was fehlt noch?</button>
-			{/if}
-		</div>
-	{/if}
+	<BadgeSheet {pick} onclose={() => choose(null)} bind:el={sheet} />
 	{#if leaf}
 		{@const closeT = leaf === 'legend' ? 'Legende schließen' : 'Schließen'}
 		<button type="button" class="pp-scrim" aria-label={closeT} onclick={() => (leaf = null)} transition:fade={{ duration: reduceMotion() ? 0 : 200 }}></button>

@@ -1,16 +1,15 @@
 <script lang="ts">
 	import { onMount, untrack } from 'svelte';
 	import { atlas } from '$lib/atlas.svelte';
-	import { openFlightsPage, openPass, ui } from '$lib/app.svelte';
-	import { badgeLevels, tierName } from '$lib/badges';
-	import { flightBadges } from '$lib/flightBadges';
-	import { flag, nameOf } from '$lib/countries';
+	import { openFlightsPage, ui } from '$lib/app.svelte';
+	import { flag } from '$lib/countries';
 	import { fd } from '$lib/flightData.svelte';
 	import { EARTH_KM, MOON_KM, fmtDuration, fmtInt, type Leg } from '$lib/flights';
 	import FlightsView from './FlightsView.svelte';
+	import FlightPassTile from './FlightPassTile.svelte';
 
-	/* Tab „Flüge“ unter dem Globus: 4 Werte wie im Flighty-Pass (Strecke, Flugzeit, Flughäfen, Airlines),
-	   darunter Zeilen zu den Listen (Vollbild) und Rekorde. Kopf mit Zahl und „+ Flug“: FlightsHero.
+	/* Tab „Flüge“ unter dem Globus: Flugpass-Kachel (Status, Bordkarten, Rekorde, Abzeichen), Strecke und Flugzeit,
+	   darunter Zeilen zu den Listen (Vollbild). Kopf mit Zahl und „+ Flug“: FlightsHero.
 	   Flughafen- und Airline-Liste werden erst nachgeladen (beim Öffnen des Tabs bzw. im Leerlauf). */
 
 	$effect(() => {
@@ -41,25 +40,7 @@
 	const route = (l: Leg) => `${city(l.f.from)} → ${city(l.to)}`;
 	const dec1 = (x: number) => x.toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 	const lastLeg = $derived(st?.legs.find((l) => l.done) ?? null);
-	const topAirport = $derived(st?.airports[0]);
 	const topAirline = $derived(st?.airlines[0] ? `${st.airlines.length} Airlines · ${al?.[st.airlines[0].code]?.[0] ?? st.airlines[0].code} ${st.airlines[0].n}× geflogen` : 'keine Angaben');
-	const topRoute = $derived(st?.routes[0]);
-	// nördlichster / südlichster besuchter Flughafen (nach Breitengrad)
-	const byLat = $derived(ap && st ? st.airports.filter((a) => ap[a.code]).sort((a, b) => ap[b.code][3] - ap[a.code][3]) : []);
-	const north = $derived(byLat[0]?.code);
-	// Flug-Abzeichen (Pass, Gruppe „Flüge“): Stand und die am weitesten gekommenen als Vorschau
-	const fb = $derived(st && ap ? flightBadges({ st, ap, al }) : []);
-	const fbTop = $derived(fb.filter((b) => b.level).sort((a, b) => b.level / b.tiers.length - a.level / a.tiers.length || b.p - a.p).slice(0, 3));
-	const fbSub = $derived.by(() => {
-		const n = [3, 2, 1].map((t) => fb.filter((b) => b.level && b.level + 3 - b.tiers.length === t).length);
-		const parts = ['Gold', 'Silber', 'Bronze'].map((name, i) => (n[i] ? `${n[i]} ${name}` : '')).filter(Boolean);
-		return parts.length ? parts.join(' · ') : `${badgeLevels(fb)} von ${fb.reduce((s, b) => s + b.tiers.length, 0)} Stufen`;
-	});
-	function showBadges() {
-		ui.passGroup = 'flug';
-		openPass();
-	}
-	const south = $derived(byLat.length > 1 ? byLat[byLat.length - 1].code : undefined);
 </script>
 
 <main class="tab" id="tab-flights" data-pane="flights" hidden={ui.tab !== 'flights'}>
@@ -73,6 +54,7 @@
 			<p class="note">Erneutes Einlesen legt nichts doppelt an, neue Flüge kommen dazu. Der Buchungscode wird nicht übernommen.</p>
 		</div>
 	{:else if st}
+		<div class="blocks"><FlightPassTile n={st.n} /></div>
 		<div class="fl-grid">
 			<div class="fl-stat">
 				<span class="fl-k">Strecke</span>
@@ -111,30 +93,7 @@
 					<span class="cat-sub">{topAirline}</span>
 				</span>
 			</button>
-			{#if fb.length}
-				<button type="button" class="cat-row" onclick={showBadges}>
-					<span class="cat-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8.5 3h7l-2 6h-3zM12 21a5.5 5.5 0 1 0 0-11 5.5 5.5 0 0 0 0 11zM12 13l1 2 2.2.3-1.6 1.5.4 2.2-2-1-2 1 .4-2.2-1.6-1.5 2.2-.3z" /></svg></span>
-					<span class="cat-txt">
-						<span class="cat-name">Abzeichen</span>
-						<span class="cat-sub">{fbSub}</span>
-					</span>
-					<span class="cat-flags" aria-label={fbTop.map((b) => `${b.name} (${tierName(b, b.level)})`).join(', ')}>{#each fbTop as b (b.id)}<span>{b.icon}</span>{/each}</span>
-				</button>
-			{/if}
 		</div>
-
-		<h2 class="blocks-h">Rekorde</h2>
-		<ul class="cats fl-rec">
-			{#if st.longest}<li><span class="fl-k">📏 Längster Flug</span><b>{route(st.longest)}</b><span class="fl-d">{fmtInt(st.longest.km)} km · {fmtDuration(st.longest.min)}</span></li>{/if}
-			{#if st.shortest}<li><span class="fl-k">🤏 Kürzester Flug</span><b>{route(st.shortest)}</b><span class="fl-d">{fmtInt(st.shortest.km)} km · {fmtDuration(st.shortest.min)}</span></li>{/if}
-			{#if topRoute}
-				{@const [a, b] = topRoute.code.split('-')}
-				<li><span class="fl-k">🔁 Häufigste Strecke</span><b>{city(a)} ⇄ {city(b)}</b><span class="fl-d">{a} ⇄ {b} · {topRoute.n}× geflogen</span></li>
-			{/if}
-			{#if topAirport}<li><span class="fl-k">📍 Meistbesuchter Flughafen</span><b>{city(topAirport.code)} ({topAirport.code})</b><span class="fl-d">{topAirport.n} Besuche · {nameOf(ap?.[topAirport.code]?.[2] ?? '')}</span></li>{/if}
-			{#if north}<li><span class="fl-k">🧭 Nördlichster Flughafen</span><b>{city(north)} ({north})</b><span class="fl-d">{dec1(Math.abs(ap?.[north]?.[3] ?? 0))}° N · {nameOf(ap?.[north]?.[2] ?? '')}</span></li>{/if}
-			{#if south}<li><span class="fl-k">🐧 Südlichster Flughafen</span><b>{city(south)} ({south})</b><span class="fl-d">{dec1(Math.abs(ap?.[south]?.[3] ?? 0))}° {(ap?.[south]?.[3] ?? 0) < 0 ? 'S' : 'N'} · {nameOf(ap?.[south]?.[2] ?? '')}</span></li>{/if}
-		</ul>
 		{#if st.unknown.length}<p class="note">Ohne Strecke (Flughafen unbekannt): {st.unknown.join(', ')}</p>{/if}
 	{/if}
 </main>

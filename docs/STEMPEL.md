@@ -1,6 +1,6 @@
 # Stempel – Übersicht
 
-> Automatisch erzeugt aus dem Code (App-Version 1.48.0). Nicht von Hand ändern, sondern neu erzeugen: `node scripts/build-stempel-doc.mjs`.
+> Automatisch erzeugt aus dem Code (App-Version 1.49.0). Nicht von Hand ändern, sondern neu erzeugen: `node scripts/build-stempel-doc.mjs`.
 
 > **Bilder aller Stempel:** [stempel.html](stempel.html) öffnen (Galerie mit Suche; Common, Rare, Epic, Legendary je Land + Weltwunder).
 

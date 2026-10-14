@@ -73,6 +73,8 @@ export interface Badge {
 export const TIER_NAMES = ['Bronze', 'Silber', 'Gold'];
 /** Name der Stufe (Abzeichen mit nur einer Stufe sind gleich Gold) */
 export const tierName = (b: { tiers: number[] }, level: number) => TIER_NAMES[level - 1 + 3 - b.tiers.length] ?? '';
+/** CSS-Klasse t1–t3 (Bronze/Silber/Gold) zu Stufe 1..n des Abzeichens */
+export const tierCls = (b: { tiers: number[] }, level: number) => (level > 0 && level <= b.tiers.length ? 't' + (level + 3 - b.tiers.length) : '');
 
 const set = (s: string) => new Set(s.split(' '));
 const ISLANDS = set(
