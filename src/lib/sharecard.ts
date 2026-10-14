@@ -48,7 +48,7 @@ const STYLE = `.sc{--paper:#FFFDF8;--st-teal:#0E6E74;--st-coral:#D9573B;--st-gol
 /** Als Bild gilt strenges XML: Stempel-SVG einmal über den HTML-Parser lesen und sauber ausgeben
    (z. B. doppelte Attribute in Szenen, die im Dokument nicht stören) */
 const xmlCache = new Map<string, string>();
-function xml(svg: string) {
+export function xml(svg: string) {
 	let out = xmlCache.get(svg);
 	if (!out) {
 		const t = document.createElement('template');

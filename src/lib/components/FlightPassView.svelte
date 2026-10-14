@@ -21,7 +21,7 @@
 	   darunter drei Reiter: Bordkarten (eine Bordkarte je Strecke, Hin- und Rückflug zusammen, 4 je Seite, waagerecht blättern;
 	   Seltenheit Common/Rare/Epic/Legendary wie die Stempel, mehrfach geflogen = Stapel + „N×“; neue Strecken werden beim Öffnen
 	   aufgeklebt; geplante neue Strecken am Ende),
-	   Rekorde und Abzeichen. Teilen ↗ = Bild wie der Flighty-Pass, für alle Jahre oder ein Jahr. */
+	   Rekorde und Abzeichen. Teilen ↗ = Bild wie der Flighty-Pass (mit den seltensten Bordkarten) oder Bordkarten-Collage, für alle Jahre oder ein Jahr. */
 
 	const PER_PAGE = 4;
 	const GAP = 16; // Abstand zwischen den Seiten (wie .fp-book gap)
@@ -394,15 +394,21 @@
 		};
 	});
 
-	/* ---------- Teilen: Bild für alle Jahre oder ein Jahr ---------- */
+	/* ---------- Teilen: zwei Motive (Flugpass, Bordkarten-Collage), für alle Jahre oder ein Jahr ---------- */
 	type Card = { url: string; png: Blob };
-	let share = $state<{ y: number | null; cards: Record<string, Card>; busy: boolean; msg: string } | null>(null);
+	type Motif = 'cover' | 'collage';
+	const MOTIFS = [
+		{ v: 'cover', name: 'Flugpass' },
+		{ v: 'collage', name: 'Bordkarten' }
+	] as const;
+	let share = $state<{ y: number | null; v: Motif; cards: Record<string, Card>; busy: boolean; msg: string } | null>(null);
 	let fcMod: typeof import('$lib/flightcard') | null = null;
 	let scMod: typeof import('$lib/sharecard') | null = null;
 	const yKey = (y: number | null) => (y === null ? 'all' : String(y));
-	async function makeCard(y: number | null) {
-		if (!share || share.cards[yKey(y)] || !ap || !st) return;
-		[fcMod, scMod] = await Promise.all([fcMod ?? import('$lib/flightcard'), scMod ?? import('$lib/sharecard')]);
+	const cKey = (y: number | null, v: Motif) => `${yKey(y)}|${v}`;
+	async function makeCard(y: number | null, v: Motif) {
+		if (!share || share.cards[cKey(y, v)] || !ap || !st) return;
+		[fcMod, scMod] = await Promise.all([fcMod ?? import('$lib/flightcard'), scMod ?? import('$lib/sharecard'), loadSc()]);
 		const s = y === null ? st : flightStats(atlas.flights.filter((f) => f.date.startsWith(String(y))), ap, fd.now);
 		const arcs = new Map<string, { a: [number, number]; b: [number, number]; n: number }>();
 		for (const l of s.legs) {
@@ -414,48 +420,96 @@
 			if (x) x.n++;
 			else arcs.set(k, { a: [A[4], A[3]], b: [B[4], B[3]], n: 1 });
 		}
-		const L = s.longest;
+		// Bordkarten des Zeitraums: Strecken, die darin geflogen wurden (Karte selbst wie im Flugpass)
+		const tk = tickets
+			.filter((t) => !t.plan && arcs.has(t.key))
+			.map((t): import('$lib/flightcard').ShareTicket => {
+				const l = t.l,
+					h = haul(l.km);
+				return {
+					a: l.f.from,
+					b: l.to,
+					ca: city(l.f.from),
+					cb: city(l.to),
+					km: fmtInt(l.km),
+					date: dateDe(l.f.date),
+					n: t.n,
+					nr: t.nr,
+					t: t.t,
+					haul: h,
+					air: (l.f.airline && al?.[l.f.airline]?.[0]) || HAUL_NAME[h],
+					color: t.t ? stampColor(t.cc) : '',
+					bg: pic(t.cc, t.t, false),
+					bgBox: t.t === 2 ? '0 0 270 130' : '0 0 180 170',
+					stub: pic(t.cc, t.t === 2 ? 1 : t.t, true)
+				};
+			});
 		const years = fd.years.map(([yy]) => yy);
-		const svg = await fcMod.flightCardSvg({
-			year: y,
-			since: years.length ? Math.min(...years) : 0,
-			n: s.n,
-			km: s.km,
-			min: s.min,
-			airports: s.airports.length,
-			countries: s.countries.length,
-			airlines: s.airlines.length,
-			earth: (s.km / EARTH_KM).toLocaleString('de-DE', { maximumFractionDigits: 1 }) + '×',
-			dur: fmtDuration(s.min),
-			rank: info.rank ? { icon: info.rank.icon, name: info.rank.name } : null,
-			card: info.card,
-			longest: L ? { a: L.f.from, b: L.to, ca: city(L.f.from), cb: city(L.to), km: fmtInt(L.km), date: dateDe(L.f.date) } : null,
-			arcs: [...arcs.values()],
-			pts: s.airports.flatMap((a) => (ap[a.code] ? [[ap[a.code][4], ap[a.code][3]] as [number, number]] : []))
-		});
+		const svg = await fcMod.flightCardSvg(
+			{
+				year: y,
+				since: years.length ? Math.min(...years) : 0,
+				n: s.n,
+				km: s.km,
+				min: s.min,
+				airports: s.airports.length,
+				countries: s.countries.length,
+				airlines: s.airlines.length,
+				earth: (s.km / EARTH_KM).toLocaleString('de-DE', { maximumFractionDigits: 1 }) + '×',
+				dur: fmtDuration(s.min),
+				rank: info.rank ? { icon: info.rank.icon, name: info.rank.name } : null,
+				card: info.card,
+				tickets: tk,
+				arcs: [...arcs.values()],
+				pts: s.airports.flatMap((a) => (ap[a.code] ? [[ap[a.code][4], ap[a.code][3]] as [number, number]] : []))
+			},
+			v
+		);
 		const png = await scMod.toPng(svg);
 		if (!share) return;
-		share.cards[yKey(y)] = { url: URL.createObjectURL(png), png };
+		share.cards[cKey(y, v)] = { url: URL.createObjectURL(png), png };
 	}
 	const shareYears = $derived<(number | null)[]>([null, ...fd.years.map(([y]) => y)]);
+	const fail = (e: unknown) => {
+		console.error(e);
+		if (share) share.msg = 'Das Bild konnte nicht erstellt werden.';
+	};
+	/** aktuelles Motiv zuerst, das andere gleich danach (Wischen zeigt es dann sofort) */
+	function build() {
+		if (!share) return;
+		const { y, v } = share;
+		makeCard(y, v).then(() => makeCard(y, v === 'cover' ? 'collage' : 'cover')).catch(fail);
+	}
 	function showYear(y: number | null) {
 		if (!share) return;
 		share.y = y;
 		share.msg = '';
-		makeCard(y).catch((e) => { console.error(e); if (share) share.msg = 'Das Bild konnte nicht erstellt werden.'; });
+		build();
+	}
+	let cardsEl = $state<HTMLDivElement>();
+	// Wischen zwischen den Motiven (einrastend); die Knöpfe darüber springen hin
+	function showMotif(i: number) {
+		if (!share || !cardsEl) return;
+		share.v = MOTIFS[i].v;
+		cardsEl.scrollTo({ left: i * cardsEl.clientWidth, behavior: reduceMotion() ? 'auto' : 'smooth' });
+	}
+	function onCards() {
+		if (!share || !cardsEl) return;
+		const v = MOTIFS[Math.round(cardsEl.scrollLeft / cardsEl.clientWidth)]?.v;
+		if (v && v !== share.v) share.v = v;
 	}
 	function openShare() {
 		openLeaf('share');
-		share = { y: null, cards: {}, busy: false, msg: '' };
-		showYear(null);
+		share = { y: null, v: 'cover', cards: {}, busy: false, msg: '' };
+		build();
 	}
 	async function doShare() {
-		const c = share?.cards[yKey(share.y)];
+		const c = share?.cards[cKey(share.y, share.v)];
 		if (!share || !c || share.busy || !scMod) return;
 		share.busy = true;
 		share.msg = '';
 		// sofort aufrufen (ohne vorheriges Warten), sonst öffnet Safari das Teilen-Menü nicht
-		const r = await scMod.shareImage(c.png, 'freiheit-flugpass.png');
+		const r = await scMod.shareImage(c.png, share.v === 'cover' ? 'freiheit-flugpass.png' : 'freiheit-bordkarten.png');
 		if (share) {
 			share.busy = false;
 			share.msg = r === 'saved' ? 'Bild gespeichert.' : '';
@@ -466,7 +520,7 @@
 		for (const c of Object.values(share.cards)) URL.revokeObjectURL(c.url);
 		share = null;
 	});
-	const shareCard = $derived(share ? share.cards[yKey(share.y)] : undefined);
+	const shareCard = $derived(share ? share.cards[cKey(share.y, share.v)] : undefined);
 </script>
 
 <!-- svelte-ignore a11y_no_noninteractive_element_to_interactive_role -->
@@ -669,15 +723,24 @@
 					</ol>
 				{:else if share}
 					<h2 id="fpLegT">Flugpass teilen</h2>
-					<p>Als Bild – ohne deinen Namen. Für alle Jahre oder ein einzelnes Jahr.</p>
+					<p>Als Bild – ohne deinen Namen. Zwei Motive, für alle Jahre oder ein einzelnes Jahr.</p>
 					<div class="pp-groups fp-syears" role="group" aria-label="Zeitraum">
 						{#each shareYears as y (yKey(y))}<button type="button" aria-pressed={share.y === y} onclick={() => showYear(y)}>{y ?? 'Alle Jahre'}</button>{/each}
 					</div>
-					<div class="pp-cardslot fp-cardslot">
-						<div class="pp-card">
-							{#if shareCard}<img src={shareCard.url} alt="Flugpass {share.y ?? 'alle Jahre'}" width="1080" height="1920" draggable="false" />{:else}<span class="pp-card-wait" aria-label="Bild wird erstellt"></span>{/if}
-						</div>
+					<div class="pp-seg" role="group" aria-label="Motiv">
+						{#each MOTIFS as m, i (m.v)}<button type="button" aria-pressed={share.v === m.v} onclick={() => showMotif(i)}>{m.name}</button>{/each}
 					</div>
+					<div class="pp-cards" bind:this={cardsEl} onscroll={onCards}>
+						{#each MOTIFS as m (m.v)}
+							{@const c = share.cards[cKey(share.y, m.v)]}
+							<div class="pp-cardslot fp-cardslot">
+								<div class="pp-card">
+									{#if c}<img src={c.url} alt="{m.name} {share.y ?? 'alle Jahre'}" width="1080" height="1920" draggable="false" />{:else}<span class="pp-card-wait" aria-label="Bild wird erstellt"></span>{/if}
+								</div>
+							</div>
+						{/each}
+					</div>
+					<div class="pp-cdots" aria-hidden="true">{#each MOTIFS as m (m.v)}<i class:on={share.v === m.v}></i>{/each}</div>
 					<button type="button" class="pp-sharebtn" disabled={!shareCard || share.busy} onclick={doShare}
 						><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V3M7 8l5-5 5 5M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6" /></svg>Bild teilen</button
 					>
