@@ -34,12 +34,13 @@ export const UNB = `'Unbounded','Arial Black',system-ui,sans-serif`,
 export const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 export const r1 = (v: number) => Math.round(v * 10) / 10;
 /** Stempel immer in den hellen Farben (unabhängig vom Dunkelmodus) */
-const STYLE = `.sc{--paper:#FFFDF8;--st-teal:#0E6E74;--st-coral:#D9573B;--st-gold:#B07800;--st-blue:#2F6FB5;--st-plum:#7A3E8E;--st-green:#2E7D4F;--st-red:#C0392B;--st-navy:#1F3F6E;--st-brown:#9A4F1E;--stp:#FFFFFF;--stg:#D6A740;--stt:16%;--sv1:#7E8892;--sv2:#DCE3E9;--sv3:#FFFFFF}
+const STYLE = `.sc{--paper:#FFFDF8;--st-teal:#0E6E74;--st-coral:#D9573B;--st-gold:#B07800;--st-blue:#2F6FB5;--st-plum:#7A3E8E;--st-green:#2E7D4F;--st-red:#C0392B;--st-navy:#1F3F6E;--st-brown:#9A4F1E;--stp:#FFFFFF;--stg:#D6A740;--stt:16%;--sv1:#6A3CC8;--sv2:#C4B0FF;--sv3:#F1EBFF;--srb:#2F7FD8;--rc1:#2F7FD8;--rc2:#7444D8;--rc3:#A57B16}
 .sc-st .d{font-family:${UNB};font-weight:800;fill:currentColor;stroke:none}
 .sc-st .t{font-family:${FIG};font-weight:700;fill:currentColor;stroke:none}
 .sc-st .k{font-family:${FIG};font-weight:700;fill:var(--paper);stroke:none}
 .sc-st .pp{fill:var(--stp);stroke:none}
 .sc-st .gd{fill:var(--stg);stroke:none}
+.sc-st .rb{fill:var(--srb);stroke:none}
 .sc-st .pic{--paper:color-mix(in srgb,currentColor var(--stt),var(--stp))}
 .sc-st .bg{fill:var(--paper);stroke:none}
 .sc-st .v{font-family:${UNB};font-weight:800;fill:currentColor;stroke:var(--paper);stroke-width:6px;paint-order:stroke}`;

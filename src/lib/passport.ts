@@ -2103,8 +2103,13 @@ ${place(m, [40, 40, 100, 84])}${nameBlock(t.name, 90, 150, 124, 14)}${pill(90, 1
 let markId = 0;
 /** Seltenheit: Beschriftung auf der Marke (1 = Rare, 2 = Epic, 3 = Legendary) */
 export const TIER_LABEL = ['', 'RARE', 'EPIC', 'LEGENDARY'];
+/** Farbe der Stufe wie bei den Bordkarten (Rare blau, Epic lila, Legendary gold); --rc1–3 in app.css, sonst die hellen Werte */
+const TIER_INK = ['', 'var(--rc1,#2F7FD8)', 'var(--rc2,#7444D8)', 'var(--rc3,#A57B16)'];
+/** Stufe unter dem Namen: Beschriftung und Sterne in der Farbe der Stufe */
+const tierLine = (x: number, y: number, label: string, fs: number, tier: number, sx: number) =>
+	`<g style="fill:${TIER_INK[tier]};color:${TIER_INK[tier]}">${small(x, y, label, fs)}${star(x - sx, y - 4, 5)}${star(x + sx, y - 4, 5)}</g>`;
 /** Briefmarke statt Stempel: gezähntes Papier, farbig bedrucktes Bild (Szene oder sonst das Stempelmotiv), Länder-Nr. als Nennwert,
-    darunter Name und Stufe; Epic mit metallischem Silberrand, Legendary mit Goldrand. Ohne Tinten-Filter: gedruckt, nicht gestempelt. */
+    darunter Name und Stufe (in der Farbe der Stufe); Rare mit blauem Rand, Epic mit metallischem lila Rand, Legendary mit Goldrand. Ohne Tinten-Filter: gedruckt, nicht gestempelt. */
 function markFrame(t: Txt, scene: string | null, m: Motif, tier: number, nr: number, wide?: string): [string, string] {
 	if (wide) return wideFrame(t, wide, nr);
 	const id = 'mk' + ++markId,
@@ -2120,17 +2125,17 @@ function markFrame(t: Txt, scene: string | null, m: Motif, tier: number, nr: num
 			? `<path d="${edge}" class="gd"/>${inner}`
 			: tier > 1
 				? `<linearGradient id="${id}s" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="var(--sv1)"/><stop offset=".3" stop-color="var(--sv2)"/><stop offset=".5" stop-color="var(--sv3)"/><stop offset=".72" stop-color="var(--sv2)"/><stop offset="1" stop-color="var(--sv1)"/></linearGradient><path d="${edge}" fill="url(#${id}s)" stroke="none"/>${inner}`
-				: `<path d="${edge}" class="pp"/>`;
+				: `<path d="${edge}" class="rb"/>${inner}`;
 	return [
 		'0 0 200 240',
 		`${paper}<clipPath id="${id}"><rect x="18" y="18" width="164" height="150"/></clipPath>
 <g class="pic"><rect x="18" y="18" width="164" height="150" class="bg"/><g clip-path="url(#${id})">${art}</g><rect x="18" y="18" width="164" height="150" stroke-width="2"/>
 ${nr ? `<text class="v" x="27" y="46" font-size="24">${nr}</text>` : ''}</g>
-${nameBlock(t.name, 100, two ? 211 : 200, 164, two ? 19 : 22)}${small(100, 226, label, fs)}${star(100 - sx, 222, 5)}${star(100 + sx, 222, 5)}`
+${nameBlock(t.name, 100, two ? 211 : 200, 164, two ? 19 : 22)}${tierLine(100, 226, label, fs, tier, sx)}`
 	];
 }
 
-/** Epic im Querformat: Silberrand, breites Bild (270 × 130, Szenen in WIDE) */
+/** Epic im Querformat: lila Rand, breites Bild (270 × 130, Szenen in WIDE) */
 function wideFrame(t: Txt, scene: string, nr: number): [string, string] {
 	const id = 'mk' + ++markId,
 		label = TIER_LABEL[2] + (t.date ? ` · ${t.date}` : ''),
@@ -2140,7 +2145,7 @@ function wideFrame(t: Txt, scene: string, nr: number): [string, string] {
 		`<linearGradient id="${id}s" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="var(--sv1)"/><stop offset=".3" stop-color="var(--sv2)"/><stop offset=".5" stop-color="var(--sv3)"/><stop offset=".72" stop-color="var(--sv2)"/><stop offset="1" stop-color="var(--sv1)"/></linearGradient><path d="${perfPath(4, 4, 272, 192, 4.5, 15)}" fill="url(#${id}s)" stroke="none"/><rect x="12" y="12" width="256" height="176" class="pp"/>
 <clipPath id="${id}"><rect x="18" y="18" width="244" height="118"/></clipPath><g class="pic"><rect x="18" y="18" width="244" height="118" class="bg"/><g clip-path="url(#${id})"><g transform="translate(18,18) scale(.904)">${scene}</g></g><rect x="18" y="18" width="244" height="118" stroke-width="2"/>
 ${nr ? `<text class="v" x="27" y="46" font-size="24">${nr}</text>` : ''}</g>
-${split(t.name).length > 1 ? nameBlock(t.name, 140, 168, 230, 17) : nameBlock(t.name, 140, 164, 230, 22)}${small(140, 183, label, 10.5)}${star(140 - sx, 179, 5)}${star(140 + sx, 179, 5)}`
+${split(t.name).length > 1 ? nameBlock(t.name, 140, 168, 230, 17) : nameBlock(t.name, 140, 164, 230, 22)}${tierLine(140, 183, label, 10.5, 2, sx)}`
 	];
 }
 
@@ -2486,7 +2491,7 @@ export function stamp(code: string, nr: number, entered?: string, special: 0 | 1
 	const wide = !special && +vb.split(' ')[2] / +vb.split(' ')[3] > 1.25;
 	const s: Stamp = {
 		svg: special
-			? `<svg class="pp-stamp sp${vb.startsWith('0 0 280') ? ' wd' : ''}" viewBox="${vb}" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-linejoin="round" stroke-linecap="round">${inner}</g></svg>`
+			? `<svg class="pp-stamp sp r${special}${vb.startsWith('0 0 280') ? ' wd' : ''}" viewBox="${vb}" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-linejoin="round" stroke-linecap="round">${inner}</g></svg>`
 			: `<svg class="pp-stamp" viewBox="${vb}" aria-hidden="true"><g filter="url(#pf${h % 4})" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-linecap="round">${inner}</g></svg>`,
 		color: `var(--st-${def?.c ?? COLORS[(h >>> 3) % COLORS.length]})`,
 		rot: special ? (((h >>> 6) % 7) - 3) : ((h >>> 6) % 15) - 7,

@@ -563,8 +563,8 @@
 		leaf === 'legend' && scenesOk
 			? [
 					{ t: 0, p: pct(1 - CHANCE.rare - CHANCE.epic - CHANCE.legend), d: 'Normaler Stempel – so sieht es bei den meisten Ländern aus.', s: stamp('JP', 12, undefined, 0) },
-					{ t: 1, p: pct(CHANCE.rare), d: 'Eingeklebte Briefmarke statt Stempel.', s: stamp('JP', 12, undefined, 1) },
-					{ t: 2, p: pct(CHANCE.epic), d: 'Breite Briefmarke mit Silberrand und eigenem Bild.', s: stamp('JP', 12, undefined, 2) },
+					{ t: 1, p: pct(CHANCE.rare), d: 'Eingeklebte Briefmarke mit blauem Rand statt Stempel.', s: stamp('JP', 12, undefined, 1) },
+					{ t: 2, p: pct(CHANCE.epic), d: 'Breite Briefmarke mit lila Rand und eigenem Bild.', s: stamp('JP', 12, undefined, 2) },
 					{ t: 3, p: pct(CHANCE.legend), d: 'Prachtvolle Briefmarke mit Goldrand – ganz selten.', s: stamp('JP', 12, undefined, 3) }
 				]
 			: []

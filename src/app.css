@@ -752,12 +752,20 @@ button.pp-tile:active{transform:scale(.98)}
 .pp-empty{width:112px;height:112px;border-radius:50%;border:2.5px dashed var(--line);display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--muted);text-align:center;font-size:11.5px;font-weight:600;line-height:1.25}
 .pp-empty b{font:800 30px/1 var(--display);color:var(--sun);margin-bottom:4px}
 .pp-slot.sp{z-index:1}
-/* Rare/Epic/Legendary: eingeklebte Briefmarke (gedruckt, nicht gestempelt) – Papier --stp, Silberrand --sv1–3, Goldrand --stg */
-:root{--stp:#FFFFFF;--stg:#D6A740;--stt:16%;--sv1:#7E8892;--sv2:#DCE3E9;--sv3:#FFFFFF}@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--stp:#26404A;--stg:#B48A33;--stt:30%;--sv1:#6C7680;--sv2:#BCC5CD;--sv3:#E8EDF1}}:root[data-theme="dark"]{--stp:#26404A;--stg:#B48A33;--stt:30%;--sv1:#6C7680;--sv2:#BCC5CD;--sv3:#E8EDF1}
+/* Rare/Epic/Legendary: eingeklebte Briefmarke (gedruckt, nicht gestempelt) – Papier --stp, Blauer Rand --srb (Rare), lila Rand --sv1–3 (Epic), Farbe der Stufen-Beschriftung --rc1–3 – alles wie bei den Bordkarten, Goldrand --stg */
+:root{--stp:#FFFFFF;--stg:#D6A740;--stt:16%;--sv1:#6A3CC8;--sv2:#C4B0FF;--sv3:#F1EBFF;--srb:#2F7FD8;--rc1:#2F7FD8;--rc2:#7444D8;--rc3:#A57B16}@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--stp:#26404A;--stg:#B48A33;--stt:30%;--sv1:#5B34B0;--sv2:#A58EEB;--sv3:#DCD0FF;--srb:#2F7FD8;--rc1:#7DB2F0;--rc2:#BBA6FF;--rc3:#E6C068}}:root[data-theme="dark"]{--stp:#26404A;--stg:#B48A33;--stt:30%;--sv1:#5B34B0;--sv2:#A58EEB;--sv3:#DCD0FF;--srb:#2F7FD8;--rc1:#7DB2F0;--rc2:#BBA6FF;--rc3:#E6C068}
 .pp-stamp.sp{transform-origin:50% 90%;width:auto;height:140px;max-height:none;mix-blend-mode:normal;opacity:1;filter:drop-shadow(0 1px 1.5px rgba(13,43,58,.3))}
 .pp-stamp.sp.wd{width:108%;max-width:none;height:auto;max-height:140px;flex:none}
 .pp-stamp .pp{fill:var(--stp);stroke:none}
 .pp-stamp .gd{fill:var(--stg);stroke:none}
+.pp-stamp .rb{fill:var(--srb,#2F7FD8);stroke:none}
+/* seltene Marken leuchten leicht in der Farbe ihrer Stufe; Legendary schimmert auf der offenen Seite immer wieder golden */
+.pp-stamp.sp.r1{filter:drop-shadow(0 1px 1.5px rgba(13,43,58,.3)) drop-shadow(0 0 6px rgba(47,127,216,.4))}
+.pp-stamp.sp.r2{filter:drop-shadow(0 1px 1.5px rgba(13,43,58,.3)) drop-shadow(0 0 7px rgba(139,92,246,.5))}
+.pp-stamp.sp.r3{filter:drop-shadow(0 1px 1.5px rgba(13,43,58,.3)) drop-shadow(0 0 8px rgba(214,167,64,.55))}
+.pp-page.on .pp-stamp.sp.r3{animation:ppGold 4.5s ease-in-out infinite}
+@keyframes ppGold{0%,60%,100%{filter:drop-shadow(0 1px 1.5px rgba(13,43,58,.3)) drop-shadow(0 0 8px rgba(214,167,64,.55))}80%{filter:drop-shadow(0 1px 1.5px rgba(13,43,58,.3)) drop-shadow(0 0 16px rgba(240,200,90,.95)) brightness(1.08)}}
+[data-motion="reduce"] .pp-page.on .pp-stamp.sp.r3{animation:none}
 .pp-stamp .pic{--paper:color-mix(in srgb,currentColor var(--stt),var(--stp))}
 .pp-stamp .bg{fill:var(--paper);stroke:none}
 .pp-stamp .v{font-family:var(--display);font-weight:800;fill:currentColor;stroke:var(--paper);stroke-width:6px;paint-order:stroke}
@@ -909,8 +917,8 @@ button.pp-tile:active{transform:scale(.98)}
 .pp-rar:active{opacity:.7}
 .pp-rar span{display:inline-flex;align-items:center;gap:5px;padding:4px 10px 4px 5px;border-radius:99px;background:var(--chip)}
 .pp-rar span b{display:grid;place-items:center;min-width:20px;height:20px;padding:0 5px;border-radius:99px;font:800 11.5px var(--text)}
-.pp-rar .r1 b{background:color-mix(in srgb,var(--primary) 18%,transparent);color:var(--primary)}
-.pp-rar .r2 b{background:var(--svl);color:#0D2B3A}
+.pp-rar .r1 b{background:color-mix(in srgb,#2F7FD8 18%,transparent);color:#2F7FD8}
+.pp-rar .r2 b{background:linear-gradient(135deg,#7444D8,#C4B0FF 50%,#8B5CF6);color:#fff}
 .pp-rar .r3 b{background:var(--gdl);color:#3A2A05}
 .pp-rar svg{flex:none;width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
 .pp-leg{max-height:calc(100% - 48px - env(safe-area-inset-top,0px));padding-bottom:0;gap:0}
@@ -926,8 +934,8 @@ button.pp-tile:active{transform:scale(.98)}
 .pp-leg-st{flex:none;display:grid;place-items:center;width:78px;height:86px}
 .pp-leg-st .pp-stamp,.pp-leg-st .pp-stamp.sp{width:auto;height:auto;max-width:78px;max-height:86px;animation:none}
 .pp-leg em{font:700 11.5px var(--text);font-style:normal;padding:2px 8px;border-radius:99px;background:var(--chip);color:var(--muted)}
-.pp-leg em.r1{background:color-mix(in srgb,var(--primary) 16%,transparent);color:var(--primary)}
-.pp-leg em.r2{background:var(--svl);color:#0D2B3A}
+.pp-leg em.r1{background:color-mix(in srgb,#2F7FD8 16%,transparent);color:#2F7FD8}
+.pp-leg em.r2{background:linear-gradient(135deg,#7444D8,#C4B0FF 50%,#8B5CF6);color:#fff}
 .pp-leg em.r3{background:var(--gdl);color:#3A2A05}
 
 /* Länderseite: Einreisedatum */
@@ -1200,7 +1208,7 @@ button.pp-tile:active{transform:scale(.98)}
 .fp-bg{position:absolute;z-index:0;right:62px;top:0;height:100%;width:75%;color:var(--sc);opacity:.24;-webkit-mask-image:linear-gradient(to left,#000 25%,transparent);mask-image:linear-gradient(to left,#000 25%,transparent);pointer-events:none}
 .fp-pic{width:46px;height:40px;margin-bottom:4px;border-radius:4px;overflow:hidden;color:var(--sc);background:color-mix(in srgb,var(--sc) 16%,var(--fp-tk));box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--sc) 50%,transparent);outline:2px dotted color-mix(in srgb,var(--sc) 35%,transparent);outline-offset:1px}
 .fp-pic svg{display:block;width:100%;height:100%}
-.fp-tk.t1{box-shadow:0 4px 10px -6px rgba(0,0,0,.5),inset 0 0 0 2px color-mix(in srgb,var(--sc) 45%,transparent)}
+.fp-tk.t1{border:3px solid var(--tk1);box-shadow:0 4px 12px -6px rgba(47,127,216,.55)}
 .fp-tk.t2{border:3px solid transparent;background:linear-gradient(var(--fp-tk),var(--fp-tk)) padding-box,conic-gradient(from 30deg,#6A3CC8,#D9CCFF,#8B5CF6,#F1EBFF,#7444D8,#C4B0FF,#6A3CC8) border-box;box-shadow:0 4px 12px -6px rgba(110,60,210,.55)}
 .fp-tk.t2 .fp-bg{opacity:.32;width:85%}
 .fp-tk.t3{--fp-tk:#0F1E3D;--fp-tk-ink:#F7E3A1;--fp-tk-mut:#C9A960;--fp-perf:#6B5A2E;border:3px solid transparent;background:radial-gradient(120% 140% at 85% 0%,#22386A,#0F1E3D 60%) padding-box,linear-gradient(135deg,#9C7418,#F2D98A 35%,#B88A1E 60%,#F7E3A1 85%,#A57B16) border-box;box-shadow:0 6px 18px -6px rgba(230,180,70,.55)}
@@ -1218,14 +1226,11 @@ button.pp-tile:active{transform:scale(.98)}
 [data-motion="reduce"] .fp-page.on .fp-tk.t3::after,[data-motion="reduce"] .fp-page.on .fp-tw{animation:none}
 /* einmaliger Glanz beim Aufkleben (markfx.ts cardOn) */
 .fp-sheen{position:absolute;z-index:3;top:0;bottom:0;left:0;width:40%;pointer-events:none;background:linear-gradient(90deg,transparent,var(--c),transparent)}
-/* Zeile über den Bordkarten: Anzahl Rare/Epic/Legendary, antippen = Legende */
-.fp-view .fp-rar .r1 b{background:color-mix(in srgb,var(--tk1) 18%,transparent);color:var(--tk1)}
-.fp-view .fp-rar .r2 b,.fp-view .pp-leg em.r2{background:linear-gradient(135deg,#7444D8,#C4B0FF 50%,#8B5CF6);color:#fff}
-.fp-view .pp-leg em.r1{background:color-mix(in srgb,var(--tk1) 16%,transparent);color:var(--tk1)}
+/* Zeile über den Bordkarten: Anzahl Rare/Epic/Legendary, antippen = Legende – Farben wie bei den Stempeln (.pp-rar/.pp-leg) */
 /* Legende: kleine Bordkarte je Stufe */
 .fp-mini{--fp-tk:#FFFFFF;flex:none;position:relative;display:flex;align-items:center;justify-content:center;width:78px;height:50px;padding-left:6px;border-radius:9px;background:var(--fp-tk);box-shadow:0 2px 6px -3px rgba(0,0,0,.45),inset 0 0 0 1px var(--line);overflow:hidden;box-sizing:border-box}
 .fp-mini::before{content:"";position:absolute;left:0;top:0;bottom:0;width:6px;background:var(--tk0)}
-.fp-mini.t1::before{background:var(--tk1)}.fp-mini.t2::before{background:var(--tk2)}.fp-mini.t3::before{background:var(--tk3)}
+.fp-mini.t1{border:2.5px solid var(--tk1)}.fp-mini.t1::before{background:var(--tk1)}.fp-mini.t2::before{background:var(--tk2)}.fp-mini.t3::before{background:var(--tk3)}
 .fp-mini i{width:40px;height:34px;border-radius:4px;overflow:hidden;color:var(--sc);background:color-mix(in srgb,var(--sc) 14%,#fff)}
 .fp-mini.t0 i{background:repeating-linear-gradient(90deg,#0A1730 0 2px,transparent 2px 4px,#0A1730 4px 5px,transparent 5px 8px);height:18px;width:34px;opacity:.6;border-radius:0}
 .fp-mini i svg{display:block;width:100%;height:100%}

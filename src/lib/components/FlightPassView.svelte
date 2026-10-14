@@ -253,7 +253,7 @@
 	/* ---------- Legende: Seltenheitsstufen (Beispiel Japan) ---------- */
 	const LEG_ROWS: [Tier, number, string][] = [
 		[0, 1 - CHANCE.rare - CHANCE.epic - CHANCE.legend, 'Normale Bordkarte mit grauem Streifen – so sieht es bei den meisten Strecken aus.'],
-		[1, CHANCE.rare, 'Blauer Streifen, Bild des Ziellands auf der Karte und als kleine Marke am Abriss.'],
+		[1, CHANCE.rare, 'Blauer Rand rundum, Bild des Ziellands auf der Karte und als kleine Marke am Abriss.'],
 		[2, CHANCE.epic, 'Lila Rand und Streifen, breites Bild des Ziellands.'],
 		[3, CHANCE.legend, 'Nachtblau mit Goldrand, Goldschrift und Funkeln – ganz selten.']
 	];

@@ -1,5 +1,5 @@
 /* Aufkleben der Briefmarken: jede Seltenheit etwas anders, nur einmal beim Aufkleben – danach ruht die Marke.
-   Rare: von oben aufgelegt und angedrückt. Epic: schräg aus der Hand hingelegt, dann ein Silberglanz.
+   Rare: von oben aufgelegt und angedrückt. Epic: schräg aus der Hand hingelegt, dann ein lila Glanz (wie bei den Bordkarten).
    Legendary: schwebt langsam mit goldenem Schein herab, dann ein Goldschimmer und ein paar Funken. Weltwunder (4): ebenso, mit Regenbogen-Schein. */
 const NS = 'http://www.w3.org/2000/svg';
 let n = 0;
@@ -76,7 +76,7 @@ export async function stickOn(el: SVGSVGElement, tier: number, land?: () => void
 			{ duration: 1200, easing: 'ease-in-out', fill: 'backwards' }
 		).finished;
 		land?.();
-		await sheen(el, '#FFFFFF', 0.9, 900);
+		await sheen(el, '#C4B0FF', 0.9, 900);
 	} else {
 		await el.animate(
 			[

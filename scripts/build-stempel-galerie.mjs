@@ -58,7 +58,7 @@ h3{margin:0 0 6px;font-size:16px}h3 small{color:var(--muted);font-weight:500;fon
 figure{margin:0;text-align:center;background:var(--paper);border-radius:12px;padding:10px 6px 6px;border:1px solid var(--line)}
 .st{display:flex;justify-content:center;align-items:flex-end;height:170px}
 figcaption{margin-top:6px;font-size:12px;font-weight:700}figcaption small{font-weight:500;color:var(--muted)}
-.c0 figcaption{color:var(--muted)}.c1 figcaption{color:#2F6FB5}.c2 figcaption{color:#7E8892}.c3 figcaption{color:#B07800}.c4 figcaption{color:var(--ink)}
+.c0 figcaption{color:var(--muted)}.c1 figcaption{color:var(--rc1)}.c2 figcaption{color:var(--rc2)}.c3 figcaption{color:var(--rc3)}.c4 figcaption{color:var(--ink)}
 .pp-stamp{display:block;max-width:100%;max-height:168px;width:auto;height:auto}
 ${stampCss}
 .pp-stamp.sp{height:160px;max-width:100%}.pp-stamp.sp.wd{width:100%;height:auto;max-height:160px}.pp-stamp:not(.sp){width:100%;height:100%;max-height:168px}

@@ -1,6 +1,6 @@
 # Stempel – Übersicht
 
-> Automatisch erzeugt aus dem Code (App-Version 1.49.0). Nicht von Hand ändern, sondern neu erzeugen: `node scripts/build-stempel-doc.mjs`.
+> Automatisch erzeugt aus dem Code (App-Version 1.52.0). Nicht von Hand ändern, sondern neu erzeugen: `node scripts/build-stempel-doc.mjs`.
 
 > **Bilder aller Stempel:** [stempel.html](stempel.html) öffnen (Galerie mit Suche; Common, Rare, Epic, Legendary je Land + Weltwunder).
 
@@ -28,9 +28,9 @@ Jedes Land wird **einmal**, beim ersten Öffnen des Passes, ausgelost. Das Los g
 | Stufe | Chance | Aussehen | Bild |
 |---|---|---|---|
 | **Common** | 70 % | Normaler Stempel in Tinte, Rahmenform und Motiv des Landes | Motiv (Abschnitt 6, „Motiv“) |
-| **Rare** | 20 % | Eingeklebte Briefmarke, gezähntes Papier, getöntes Bild, Länder-Nr. als Nennwert, Beschriftung RARE | Hochformat, eigenes Bild pro Land |
-| **Epic** | 8 % | Breite Briefmarke (Querformat) mit metallischem **Silberrand**, schräg aufgeklebt mit Silberglanz, Beschriftung EPIC | Querbild, eigenes Bild pro Land |
-| **Legendary** | 2 % | Prachtvolle Briefmarke mit **Goldrand**, schwebt beim Aufkleben, Goldschimmer und Funken, Beschriftung LEGENDARY | Hochformat, aufwendigste Szene pro Land |
+| **Rare** | 20 % | Eingeklebte Briefmarke mit **blauem Rand** (wie Rare-Bordkarten), gezähntes Papier, getöntes Bild, Länder-Nr. als Nennwert, Beschriftung RARE | Hochformat, eigenes Bild pro Land |
+| **Epic** | 8 % | Breite Briefmarke (Querformat) mit metallischem **lila Rand** (wie Epic-Bordkarten), schräg aufgeklebt mit lila Glanz, Beschriftung EPIC | Querbild, eigenes Bild pro Land |
+| **Legendary** | 2 % | Prachtvolle Briefmarke mit **Goldrand**, schwebt beim Aufkleben, Goldschimmer und Funken, leuchtet auf der offenen Passseite immer wieder golden auf, Beschriftung LEGENDARY | Hochformat, aufwendigste Szene pro Land |
 | **Weltwunder** | Sondersammlung | Hologramm-Briefmarke mit Regenbogen-Schein, römische Ziffer I–VII, Beschriftung WELTWUNDER | siehe Abschnitt 4 |
 
 Bei 250 Ländern ist im Schnitt etwa 50 Mal Rare, 20 Mal Epic und 5 Mal Legendary zu erwarten.
