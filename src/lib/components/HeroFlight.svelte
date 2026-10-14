@@ -19,8 +19,8 @@
 	   Szene „landing“ (Tab Flüge, Fortsetzung der Geschichte): kommt links in derselben Reiseflughöhe herein, in der die
 	   Kurve der Welt rechts endet (beide Kurven reichen bis in den Seitenrand, beim Wischen gehen sie ineinander über);
 	   Sinkflug, flacher Endanflug, Abfangen mit leicht angehobener Nase, Ausrollen zum Flughafen. Prozentwert rechts oben.
-	   Tabwechsel: keine Animation, das Flugzeug steht an seiner Stelle.
-	   */
+	   Wischen Welt → Flüge: das Flugzeug der Welt fliegt ans Ende seiner Kurve (im Seitenrand, genau dort beginnt die Kurve
+	   der Flüge) und übergibt dort an das Flugzeug der Flüge (ui.planeHandoff); das fliegt weiter, sobald der Tab offen ist. */
 
 	/** label: Text unter dem Prozentwert (Startseite „der Welt“, Flüge „zum Mond“); scene: Start (Welt) oder Landung (Flüge) */
 	let { progress, label = 'der Welt', scene = 'takeoff' }: { progress: number; label?: string; scene?: 'takeoff' | 'landing' } = $props();
@@ -223,7 +223,7 @@
 				boostAlpha = 1;
 				fly(shown, shownPct, { boost: true });
 				boostT = setTimeout(() => (boostAlpha = 0), 1100); // Leuchten geht in die normale Spur über
-			} else jump();
+			} else fly(shown, shownPct);
 		});
 	});
 
@@ -248,14 +248,42 @@
 		gut = Math.min(24, Math.max(0, (window.innerWidth - box.width) / 2));
 	}
 
-	/* Tabwechsel: keine Animation. Das Flugzeug steht einfach an seiner Stelle; geflogen wird nur nach dem Hinzufügen
-	   eines Landes bzw. Flugs und beim Start. */
+	/* Fortsetzung beim Tabwechsel. Welt: beim Wischen zu den Flügen fliegt das Flugzeug ans Ende seiner Kurve und übergibt
+	   dort (Wischen abgebrochen → zurück an seine Stelle). Flüge: wartet unsichtbar am Anfang (= Ende der Welt-Kurve),
+	   erscheint mit der Übergabe und fliegt weiter, sobald der Tab offen ist. */
 	const active = $derived(ui.tab === (landing ? 'flights' : 'home'));
-	const exited = false;
-	const planeVisible = true;
+	let wasActive = untrack(() => active);
+	let exited = false;
+	let handT: ReturnType<typeof setTimeout> | undefined;
+	// sichtbar: im eigenen Tab; Flüge im Hintergrund erst nach der Übergabe, Welt bis zur Übergabe
+	const planeVisible = $derived(landing ? active || ui.planeHandoff : !(ui.planeHandoff && ui.swipeTo === 'flights'));
 	$effect(() => {
-		void active;
-		untrack(jump);
+		const a = active,
+			sw = ui.swipeTo;
+		untrack(() => {
+			if (landing) {
+				if (a && !wasActive) fly(0, p * 100, { ms: 1700, ease: easeOutCubic });
+				else if (!a) {
+					cancelAnimationFrame(anim);
+					clearTimeout(settleT);
+					shown = 0;
+					shownPct = p * 100;
+				}
+			} else if (a && sw === 'flights' && !exited) {
+				exited = true;
+				const k = Math.max(0.25, 1 - shown);
+				fly(shown, shownPct, { to: 1, ms: 350 + 700 * k, ease: (t) => t * t });
+				clearTimeout(handT);
+				handT = setTimeout(() => exited && (ui.planeHandoff = true), 350 + 700 * k);
+			} else if (exited && (!a || sw !== 'flights')) {
+				exited = false;
+				clearTimeout(handT);
+				ui.planeHandoff = false;
+				if (a) fly(shown, shownPct, { ms: 700 });
+				else jump();
+			}
+			wasActive = a;
+		});
 	});
 
 	// Prozentwert wird erst nach der ersten Breitenmessung gezeichnet: dann neu vermessen
@@ -286,6 +314,7 @@
 			cancelAnimationFrame(anim);
 			clearTimeout(boostT);
 			clearTimeout(settleT);
+			clearTimeout(handT);
 		};
 	});
 </script>
