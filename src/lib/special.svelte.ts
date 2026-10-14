@@ -35,7 +35,7 @@ function load(): Record<string, Tier> {
 export const special = $state<{ map: Record<string, Tier> }>({ map: typeof window === 'undefined' ? {} : load() });
 
 /** Vorschau: ?spezial in der Adresse macht alle Stempel zu Rare, ?spezial=epic zu Epic, ?spezial=legende zu Legendary */
-const preview = (): Tier | null => {
+export const preview = (): Tier | null => {
 	const p = typeof location === 'undefined' ? null : new URLSearchParams(location.search).get('spezial');
 	return p === null ? null : p === 'legende' ? 3 : p === 'epic' || p === 'super' ? 2 : 1;
 };
@@ -75,7 +75,8 @@ export function rollSpecials(codes: string[]) {
 		} catch {}
 }
 
-function roll(): Tier {
-	const r = Math.random();
+const roll = () => tierOf01(Math.random());
+/** Zufallszahl 0..1 → Stufe nach CHANCE (auch für die Bordkarten) */
+export function tierOf01(r: number): Tier {
 	return r < CHANCE.legend ? 3 : r < CHANCE.legend + CHANCE.epic ? 2 : r < CHANCE.legend + CHANCE.epic + CHANCE.rare ? 1 : 0;
 }

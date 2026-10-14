@@ -91,3 +91,70 @@ export async function stickOn(el: SVGSVGElement, tier: number, land?: () => void
 		land?.();
 	}
 }
+
+/** Glanzstreifen einmal über eine Bordkarte (HTML, die Karte schneidet ihn ab) */
+async function cardSheen(card: HTMLElement, color: string, dur: number) {
+	const s = document.createElement('i');
+	s.className = 'fp-sheen';
+	s.style.setProperty('--c', color);
+	card.appendChild(s);
+	await s.animate([{ transform: 'translateX(-120%) skewX(-18deg)' }, { transform: 'translateX(320%) skewX(-18deg)' }], { duration: dur, easing: 'cubic-bezier(.45,0,.3,1)' }).finished;
+	s.remove();
+}
+
+/** Neue Bordkarte in den Flugpass: Common wird eingesteckt, Rare aufgelegt, Epic schräg hingelegt + Silberglanz,
+    Legendary schwebt mit Goldschein herab + Funken und Goldglanz. land = Moment des Auflegens (Seite federt, Vibration). */
+export async function cardOn(el: HTMLElement, tier: number, land?: () => void) {
+	const card = el.querySelector<HTMLElement>('.fp-tk') ?? el;
+	if (tier >= 3) {
+		await el.animate(
+			[
+				{ transform: 'translateY(-50px) scale(1.12) rotate(3deg)', opacity: 0, filter: 'drop-shadow(0 0 0 rgba(230,180,70,0))' },
+				{ transform: 'translateY(-44px) scale(1.1) rotate(2deg)', opacity: 1, filter: 'drop-shadow(0 0 18px rgba(240,190,70,1))', offset: 0.25 },
+				{ transform: 'translateY(-5px) scale(1.03) rotate(.4deg)', filter: 'drop-shadow(0 0 10px rgba(230,180,70,.7))', offset: 0.72 },
+				{ transform: 'translateY(2px) scale(.98)', filter: 'drop-shadow(0 0 6px rgba(230,180,70,.5))', offset: 0.86 },
+				{ transform: 'none', filter: 'drop-shadow(0 0 0 rgba(230,180,70,0))' }
+			],
+			{ duration: 1500, easing: 'ease-in-out', fill: 'backwards' }
+		).finished;
+		land?.();
+		sparks(card);
+		await cardSheen(card, 'rgba(255,225,140,.6)', 1100);
+	} else if (tier === 2) {
+		await el.animate(
+			[
+				{ transform: 'perspective(700px) translate(24px,-34px) rotateX(30deg) rotate(-6deg) scale(1.08)', opacity: 0 },
+				{ transform: 'perspective(700px) translate(20px,-28px) rotateX(26deg) rotate(-5deg) scale(1.06)', opacity: 1, offset: 0.22 },
+				{ transform: 'perspective(700px) translate(2px,-4px) rotateX(5deg) rotate(-.6deg) scale(1.02)', offset: 0.7 },
+				{ transform: 'perspective(700px) translateY(1px) scale(.985)', offset: 0.86 },
+				{ transform: 'none' }
+			],
+			{ duration: 1200, easing: 'ease-in-out', fill: 'backwards' }
+		).finished;
+		land?.();
+		await cardSheen(card, 'rgba(255,255,255,.75)', 900);
+	} else if (tier === 1) {
+		await el.animate(
+			[
+				{ transform: 'translateY(-40px) scale(1.08) rotate(-3deg)', opacity: 0 },
+				{ transform: 'translateY(-40px) scale(1.08) rotate(-3deg)', opacity: 1, offset: 0.2 },
+				{ transform: 'translateY(-5px) scale(1.02) rotate(-.6deg)', offset: 0.7 },
+				{ transform: 'translateY(2px) scale(.985)', offset: 0.85 },
+				{ transform: 'none' }
+			],
+			{ duration: 1000, easing: 'ease-in-out', fill: 'backwards' }
+		).finished;
+		land?.();
+	} else {
+		// eingesteckt: von rechts in die Mappe geschoben, kurz nachgefedert
+		await el.animate(
+			[
+				{ transform: 'translateX(70px) rotate(3deg)', opacity: 0 },
+				{ transform: 'translateX(-4px) rotate(-.4deg)', opacity: 1, offset: 0.7 },
+				{ transform: 'none' }
+			],
+			{ duration: 520, easing: 'cubic-bezier(.2,.8,.2,1)', fill: 'backwards' }
+		).finished;
+		land?.();
+	}
+}

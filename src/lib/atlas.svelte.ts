@@ -158,6 +158,8 @@ export const atlas = $state<{
 });
 
 let uid: string | null = null;
+/** angemeldetes Konto (für feste Lose wie die Seltenheit der Bordkarten) */
+export const userId = () => uid;
 let queue: Op[] = [];
 let flushing = false;
 let retryT: ReturnType<typeof setTimeout> | undefined;

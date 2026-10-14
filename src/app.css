@@ -1141,7 +1141,7 @@ button.pp-tile:active{transform:scale(.98)}
 .fp-tk-stub b{font:800 20px/1 var(--display);font-variant-numeric:tabular-nums;color:var(--fp-tk-ink)}
 .fp-code{width:36px;height:18px;margin-top:6px;opacity:.75;background:repeating-linear-gradient(90deg,var(--fp-tk-ink) 0 2px,transparent 2px 3px,var(--fp-tk-ink) 3px 4px,transparent 4px 6px,var(--fp-tk-ink) 6px 9px,transparent 9px 10px)}
 .fp-tk.plan{background:color-mix(in srgb,var(--fp-tk) 82%,transparent);box-shadow:inset 0 0 0 2px color-mix(in srgb,var(--fp-perf) 80%,transparent)}
-.fp-tk.plan::before{background:repeating-linear-gradient(180deg,var(--hc) 0 6px,transparent 6px 10px)}
+.fp-tk.plan::before{background:repeating-linear-gradient(180deg,var(--tk0) 0 6px,transparent 6px 10px)}
 .fp-tk.plan .fp-tk-stub b{color:var(--sun)}
 .fp-strip .pp-fill{background:color-mix(in srgb,var(--fp-acc) 70%,var(--chip))}.fp-strip .pp-knob{background:var(--fp-acc);color:var(--fp-on)}
 .fp-broutes{font-size:11.5px!important;line-height:1.35;color:var(--ink)!important;font-variant-numeric:tabular-nums}
@@ -1175,3 +1175,61 @@ button.pp-tile:active{transform:scale(.98)}
 .fp-free:not(.first){opacity:.5}
 .fp-free .fp-tk-stub::before,.fp-free .fp-tk-stub::after{display:none}
 .fp-view .pp-sharebtn{background:var(--fp-acc);color:var(--fp-on)}
+/* Bordkarten mit Seltenheit (seit v1.51.0): eine Karte je Strecke; Streifen links = Stufe (grau, blau, silber, gold), Flugzeug = Kurz/Mittel/Lang.
+   Rare: Rand + Bild des Ziellands (--sc = Stempelfarbe). Epic: Silberrand. Legendary: Nachtblau, Goldrand, Goldglanz + Funkeln nur auf der aufgeschlagenen Seite. */
+.fp-view{--tk0:#A9B6C3;--tk1:#2F7FD8;--tk2:linear-gradient(180deg,#7E8892,#F4F7FA 30%,#9AA5AF 55%,#FFFFFF 75%,#8994A0);--tk3:linear-gradient(180deg,#9C7418,#F2D98A 30%,#B88A1E 55%,#F7E3A1 78%,#A57B16);--tks:#5F6A74}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .fp-view{--tks:#C9D2DA}}
+:root[data-theme="dark"] .fp-view{--tks:#C9D2DA}
+.fp-bk{position:relative;isolation:isolate}
+.fp-bk.multi{margin-bottom:6px}
+.fp-bk.wait{visibility:hidden}
+.fp-st{position:absolute;inset:0;z-index:-1;border-radius:15px;background:color-mix(in srgb,var(--fp-tk) 85%,#fff);box-shadow:0 3px 8px -4px rgba(0,0,0,.6),inset 0 0 0 1px rgba(255,255,255,.18)}
+.fp-st.s1{transform:translate(4px,6px) rotate(1.2deg);opacity:.75}
+.fp-st.s2{transform:translate(-3px,11px) rotate(-1.3deg);opacity:.45}
+.fp-bk.t2 .fp-st{box-shadow:0 3px 8px -4px rgba(0,0,0,.6),inset 0 0 0 1.5px #9AA5AF}
+.fp-bk.t3 .fp-st{background:#1A2C55;box-shadow:0 3px 8px -4px rgba(0,0,0,.6),inset 0 0 0 1.5px #9C7418}
+.fp-bk .fp-tk{overflow:hidden;isolation:isolate;min-height:104px}
+.fp-bk .fp-tk-main{position:relative;z-index:1}
+.fp-bk .fp-tk-stub{z-index:1}
+.fp-tk.t0::before{background:var(--tk0)}.fp-tk.t1::before{background:var(--tk1)}.fp-tk.t2::before{background:var(--tk2)}.fp-tk.t3::before{background:var(--tk3)}
+.fp-tk.t1 .fp-tk-top span:last-child,.fp-bk.t1 .fp-x{color:var(--tk1)}
+.fp-tk.t2 .fp-tk-top span:last-child{color:var(--tks)}
+.fp-tk-top span:last-child{letter-spacing:.12em}
+.fp-bk .fp-tk-top span:last-child{text-shadow:0 0 3px var(--fp-tk),0 0 6px var(--fp-tk)}
+.fp-x{display:inline-block;font:800 12.5px/1 var(--display);font-style:normal;color:var(--hc);padding:3px 5px;margin:-2px 0 -3px -2px;border:2px solid currentColor;border-radius:999px;transform:rotate(-8deg)}
+.fp-bg{position:absolute;z-index:0;right:62px;top:0;height:100%;width:75%;color:var(--sc);opacity:.24;-webkit-mask-image:linear-gradient(to left,#000 25%,transparent);mask-image:linear-gradient(to left,#000 25%,transparent);pointer-events:none}
+.fp-pic{width:46px;height:40px;margin-bottom:4px;border-radius:4px;overflow:hidden;color:var(--sc);background:color-mix(in srgb,var(--sc) 16%,var(--fp-tk));box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--sc) 50%,transparent);outline:2px dotted color-mix(in srgb,var(--sc) 35%,transparent);outline-offset:1px}
+.fp-pic svg{display:block;width:100%;height:100%}
+.fp-tk.t1{box-shadow:0 4px 10px -6px rgba(0,0,0,.5),inset 0 0 0 2px color-mix(in srgb,var(--sc) 45%,transparent)}
+.fp-tk.t2{border:3px solid transparent;background:linear-gradient(var(--fp-tk),var(--fp-tk)) padding-box,conic-gradient(from 30deg,#7E8892,#F4F7FA,#9AA5AF,#FFFFFF,#8994A0,#DCE3E9,#7E8892) border-box;box-shadow:0 4px 12px -6px rgba(0,0,0,.6)}
+.fp-tk.t2 .fp-bg{opacity:.32;width:85%}
+.fp-tk.t3{--fp-tk:#0F1E3D;--fp-tk-ink:#F7E3A1;--fp-tk-mut:#C9A960;--fp-perf:#6B5A2E;border:3px solid transparent;background:radial-gradient(120% 140% at 85% 0%,#22386A,#0F1E3D 60%) padding-box,linear-gradient(135deg,#9C7418,#F2D98A 35%,#B88A1E 60%,#F7E3A1 85%,#A57B16) border-box;box-shadow:0 6px 18px -6px rgba(230,180,70,.55)}
+.fp-tk.t3 .fp-bg{color:#E2BE5A;opacity:.42;width:90%}
+.fp-tk.t3 .fp-pic{color:#E2BE5A;background:#1A2C55;box-shadow:inset 0 0 0 1.5px #C9A03A;outline-color:rgba(201,160,58,.4)}
+.fp-tk.t3 .fp-tk-top span:last-child,.fp-bk.t3 .fp-x{color:#F2D98A}
+.fp-tk.t3 .fp-tk-rt b{background:linear-gradient(180deg,#FFF0B8,#D6A740);-webkit-background-clip:text;background-clip:text;color:transparent}
+.fp-tk.t3 .fp-tk-rt svg{background:#14264B}
+/* Goldglanz: per transform (läuft auf der Grafikkarte), nur auf der aufgeschlagenen Seite */
+.fp-page.on .fp-tk.t3::after{content:"";position:absolute;z-index:2;top:0;bottom:0;left:0;width:45%;pointer-events:none;background:linear-gradient(100deg,transparent,rgba(255,225,140,.32) 50%,transparent);transform:translateX(-120%);animation:fpSheen 4.5s ease-in-out infinite}
+@keyframes fpSheen{0%,55%{transform:translateX(-120%)}100%{transform:translateX(330%)}}
+.fp-tw{position:absolute;z-index:3;font-style:normal;font-size:11px;line-height:1;color:#FFE7A0;text-shadow:0 0 6px rgba(255,220,120,.9);opacity:0;pointer-events:none}
+.fp-page.on .fp-tw{animation:fpTwinkle 2.4s ease-in-out infinite}
+@keyframes fpTwinkle{0%,100%{opacity:0;transform:scale(.4)}50%{opacity:1;transform:scale(1)}}
+[data-motion="reduce"] .fp-page.on .fp-tk.t3::after,[data-motion="reduce"] .fp-page.on .fp-tw{animation:none}
+/* einmaliger Glanz beim Aufkleben (markfx.ts cardOn) */
+.fp-sheen{position:absolute;z-index:3;top:0;bottom:0;left:0;width:40%;pointer-events:none;background:linear-gradient(90deg,transparent,var(--c),transparent)}
+/* Zeile über den Bordkarten: Anzahl Rare/Epic/Legendary, antippen = Legende */
+.fp-view .fp-rar .r1 b{background:color-mix(in srgb,var(--tk1) 18%,transparent);color:var(--tk1)}
+.fp-view .pp-leg em.r1{background:color-mix(in srgb,var(--tk1) 16%,transparent);color:var(--tk1)}
+/* Legende: kleine Bordkarte je Stufe */
+.fp-mini{--fp-tk:#FFFFFF;flex:none;position:relative;display:flex;align-items:center;justify-content:center;width:78px;height:50px;padding-left:6px;border-radius:9px;background:var(--fp-tk);box-shadow:0 2px 6px -3px rgba(0,0,0,.45),inset 0 0 0 1px var(--line);overflow:hidden;box-sizing:border-box}
+.fp-mini::before{content:"";position:absolute;left:0;top:0;bottom:0;width:6px;background:var(--tk0)}
+.fp-mini.t1::before{background:var(--tk1)}.fp-mini.t2::before{background:var(--tk2)}.fp-mini.t3::before{background:var(--tk3)}
+.fp-mini i{width:40px;height:34px;border-radius:4px;overflow:hidden;color:var(--sc);background:color-mix(in srgb,var(--sc) 14%,#fff)}
+.fp-mini.t0 i{background:repeating-linear-gradient(90deg,#0A1730 0 2px,transparent 2px 4px,#0A1730 4px 5px,transparent 5px 8px);height:18px;width:34px;opacity:.6;border-radius:0}
+.fp-mini i svg{display:block;width:100%;height:100%}
+.fp-mini.t1{box-shadow:0 2px 6px -3px rgba(0,0,0,.45),inset 0 0 0 2px color-mix(in srgb,var(--sc) 45%,transparent)}
+.fp-mini.t2{border:2.5px solid transparent;background:linear-gradient(#fff,#fff) padding-box,conic-gradient(from 30deg,#7E8892,#F4F7FA,#9AA5AF,#FFFFFF,#8994A0,#DCE3E9,#7E8892) border-box}
+.fp-mini.t3{border:2.5px solid transparent;background:radial-gradient(120% 140% at 85% 0%,#22386A,#0F1E3D 60%) padding-box,linear-gradient(135deg,#9C7418,#F2D98A 35%,#B88A1E 60%,#F7E3A1 85%,#A57B16) border-box}
+.fp-mini.t3 i{color:#E2BE5A;background:#1A2C55}
+.fp-leg-h{margin:16px 0 4px;font:800 15px var(--display)}

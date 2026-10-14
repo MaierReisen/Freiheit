@@ -1,6 +1,7 @@
 import { nameOf } from './countries';
 import { fmtDuration, fmtInt, routeKey, type Airlines, type Airports, type FlightStats, type Leg } from './flights';
 import type { Rank } from './passport';
+import { preview, tierOf01, type Tier } from './special.svelte';
 
 /* Flugpass (Tab „Flüge“): Status nach Zahl der Flüge (wie eine Vielflieger-Karte, die Farbe der Karte steigt mit),
    Rekorde und Hilfen für die Bordkarten. Zahlen kommen aus flightStats (gleiche Regeln wie Flighty). */
@@ -32,6 +33,28 @@ export function flightRankInfo(n: number) {
 /** Kurz-, Mittel-, Langstrecke (Farbe der Bordkarte) */
 export const haul = (km: number) => (km < 1500 ? 'kurz' : km < 4000 ? 'mittel' : 'lang');
 export const HAUL_NAME = { kurz: 'Kurzstrecke', mittel: 'Mittelstrecke', lang: 'Langstrecke' };
+
+/* Seltenheit der Bordkarten (eine Bordkarte je Strecke, Hin- und Rückflug zusammen): gleiche Stufen und Chancen wie die Stempel.
+   Das Los ergibt sich fest aus Konto + Strecke – auf allen Geräten gleich, ohne Datenbank-Spalte, und Löschen + neu Eintragen
+   lost nicht neu. Gezogen wird mit dem ersten geflogenen Flug der Strecke (geplante haben noch keine Stufe). */
+function unit(s: string) {
+	// cyrb53: gut verteilter 53-Bit-Wert → 0..1
+	let h1 = 0xdeadbeef,
+		h2 = 0x41c6ce57;
+	for (let i = 0; i < s.length; i++) {
+		const c = s.charCodeAt(i);
+		h1 = Math.imul(h1 ^ c, 2654435761);
+		h2 = Math.imul(h2 ^ c, 1597334677);
+	}
+	h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+	h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+	return (4294967296 * (2097151 & h2) + (h1 >>> 0)) / 2 ** 53;
+}
+export function ticketTier(user: string | null, key: string): Tier {
+	// Vorschau wie bei den Stempeln: ?spezial (alle Rare), ?spezial=epic, ?spezial=legende
+	return preview() ?? tierOf01(unit(`${user ?? ''}|bordkarte|${key}`));
+}
+export const TICKET_TIER = ['Common', 'Rare', 'Epic', 'Legendary'];
 
 /** „2024-05-17“ → „17.05.2024“ */
 export const dateDe = (d: string) => d.split('-').reverse().join('.');

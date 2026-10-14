@@ -2448,6 +2448,8 @@ const hash = (s: string) => {
 	for (const ch of s) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
 	return h >>> 0;
 };
+/** Stempelfarbe eines Landes (Farbtoken), z. B. für die Bilder auf den Bordkarten */
+export const stampColor = (code: string) => `var(--st-${DEFS[code]?.c ?? COLORS[(hash(code) >>> 3) % COLORS.length]})`;
 
 export interface Stamp {
 	svg: string;
