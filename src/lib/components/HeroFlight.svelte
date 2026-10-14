@@ -51,6 +51,7 @@
 	let boostAlpha = $state(0);
 	let anim = 0;
 	let boostT: ReturnType<typeof setTimeout> | undefined;
+	let boostGone: ReturnType<typeof setTimeout> | undefined;
 	let settleT: ReturnType<typeof setTimeout> | undefined;
 
 	// Geometrie: Räder auf dem Horizont, Sonne mittig-links (rechts unten bleibt Platz für den Prozentwert)
@@ -218,11 +219,13 @@
 				fly(shown, shownPct, { ms: introLeft, intro: true });
 			} else if (ownAdd && !reduceMotion()) {
 				clearTimeout(boostT);
+				clearTimeout(boostGone);
 				// Nachbrenner: auch ein Stück der Spur hinter dem Flugzeug leuchtet mit
 				boost = { from: Math.max(0, shown - 0.06), key: (boost?.key ?? 0) + 1, label: `+${landing ? fmt2((now - prev) * 100) : fmt((now - prev) * 100)} %` };
 				boostAlpha = 1;
 				fly(shown, shownPct, { boost: true });
 				boostT = setTimeout(() => (boostAlpha = 0), 1100); // Leuchten geht in die normale Spur über
+				boostGone = setTimeout(() => (boost = null), 2300); // „+x %“ und Spur weg, damit sie beim Tabwechsel nicht neu starten
 			} else fly(shown, shownPct);
 		});
 	});
@@ -313,6 +316,7 @@
 			ro.disconnect();
 			cancelAnimationFrame(anim);
 			clearTimeout(boostT);
+			clearTimeout(boostGone);
 			clearTimeout(settleT);
 			clearTimeout(handT);
 		};
