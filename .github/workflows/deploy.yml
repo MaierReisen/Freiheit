@@ -41,6 +41,9 @@ jobs:
 
       - run: npm run check
 
+      # Automatische Tests (Flüge, Länder): schlägt einer fehl, wird nicht veröffentlicht
+      - run: npm test
+
       - name: Build
         run: npm run build
         env:
