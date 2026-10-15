@@ -22,7 +22,7 @@ export interface ShareTicket {
 	/** Seltenheit 0–3 */
 	t: number;
 	haul: 'kurz' | 'mittel' | 'lang';
-	/** Airline oder Kurz-/Mittel-/Langstrecke */
+	/** Airline (leer, wenn nicht gepflegt) */
 	air: string;
 	/** Farbe des Ziellands und Bilder (innerer SVG-Inhalt, leer bei Common) */
 	color: string;

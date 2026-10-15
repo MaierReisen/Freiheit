@@ -6,7 +6,7 @@
 	import { badgeLevels, tierCls } from '$lib/badges';
 	import { flightBadges } from '$lib/flightBadges';
 	import { fd } from '$lib/flightData.svelte';
-	import { CARD_NAME, FLIGHT_RANKS, HAUL_NAME, TICKET_TIER, dateDe, flightRankInfo, flightRecords, haul, ticketTier } from '$lib/flightPass';
+	import { CARD_NAME, FLIGHT_RANKS, TICKET_TIER, dateDe, flightRankInfo, flightRecords, haul, ticketTier } from '$lib/flightPass';
 	import { cardOn } from '$lib/markfx';
 	import { fpSeen, markFpSeen } from '$lib/passSeen.svelte';
 	import { TIER_LABEL, stampColor } from '$lib/passport';
@@ -437,7 +437,7 @@
 					nr: t.nr,
 					t: t.t,
 					haul: h,
-					air: (l.f.airline && al?.[l.f.airline]?.[0]) || HAUL_NAME[h],
+					air: (l.f.airline && (al?.[l.f.airline]?.[0] || l.f.airline)) || '',
 					color: t.t ? stampColor(t.cc) : '',
 					bg: pic(t.cc, t.t, false),
 					bgBox: t.t === 2 ? '0 0 270 130' : '0 0 180 170',
@@ -576,7 +576,7 @@
 												aria-label="{t.plan ? 'Geplant: ' : `Strecke ${t.nr}, ${TICKET_TIER[t.t]}: `}{city(l.f.from)} nach {city(l.to)}, {t.plan ? dateDe(l.f.date) : `${t.n}× geflogen, zuerst am ${dateDe(l.f.date)}`}, {fmtInt(l.km)} km">
 												{#if img}<svg class="fp-bg" viewBox={img === 2 ? '0 0 270 130' : '0 0 180 170'} preserveAspectRatio="xMaxYMid slice" aria-hidden="true">{@html pic(t.cc, img, false)}</svg>{/if}
 												<span class="fp-tk-main">
-													<span class="fp-tk-top"><span>{(l.f.airline && al?.[l.f.airline]?.[0]) || HAUL_NAME[h]}</span><span>{t.t ? TIER_LABEL[t.t] : t.n === 1 || t.plan ? no : ''}</span></span>
+													<span class="fp-tk-top"><span>{(l.f.airline && (al?.[l.f.airline]?.[0] || l.f.airline)) || ''}</span><span>{t.t ? TIER_LABEL[t.t] : t.n === 1 || t.plan ? no : ''}</span></span>
 													<span class="fp-tk-rt">
 														<b>{l.f.from}</b>
 														<i aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M21 15.5v-1.6l-8-5V3.6a1.5 1.5 0 0 0-3 0v5.3l-8 5v1.6l8-2.4v5.1l-2 1.5V21l3.5-1 3.5 1v-1.3l-2-1.5v-5.1z" /></svg></i>
