@@ -118,7 +118,7 @@
 						<span class="lbl">{t}</span>
 						<b>{c}</b>
 						<span class="sub">{city(c)}</span>
-						<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>
+						<span class="rs-go" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6" /></svg></span>
 					</button>
 				{/each}
 			</div>

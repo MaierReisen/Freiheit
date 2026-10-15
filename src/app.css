@@ -1039,12 +1039,14 @@ button.pp-tile:active{transform:scale(.98)}
 .rs-hint{margin-top:8px}
 .rs-quick{grid-template-columns:minmax(0,1.08fr) minmax(0,.96fr) minmax(0,.96fr)}
 .cs-quick > .rs-aps{padding:0;background:none;gap:6px}
-.rs-ap{position:relative;display:flex;flex-direction:column;align-items:flex-start;flex:1;gap:0;padding:7px 10px;border:0;border-radius:14px;background:var(--chip);color:var(--ink);text-align:left;font:inherit;cursor:pointer;min-width:0}
-.rs-ap:active{filter:brightness(.94)}
-.cs-quick .rs-ap .lbl{letter-spacing:.02em}
-.rs-ap :is(b,.sub){max-width:calc(100% - 16px)}
-.rs-ap .sub{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.cs-quick .rs-ap svg{position:absolute;right:6px;top:calc(50% + 4px);width:16px;height:16px;margin:-8px 0 0;stroke-width:2.2}
+.rs-ap{position:relative;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;flex:1;gap:1px;padding:10px 11px;border:1.5px solid color-mix(in srgb,var(--primary) 45%,transparent);border-radius:16px;background:color-mix(in srgb,var(--primary) 12%,var(--chip));color:var(--ink);text-align:left;font:inherit;cursor:pointer;min-width:0;transition:transform .12s,filter .12s}
+.rs-ap:active{transform:scale(.97);filter:brightness(.94)}
+.cs-quick .rs-ap .lbl{letter-spacing:.02em;color:var(--primary)}
+.cs-quick .rs-ap b{font-size:19px;line-height:1.15;letter-spacing:.01em}
+.rs-ap :is(b,.sub){max-width:calc(100% - 26px)}
+.cs-quick .rs-ap .sub{font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rs-ap .rs-go{position:absolute;right:8px;top:calc(50% + 6px);display:grid;place-items:center;width:22px;height:22px;margin-top:-11px;border-radius:50%;background:var(--primary);color:var(--on-primary)}
+.cs-quick .rs-ap .rs-go svg{width:14px;height:14px;margin:0;stroke:currentColor;stroke-width:2.6}
 .rs-land{align-self:flex-start;margin-top:6px;padding:6px 11px;font-size:13px}
 
 /* Flug hinzufügen: Karte mit Zeilen (Bezeichnung links, Wert rechts), wie Einstellungen in iOS */
