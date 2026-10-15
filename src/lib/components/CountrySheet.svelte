@@ -201,7 +201,7 @@
 						<b>{facts.cap[0]}</b>
 						{#if been}
 							<span class="cap-st" class:on={capDone}
-								>{#if capDone}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>Besucht{:else}Noch offen{/if}</span
+								>{#if capDone}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>Besucht{:else}Nicht besucht{/if}</span
 							>
 						{/if}
 						{#if lt}<span class="sub">{lt.time} Uhr</span>{/if}
