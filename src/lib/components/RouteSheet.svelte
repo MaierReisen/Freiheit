@@ -1,8 +1,7 @@
 <script lang="ts">
 	import { tick } from 'svelte';
 	import { removeFlights } from '$lib/atlas.svelte';
-	import { closeSheet, openAddFlight, openAirport, openCountry, setSheetDetent, toast, ui } from '$lib/app.svelte';
-	import { flag, nameOf } from '$lib/countries';
+	import { closeSheet, openAddFlight, openAirport, setSheetDetent, toast, ui } from '$lib/app.svelte';
 	import { fd } from '$lib/flightData.svelte';
 	import SwipeRow from './SwipeRow.svelte';
 	import { EARTH_KM, flightNo, fmtDuration, fmtInt, routeKey, type Leg } from '$lib/flights';
@@ -10,7 +9,7 @@
 	/* Seite zu einer Flugstrecke (Bogen auf dem Globus angetippt oder Flug in der Liste): Aufbau wie die Länderseite.
 	   Oben die kompakte Karte (Städte, Anzahl, „+ Flug“, drei Schnellwerte) – auch die „peek“-Stufe über dem Globus.
 	   Darunter alle Flüge dieser Strecke (beide Richtungen, neueste zuerst; Wischen nach links = Entfernen, wie in „Meine Länder“; bei nur einem Flug zusätzlich „Entfernen“ oben wie auf der Länderseite),
-	   „Rückflug eintragen“ (Formular mit vertauschten Flughäfen) und die beiden Flughäfen mit Land.
+	   „Rückflug eintragen“ (Formular mit vertauschten Flughäfen).
 	   Ganz links in den Schnellwerten zwei Kacheln Abflug/Ziel (Tipp = Seite des Flughafens). */
 
 	let { key, id }: { key: string; id?: string } = $props();
@@ -114,8 +113,8 @@
 
 		<div class="cs-quick rs-quick">
 			<div class="rs-aps">
-				{#each [[a, 'Abflug'], [b, 'Ziel']] as [c, t] (t)}
-					<button type="button" class="rs-ap" onclick={() => openAirport(c)} aria-label="{t}: Flughafen {city(c)} ({c}) öffnen">
+				{#each [[a, 'Abflughafen'], [b, 'Zielflughafen']] as [c, t] (t)}
+					<button type="button" class="rs-ap" onclick={() => openAirport(c)} aria-label="{t} {city(c)} ({c}) öffnen">
 						<span class="lbl">{t}</span>
 						<b>{c}</b>
 						<span class="sub">{city(c)}</span>
@@ -162,23 +161,6 @@
 			{/each}
 		</ul>
 		{#if legs.length > 1}<p class="note rs-hint">Zum Entfernen einen Flug nach links wischen.</p>{/if}
-
-		<h4 class="cs-h">Flughäfen</h4>
-		<div class="cs-grid">
-			{#each [a, b] as c (c)}
-				{@const x = ap?.[c]}
-				<div class="cs-tile">
-					<span class="lbl">{c}</span>
-					<b>{city(c)}</b>
-					{#if x}
-						{#if x[1]}<span class="sub">{x[1]}</span>{/if}
-						<button type="button" class="cs-chip rs-land" onclick={() => openCountry(x[2])}><span aria-hidden="true">{flag(x[2])}</span>{nameOf(x[2])}</button>
-					{:else}
-						<span class="sub">unbekannter Flughafen</span>
-					{/if}
-				</div>
-			{/each}
-		</div>
 	{:else}
 		<p class="cs-note">Auf dieser Strecke ist kein Flug mehr eingetragen.</p>
 	{/if}

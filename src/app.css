@@ -1037,12 +1037,14 @@ button.pp-tile:active{transform:scale(.98)}
 .rs-list .fl-route span{white-space:normal}
 .rs-list .rs-st{color:#C2410C;font-weight:600}
 .rs-hint{margin-top:8px}
-.rs-quick{grid-template-columns:minmax(0,.9fr) minmax(0,1fr) minmax(0,1fr)}
+.rs-quick{grid-template-columns:minmax(0,1.08fr) minmax(0,.96fr) minmax(0,.96fr)}
 .cs-quick > .rs-aps{padding:0;background:none;gap:6px}
-.rs-ap{position:relative;display:flex;flex-direction:column;align-items:flex-start;flex:1;gap:0;padding:7px 24px 7px 11px;border:0;border-radius:14px;background:var(--chip);color:var(--ink);text-align:left;font:inherit;cursor:pointer;min-width:0}
+.rs-ap{position:relative;display:flex;flex-direction:column;align-items:flex-start;flex:1;gap:0;padding:7px 10px;border:0;border-radius:14px;background:var(--chip);color:var(--ink);text-align:left;font:inherit;cursor:pointer;min-width:0}
 .rs-ap:active{filter:brightness(.94)}
-.rs-ap .sub{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.cs-quick .rs-ap svg{position:absolute;right:7px;top:50%;width:16px;height:16px;margin:-8px 0 0;stroke-width:2.2}
+.cs-quick .rs-ap .lbl{letter-spacing:.02em}
+.rs-ap :is(b,.sub){max-width:calc(100% - 16px)}
+.rs-ap .sub{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cs-quick .rs-ap svg{position:absolute;right:6px;top:calc(50% + 4px);width:16px;height:16px;margin:-8px 0 0;stroke-width:2.2}
 .rs-land{align-self:flex-start;margin-top:6px;padding:6px 11px;font-size:13px}
 
 /* Flug hinzufügen: Karte mit Zeilen (Bezeichnung links, Wert rechts), wie Einstellungen in iOS */
