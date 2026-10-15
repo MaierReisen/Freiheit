@@ -10,7 +10,8 @@
 	/* Seite zu einer Flugstrecke (Bogen auf dem Globus angetippt oder Flug in der Liste): Aufbau wie die Länderseite.
 	   Oben die kompakte Karte (Städte, Anzahl, „+ Flug“, drei Schnellwerte) – auch die „peek“-Stufe über dem Globus.
 	   Darunter alle Flüge dieser Strecke (beide Richtungen, neueste zuerst; Wischen nach links = Entfernen, wie in „Meine Länder“; bei nur einem Flug zusätzlich „Entfernen“ oben wie auf der Länderseite),
-	   „Rückflug eintragen“ (Formular mit vertauschten Flughäfen) und die beiden Flughäfen (Tipp = Seite des Flughafens). */
+	   „Rückflug eintragen“ (Formular mit vertauschten Flughäfen) und die beiden Flughäfen mit Land.
+	   Ganz links in den Schnellwerten zwei Kacheln Abflug/Ziel (Tipp = Seite des Flughafens). */
 
 	let { key, id }: { key: string; id?: string } = $props();
 
@@ -111,7 +112,17 @@
 			{/if}
 		</div>
 
-		<div class="cs-quick">
+		<div class="cs-quick rs-quick">
+			<div class="rs-aps">
+				{#each [[a, 'Abflug'], [b, 'Ziel']] as [c, t] (t)}
+					<button type="button" class="rs-ap" onclick={() => openAirport(c)} aria-label="{t}: Flughafen {city(c)} ({c}) öffnen">
+						<span class="lbl">{t}</span>
+						<b>{c}</b>
+						<span class="sub">{city(c)}</span>
+						<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>
+					</button>
+				{/each}
+			</div>
 			<div>
 				<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 18c3-8 13-8 16 0" /><circle cx="4" cy="18" r="1.6" /><circle cx="20" cy="18" r="1.6" /></svg>
 				<span class="lbl">Strecke</span>
@@ -123,12 +134,6 @@
 				<span class="lbl">Flugzeit</span>
 				<b>{avgMin ? `${fmtDuration(avgMin)}` : '–'}</b>
 				<span class="sub">{legs.length > 1 ? 'im Schnitt' : 'Gate bis Gate'}</span>
-			</div>
-			<div>
-				<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2.5" /><path d="M4 10h16M9 3v4M15 3v4" /></svg>
-				<span class="lbl">{done.length ? 'Zuletzt' : 'Geplant'}</span>
-				<b>{shortDay((done[0] ?? legs[legs.length - 1]).f.date)}</b>
-				{#if done.length > 1 && done[done.length - 1].f.date !== done[0].f.date}<span class="sub">zuerst {shortDay(done[done.length - 1].f.date)}</span>{/if}
 			</div>
 		</div>
 	{/if}
@@ -167,7 +172,6 @@
 					<b>{city(c)}</b>
 					{#if x}
 						{#if x[1]}<span class="sub">{x[1]}</span>{/if}
-						<button type="button" class="cs-chip rs-land" onclick={() => openAirport(c)}>Flughafen</button>
 						<button type="button" class="cs-chip rs-land" onclick={() => openCountry(x[2])}><span aria-hidden="true">{flag(x[2])}</span>{nameOf(x[2])}</button>
 					{:else}
 						<span class="sub">unbekannter Flughafen</span>
