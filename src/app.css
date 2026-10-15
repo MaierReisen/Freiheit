@@ -228,7 +228,8 @@ html.swiping{overflow-x:hidden}
 .hero-row{position:relative;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:14px 12px}
 .count-btn{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:4px 8px 4px 0;margin:0;background:none;border:0;color:inherit;text-align:left;cursor:pointer;border-radius:22px;-webkit-tap-highlight-color:transparent;transition:transform .15s}
 .count-btn:active{transform:scale(.96)}
-.count-wrap{position:relative;display:inline-block}
+.count-wrap{position:relative;display:block}
+.count-wrap .count{display:block}
 .count-meta{display:flex;flex-direction:column;align-items:flex-start;gap:3px}
 .hero-add{display:flex;align-items:center;gap:8px;margin-left:auto;padding:15px 22px 15px 17px;border:0;border-radius:999px;background:var(--ink);color:var(--bg);font-weight:700;font-size:17px;box-shadow:0 8px 20px rgba(13,43,58,.2);transition:transform .15s}
 .hero-add svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round}
