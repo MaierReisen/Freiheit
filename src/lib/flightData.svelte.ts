@@ -1,7 +1,7 @@
 import { toast } from './app.svelte';
-import { addFromFlights, atlas, flightsMarked, setFlightsMarked, synced, userId } from './atlas.svelte';
+import { addFromFlights, atlas, putFlights, synced, userId } from './atlas.svelte';
 import { nameOf } from './countries';
-import { flightCountries, flightStats, legOf, loadAirlines, loadAirports, routeKey, type Airlines, type Airports } from './flights';
+import { flightStats, legOf, loadAirlines, loadAirports, routeKey, type Airlines, type Airports } from './flights';
 import { buildRoutes } from './map/routes';
 
 /* Gemeinsamer Stand für den Tab „Flüge“ (Kopf, Inhalt, Globus): Flughafen-/Airline-Liste (nachgeladen),
@@ -41,28 +41,29 @@ class FlightData {
 	tick() {
 		const t = Date.now();
 		if (!this.st || this.st.legs.some((l) => !l.done && !l.f.d.cx && l.doneAt <= t)) this.now = t;
-		this.syncCountries(); // geplanter Flug hat inzwischen stattgefunden: Land eintragen
+		this.syncCountries(); // geplanter Flug mit „als bereist eintragen“ hat inzwischen stattgefunden
 	}
-	/** Länder geflogener Flüge als bereist eintragen (samt Einreisedatum) – je Flug nur einmal, auch für Flüge,
-	    die stattgefunden haben, während die App zu war. Erst nach dem Abgleich mit dem Konto. `msg`: Meldung des Aufrufers,
-	    wird um die neuen Länder ergänzt. */
-	async syncCountries(msg = '') {
+	/** Geplante Flüge, bei denen „Land als bereist eintragen“ an war: hat der Flug stattgefunden (auch während die App zu war),
+	    Zielland eintragen (Einreise = Monat des Flugs) und den Vermerk entfernen – so kommt ein später gelöschtes Land nicht wieder.
+	    Erst nach dem Abgleich mit dem Konto. */
+	async syncCountries() {
 		const user = userId();
-		if (!user || !atlas.flights.length) return;
+		if (!user || !atlas.flights.some((f) => f.d.vc)) return;
 		await synced();
 		const ap = this.ap ?? (await this.load());
 		if (!ap || userId() !== user) return;
-		const seen = flightsMarked() ?? new Set<string>(),
-			t = Date.now();
-		const todo = atlas.flights.filter((f) => !seen.has(f.id) && legOf(f, ap, t).done).map((f) => f.id);
-		if (!todo.length) return;
-		const fresh = addFromFlights(flightCountries(atlas.flights, ap, new Set(todo), t));
-		// nur noch vorhandene Flüge merken, damit die Liste nicht wächst
-		const ids = new Set(atlas.flights.map((f) => f.id));
-		setFlightsMarked(new Set([...seen, ...todo].filter((id) => ids.has(id))));
-		if (!fresh.length) return;
-		const land = fresh.length === 1 ? `${nameOf(fresh[0])} als bereist eingetragen` : `${fresh.length} Länder als bereist eingetragen`;
-		toast(msg ? `${msg} · ${land}` : land);
+		const t = Date.now();
+		const due = atlas.flights.filter((f) => f.d.vc && legOf(f, ap, t).done);
+		if (!due.length) return;
+		const found = new Map<string, string>();
+		for (const f of due) {
+			const c = ap[f.d.div || f.to]?.[2],
+				m = f.date.slice(0, 7);
+			if (c && (!found.has(c) || m < found.get(c)!)) found.set(c, m);
+		}
+		putFlights(due.map(({ d: { vc: _v, ...d }, ...f }) => ({ ...f, d })));
+		const fresh = addFromFlights(found);
+		if (fresh.length) toast(fresh.length === 1 ? `${nameOf(fresh[0])} als bereist eingetragen` : `${fresh.length} Länder als bereist eingetragen`);
 	}
 	private loading: Promise<Airports | null> | null = null;
 	load(): Promise<Airports | null> {

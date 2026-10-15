@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { atlas, putFlights } from '$lib/atlas.svelte';
+	import { addFromFlights, atlas, putFlights, visitedSet } from '$lib/atlas.svelte';
 	import { closeFlightsPage, closeSheet, flashRoute, hooks, toast, ui } from '$lib/app.svelte';
 	import { tierName } from '$lib/badges';
 	import { flightBadges } from '$lib/flightBadges';
-	import { flag, nameOf } from '$lib/countries';
+	import { appCountry, flag, nameOf } from '$lib/countries';
 	import { fd } from '$lib/flightData.svelte';
 	import {
 		airlineFor,
@@ -183,6 +183,13 @@
 		}
 		return e;
 	});
+	// Zielland noch nicht bereist: Schalter „als bereist eintragen“ (an; aus bei nur Umsteigen). Flug in der Zukunft:
+	// Vermerk am Flug, das Land kommt nach dem Abflug dazu (fd.syncCountries)
+	const today = new Date().toLocaleDateString('sv-SE');
+	const land = $derived(B ? appCountry(B[2]) : '');
+	const askLand = $derived(!!land && from !== to && !visitedSet().has(land));
+	const later = $derived(isDay(date) && date > today);
+	let mark = $state(true);
 	const ready = $derived(!!ap && isDay(date) && !!from && !!to && from !== to && (!back || isDay(rdate)) && !problems.length);
 	const label = (c: string) => (ap?.[c] ? `${ap[c][0]}` : c);
 
@@ -215,11 +222,20 @@
 				ui.unlock = { key: ui.unlock.key + 1, cont: '', n: 0, rank: '', badge: b.name, badgeId: b.id, icon: b.icon, sub: `${tierName(b, b.level)} · ${b.fmt(b.v)} ${b.what}`, added: '', area: '' };
 			}, 1800 + k * 3900)
 		);
+		const markLand = askLand && mark;
+		if (markLand && list[0].date > today) list[0].d.vc = true;
 		atlas.lastFlightAddedAt = Date.now();
 		putFlights(list);
+		// geflogene Flüge: Zielland eintragen (Hinflug mit Schalter), Einreisedatum bereits bereister Länder ergänzen
+		const visited = visitedSet(),
+			found = new Map<string, string>();
+		for (const f of list) {
+			const c = appCountry(ap[f.to]?.[2] ?? '');
+			if (c && f.date <= today && (visited.has(c) || (f === list[0] && markLand)) && !found.has(c)) found.set(c, f.date.slice(0, 7));
+		}
+		const fresh = addFromFlights(found);
 		const msg = list.length > 1 ? `Hin- und Rückflug ${from} ⇄ ${to} hinzugefügt` : `Flug ${from} → ${to} hinzugefügt`;
-		toast(msg);
-		fd.syncCountries(msg); // neues Land: als bereist eintragen
+		toast(fresh.length ? `${msg} · ${nameOf(fresh[0])} als bereist eingetragen` : msg);
 		closeSheet();
 		closeFlightsPage(); // aus „Meine Flüge“ heraus: Liste schließen, damit der Globus zu sehen ist
 		// wie beim neuen Land: Globus fliegt zur neuen Strecke, die wächst; keine Seite öffnet sich
@@ -323,6 +339,17 @@
 				>
 			</div>
 		{/snippet}
+		{#if askLand}
+			<div class="fa-card">
+				<button type="button" class="fa-row fa-mark" role="switch" aria-checked={mark} onclick={() => (mark = !mark)}
+					><span class="fa-flag" aria-hidden="true">{flag(land)}</span><span class="fa-mk"
+						><b>{later ? `${nameOf(land)} eintragen, sobald du dort bist` : `${nameOf(land)} als bereist eintragen`}</b><small
+							>Nur umgestiegen? Dann ausschalten.</small
+						></span
+					><span class="fa-sw" class:on={mark} aria-hidden="true"></span></button
+				>
+			</div>
+		{/if}
 		{@render legCard(back ? `Hinflug ${from || ''} → ${to || ''}` : '', out, {
 			get: () => [date, no, dep, arr],
 			set: (i, v) => (i === 0 ? (date = v) : i === 1 ? (no = v) : i === 2 ? (dep = v) : (arr = v))

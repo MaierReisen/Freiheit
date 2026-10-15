@@ -1119,6 +1119,15 @@ button.pp-tile:active{transform:scale(.98)}
 .fa-plus{flex:none;padding:2px 8px;border-radius:999px;background:var(--surface);font-size:12px;font-weight:700;color:var(--primary)}
 .fa-preview{display:flex;align-items:center;gap:8px;margin:12px 2px 0;font-size:14px;font-weight:600;color:var(--muted)}
 .fa-head{min-height:44px;justify-content:space-between}
+.fa-mark{gap:12px}
+.fa-mark .fa-flag{flex:none;font-size:24px;line-height:1}
+.fa-mk{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.fa-mk b{font-size:15.5px;font-weight:600;line-height:1.3}
+.fa-mk small{font-size:13px;color:var(--muted)}
+.fa-sw{flex:none;position:relative;width:46px;height:28px;border-radius:999px;background:color-mix(in srgb,var(--muted) 40%,transparent);transition:background .2s}
+.fa-sw::after{content:'';position:absolute;top:2px;left:2px;width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:transform .2s}
+.fa-sw.on{background:var(--primary)}
+.fa-sw.on::after{transform:translateX(18px)}
 .fa-head .fa-k{width:auto;font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:var(--primary)}
 .fa-x{border:0;background:none;padding:6px 0;color:var(--muted);font-size:14px;font-weight:600}
 .fa-back{color:var(--primary);font-weight:600}

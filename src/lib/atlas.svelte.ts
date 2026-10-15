@@ -1,4 +1,4 @@
-import { CONT, CONT_VIEW, nameOf, type ContinentCode } from './countries';
+import { appCountry, CONT_VIEW, nameOf, type ContinentCode } from './countries';
 import { toast } from './app.svelte';
 import { DEFAULT_SCOPE, countsForContinent, inScope, isScope, type CountryScope } from './scope';
 import { supabase } from './supabase';
@@ -701,14 +701,12 @@ export function putFlights(list: Flight[]): { fresh: number; changed: number } {
 	enqueue(...(gone.length ? [{ t: 'removeFlights', ids: gone } as Op] : []), { t: 'putFlights', flights: changed });
 	return { fresh, changed: changed.length };
 }
-/** Überseegebiete, die in der App zum Mutterland gehören (Flughäfen haben dort eigene Ländercodes) */
-const PART_OF: Record<string, string> = { GP: 'FR', GF: 'FR', MQ: 'FR', RE: 'FR', YT: 'FR', BQ: 'NL' };
-/** Länder aus Flügen (Code → erster Monat „JJJJ-MM“): neue als bereist eintragen (älteste zuerst, wie von Hand mit Globus,
-    Feier-Karten und Stempel), fehlendes Einreisedatum ergänzen. Gibt die neu eingetragenen Länder zurück. */
+/** Länder aus Flügen (Ländercode des Flughafens → Monat „JJJJ-MM“): neue als bereist eintragen (älteste zuerst, wie von Hand
+    mit Globus, Feier-Karten und Stempel), fehlendes Einreisedatum ergänzen. Gibt die neu eingetragenen Länder zurück. */
 export function addFromFlights(found: Map<string, string>): string[] {
 	const first = new Map<string, string>();
 	for (const [c0, m] of found) {
-		const c = CONT[c0] ? c0 : PART_OF[c0];
+		const c = appCountry(c0);
 		if (c && (!first.has(c) || m < first.get(c)!)) first.set(c, m);
 	}
 	const have = new Map(atlas.data.countries.map((c) => [c.code, c]));
@@ -720,13 +718,6 @@ export function addFromFlights(found: Map<string, string>): string[] {
 	for (const [c, m] of first) if (have.has(c) && !have.get(c)!.entered) setEntered(c, m);
 	return fresh;
 }
-/** Flüge, deren Länder schon eingetragen wurden (je Konto auf dem Gerät; null = noch nie) – so kommt ein bewusst
-    gelöschtes Land nicht bei jedem Import wieder */
-export const flightsMarked = (): Set<string> | null => {
-	const v = uid ? readJson(`freiheit-flight-countries:${uid}`) : null;
-	return Array.isArray(v) ? new Set(v as string[]) : null;
-};
-export const setFlightsMarked = (ids: Set<string>) => uid && writeJson(`freiheit-flight-countries:${uid}`, [...ids]);
 export function removeFlights(ids: string[]) {
 	const del = new Set(ids);
 	if (!atlas.flights.some((f) => del.has(f.id))) return;

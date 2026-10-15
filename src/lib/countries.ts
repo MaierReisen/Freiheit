@@ -51,4 +51,8 @@ export const compareNames = (a: string, b: string): number => {
 export const flag = (c: string): string =>
 	/^[A-Z]{2}$/.test(c) ? String.fromCodePoint(...[...c].map((ch) => 127397 + ch.charCodeAt(0))) : '🏳️';
 
+/** Überseegebiete, die in der App zum Mutterland gehören (Flughäfen haben dort eigene Ländercodes) */
+const PART_OF: Record<string, string> = { GP: 'FR', GF: 'FR', MQ: 'FR', RE: 'FR', YT: 'FR', BQ: 'NL' };
+/** Ländercode eines Flughafens als Land der App ('' = unbekannt) */
+export const appCountry = (c: string): string => (CONT[c] ? c : (PART_OF[c] ?? ''));
 export const contOf = (c: string): string => CONT_NAMES[CONT[c]] || '';
