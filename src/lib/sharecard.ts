@@ -34,7 +34,7 @@ export const UNB = `'Unbounded','Arial Black',system-ui,sans-serif`,
 export const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 export const r1 = (v: number) => Math.round(v * 10) / 10;
 /** Stempel immer in den hellen Farben (unabhängig vom Dunkelmodus) */
-const STYLE = `.sc{--paper:#FFFDF8;--st-teal:#0E6E74;--st-coral:#D9573B;--st-gold:#B07800;--st-blue:#2F6FB5;--st-plum:#7A3E8E;--st-green:#2E7D4F;--st-red:#C0392B;--st-navy:#1F3F6E;--st-brown:#9A4F1E;--stp:#FFFFFF;--stg:#D6A740;--stt:16%;--sv1:#6A3CC8;--sv2:#C4B0FF;--sv3:#F1EBFF;--tk1:#2F7FD8;--rc1:#2F7FD8;--rc2:#7444D8;--rc3:#A57B16}
+export const STYLE = `.sc{--paper:#FFFDF8;--st-teal:#0E6E74;--st-coral:#D9573B;--st-gold:#B07800;--st-blue:#2F6FB5;--st-plum:#7A3E8E;--st-green:#2E7D4F;--st-red:#C0392B;--st-navy:#1F3F6E;--st-brown:#9A4F1E;--stp:#FFFFFF;--stg:#D6A740;--stt:16%;--sv1:#6A3CC8;--sv2:#C4B0FF;--sv3:#F1EBFF;--tk1:#2F7FD8;--rc1:#2F7FD8;--rc2:#7444D8;--rc3:#A57B16}
 .sc-st .d{font-family:${UNB};font-weight:800;fill:currentColor;stroke:none}
 .sc-st .t{font-family:${FIG};font-weight:700;fill:currentColor;stroke:none}
 .sc-st .k{font-family:${FIG};font-weight:700;fill:var(--paper);stroke:none}
@@ -61,18 +61,18 @@ export function xml(svg: string) {
 }
 
 /** Schein seltener Marken wie im Pass (.pp-stamp.sp.r1–r3 in app.css): Rare blau, Epic lila, Legendary gold; Größe relativ zur Marke */
-const GLOW_FILTERS = ([['2F7FD8', 0.45], ['8B5CF6', 0.55], ['D6A740', 0.6]] as const)
+export const GLOW_FILTERS = ([['2F7FD8', 0.45], ['8B5CF6', 0.55], ['D6A740', 0.6]] as const)
 	.map(([c, o], i) => `<filter id="scG${i + 1}" x="-25%" y="-25%" width="150%" height="150%" primitiveUnits="objectBoundingBox"><feDropShadow dx="0" dy="0" stdDeviation=".035" flood-color="#${c}" flood-opacity="${o}"/></filter>`)
 	.join('');
 /** Stempel in ein Feld (x, y, w, h) setzen, gedreht um seine Mitte */
-function place(s: Stamp, x: number, y: number, w: number, h: number, rot: number, shadow = false) {
+export function place(s: Stamp, x: number, y: number, w: number, h: number, rot: number, shadow = false) {
 	const svg = xml(s.svg).replace(/^<svg class="pp-stamp([^"]*)"/, `<svg x="${r1(x)}" y="${r1(y)}" width="${r1(w)}" height="${r1(h)}" class="sc-st$1"`),
 		tier = /^<svg class="pp-stamp sp r([123])/.exec(s.svg)?.[1],
 		inner = tier ? `<g filter="url(#scG${tier})">${svg}</g>` : svg;
 	return `<g transform="rotate(${rot} ${r1(x + w / 2)} ${r1(y + h / 2)})" style="color:${s.color}"${shadow ? ' filter="url(#scSh)"' : ''}>${inner}</g>`;
 }
 /** seltenste zuerst (Legendary, Epic, Rare), danach in Reihenfolge der Länder */
-const rarest = (st: ShareStamp[]) => [...st].sort((a, b) => b.sp - a.sp || (a.nr || 1e4) - (b.nr || 1e4));
+export const rarest = (st: ShareStamp[]) => [...st].sort((a, b) => b.sp - a.sp || (a.nr || 1e4) - (b.nr || 1e4));
 /** grobe Textbreite (für Pillen und Umbrüche) */
 export const tw = (s: string, size: number, k = 0.56) => [...s].reduce((w, ch) => w + (/\p{Extended_Pictographic}/u.test(ch) ? 1.15 : /[A-ZÄÖÜ]/.test(ch) ? k * 1.18 : k), 0) * size;
 /** Breite in der Zahlen-Schrift Unbounded 800 (gemessen, sehr breit: Ziffern fast 1 em); mit etwas Reserve */
@@ -89,18 +89,19 @@ const MAP_H = 640; // Zielhöhe bei 992 Breite
 const SOUTH = -73; // Antarktis nur als Küstenstreifen andeuten
 const mapCache = new Map<string, { h: number; y0: number; inner: string }>();
 /** Karte in der Breite w; liefert die Höhe und das SVG an Position (x, y) */
-function worldMap(visited: Set<string>, w: number, on: string, off: string) {
-	const key = [...visited].sort().join(',') + `|${w}|${on}|${off}`;
+/** prev + mid: schon früher bereiste Länder in einer dritten Farbe (Reisejahr) */
+export function worldMap(visited: Set<string>, w: number, on: string, off: string, prev?: Set<string>, mid = off) {
+	const key = [...visited].sort().join(',') + `|${w}|${on}|${off}|` + (prev ? [...prev].sort().join(',') + mid : '');
 	let m = mapCache.get(key);
 	if (!m) {
-		m = buildMap(visited, w, on, off);
+		m = buildMap(visited, w, on, off, prev, mid);
 		if (mapCache.size > 4) mapCache.clear();
 		mapCache.set(key, m);
 	}
 	const { h, y0, inner } = m;
 	return { h, at: (x: number, y: number) => `<svg x="${x}" y="${y}" width="${w}" height="${h}" viewBox="0 ${y0} ${w} ${h}">${inner}</svg>` };
 }
-function buildMap(visited: Set<string>, w: number, on: string, off: string) {
+function buildMap(visited: Set<string>, w: number, on: string, off: string, prev?: Set<string>, mid = off) {
 	const lod = getLod('v1')!;
 	// eng an die Landmassen: höher als eine Weltkarte mit gebogenen Rändern, Karte wird größer
 	const land = lod.feats;
@@ -115,14 +116,16 @@ function buildMap(visited: Set<string>, w: number, on: string, off: string) {
 	const path = geoPath(proj).digits(1);
 	// nur die tatsächliche Fläche einfärben – keine Ersatz-Punkte für Zwergstaaten und kleine Inseln
 	let v = '',
+		p = '',
 		o = '';
 	for (const f of land) {
 		const d = path(f) ?? '';
 		if (visited.has(f.id)) v += d;
+		else if (prev?.has(f.id)) p += d;
 		else o += d;
 	}
 	const h = Math.ceil(y1 - y0);
-	return { h, y0: r1(y0), inner: `<path d="${o}" fill="${off}"/><path d="${v}" fill="${on}"/>` };
+	return { h, y0: r1(y0), inner: `<path d="${o}" fill="${off}"/>` + (p ? `<path d="${p}" fill="${mid}"/>` : '') + `<path d="${v}" fill="${on}"/>` };
 }
 
 /* ---------- Variante „Pass-Umschlag“ ---------- */

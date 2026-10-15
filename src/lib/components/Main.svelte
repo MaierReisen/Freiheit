@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { TABS, closeCapitals, closeContinents, reduceMotion, closeFlightsPage, closeFlightPass, closePass, closePlaces, closeSettings, closeSheet, goTab, initFromHash, onHashChange, setFull, startIntro, ui } from '$lib/app.svelte';
+	import { TABS, closeCapitals, closeYear, closeContinents, reduceMotion, closeFlightsPage, closeFlightPass, closePass, closePlaces, closeSettings, closeSheet, goTab, initFromHash, onHashChange, setFull, startIntro, ui } from '$lib/app.svelte';
 	import ContinentChips from './ContinentChips.svelte';
 	import Hero from './Hero.svelte';
 	import SettingsView from './SettingsView.svelte';
@@ -12,9 +12,11 @@
 	import PlacesTile from './PlacesTile.svelte';
 	import ContinentsTile from './ContinentsTile.svelte';
 	import CapitalsTile from './CapitalsTile.svelte';
+	import YearTile from './YearTile.svelte';
 	import PlacesView from './PlacesView.svelte';
 	import ContinentsView from './ContinentsView.svelte';
 	import CapitalsView from './CapitalsView.svelte';
+	import YearView from './YearView.svelte';
 	import WorldMap from './WorldMap.svelte';
 	import FlightsTab from './FlightsTab.svelte';
 	import FlightsHero from './FlightsHero.svelte';
@@ -37,6 +39,10 @@
 		}
 		if (ui.capitalsOpen && !ui.sheetOpen && !ui.settingsOpen && !ui.passOpen) {
 			closeCapitals(false);
+			return;
+		}
+		if (ui.yearOpen && !ui.sheetOpen && !ui.settingsOpen && !ui.passOpen) {
+			closeYear(false);
 			return;
 		}
 		if (ui.flightsPage && !ui.sheetOpen && !ui.settingsOpen) {
@@ -116,7 +122,7 @@
 	}
 	function onTouchStart(e: TouchEvent) {
 		if (swipe || settling) return;
-		if (TABS.length < 2 || e.touches.length !== 1 || ui.full || ui.flightsPage || ui.placesOpen || ui.continentsOpen || ui.capitalsOpen || ui.sheetOpen || ui.settingsOpen || ui.passOpen || ui.fpOpen) return;
+		if (TABS.length < 2 || e.touches.length !== 1 || ui.full || ui.flightsPage || ui.placesOpen || ui.continentsOpen || ui.capitalsOpen || ui.yearOpen || ui.sheetOpen || ui.settingsOpen || ui.passOpen || ui.fpOpen) return;
 		const target = e.target as Element | null;
 		if (!target?.closest?.('#appMain') || target.closest('input,textarea,select,.continents,.chips,.sheet')) return;
 		if (ui.mapActive && target.closest('#mapBox')) return;
@@ -233,6 +239,7 @@
 			if (ui.placesOpen) closePlaces(true);
 			if (ui.continentsOpen) closeContinents(true);
 			if (ui.capitalsOpen) closeCapitals(true);
+			if (ui.yearOpen) closeYear(true);
 			closeFlightsPage();
 			document.body.classList.remove('noscroll');
 		};
@@ -261,6 +268,7 @@
 				<PlacesTile />
 				<ContinentsTile />
 				<CapitalsTile />
+				<YearTile />
 			</div>
 		</div>
 	</main>
@@ -274,5 +282,6 @@
 <PlacesView />
 <ContinentsView />
 <CapitalsView />
+<YearView />
 <Sheet />
 <ContinentUnlock />

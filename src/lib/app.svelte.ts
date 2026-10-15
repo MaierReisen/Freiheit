@@ -95,6 +95,8 @@ export const ui = $state({
 	continentsOpen: false,
 	/** Seite „Meine Hauptstädte“ (Vollbild, über den Block auf der Startseite) */
 	capitalsOpen: false,
+	/** Seite „Mein Reisejahr“ (Vollbild, über den Block auf der Startseite) */
+	yearOpen: false,
 	full: false,
 	settingsOpen: false,
 	/** Reisepass (Vollbild, über die Kachel in der Länderliste) */
@@ -297,6 +299,7 @@ export function openSettings(fromHash = false) {
 	if (ui.placesOpen) closePlaces(true);
 	if (ui.continentsOpen) closeContinents(true);
 	if (ui.capitalsOpen) closeCapitals(true);
+	if (ui.yearOpen) closeYear(true);
 	if (ui.passOpen) closePass(true);
 	closeFlightsPage();
 	settingsReturnFocus = document.activeElement;
@@ -322,6 +325,7 @@ export function openPlaces(fromHash = false) {
 	if (ui.passOpen) closePass(true);
 	if (ui.continentsOpen) closeContinents(true);
 	if (ui.capitalsOpen) closeCapitals(true);
+	if (ui.yearOpen) closeYear(true);
 	placesReturnFocus = document.activeElement;
 	ui.placesOpen = true;
 	document.body.classList.add('noscroll');
@@ -345,6 +349,7 @@ export function openContinents(fromHash = false) {
 	if (ui.passOpen) closePass(true);
 	if (ui.placesOpen) closePlaces(true);
 	if (ui.capitalsOpen) closeCapitals(true);
+	if (ui.yearOpen) closeYear(true);
 	contsReturnFocus = document.activeElement;
 	ui.continentsOpen = true;
 	document.body.classList.add('noscroll');
@@ -355,7 +360,7 @@ export function closeContinents(fromHash = false, refocus = true) {
 	if (!ui.continentsOpen) return;
 	ui.continentsOpen = false;
 	if (ui.sheetOpen) closeSheet();
-	if (!ui.settingsOpen && !ui.passOpen && !ui.placesOpen && !ui.capitalsOpen) document.body.classList.remove('noscroll');
+	if (!ui.settingsOpen && !ui.passOpen && !ui.placesOpen && !ui.capitalsOpen && !ui.yearOpen) document.body.classList.remove('noscroll');
 	if (refocus && contsReturnFocus instanceof HTMLElement) contsReturnFocus.focus({ preventScroll: true });
 }
 
@@ -369,6 +374,7 @@ export function openCapitals(fromHash = false) {
 	if (ui.passOpen) closePass(true);
 	if (ui.placesOpen) closePlaces(true);
 	if (ui.continentsOpen) closeContinents(true);
+	if (ui.yearOpen) closeYear(true);
 	capsReturnFocus = document.activeElement;
 	ui.capitalsOpen = true;
 	document.body.classList.add('noscroll');
@@ -378,8 +384,32 @@ export function closeCapitals(fromHash = false) {
 	if (!ui.capitalsOpen) return;
 	ui.capitalsOpen = false;
 	if (ui.sheetOpen) closeSheet();
-	if (!ui.settingsOpen && !ui.passOpen && !ui.placesOpen && !ui.continentsOpen) document.body.classList.remove('noscroll');
+	if (!ui.settingsOpen && !ui.passOpen && !ui.placesOpen && !ui.continentsOpen && !ui.yearOpen) document.body.classList.remove('noscroll');
 	if (capsReturnFocus instanceof HTMLElement) capsReturnFocus.focus({ preventScroll: true });
+}
+
+/* ---------- Mein Reisejahr (Vollbild, wie „Meine Hauptstädte“) ---------- */
+let yearReturnFocus: Element | null = null;
+export function openYear(fromHash = false) {
+	if (ui.yearOpen) return;
+	if (ui.sheetOpen) closeSheet();
+	if (ui.full) setFull(false, true);
+	if (ui.settingsOpen) closeSettings(true);
+	if (ui.passOpen) closePass(true);
+	if (ui.placesOpen) closePlaces(true);
+	if (ui.continentsOpen) closeContinents(true);
+	if (ui.capitalsOpen) closeCapitals(true);
+	yearReturnFocus = document.activeElement;
+	ui.yearOpen = true;
+	document.body.classList.add('noscroll');
+	tick().then(() => document.getElementById('yearClose')?.focus({ preventScroll: true }));
+}
+export function closeYear(fromHash = false) {
+	if (!ui.yearOpen) return;
+	ui.yearOpen = false;
+	if (ui.sheetOpen) closeSheet();
+	if (!ui.settingsOpen && !ui.passOpen && !ui.placesOpen && !ui.continentsOpen && !ui.capitalsOpen) document.body.classList.remove('noscroll');
+	if (yearReturnFocus instanceof HTMLElement) yearReturnFocus.focus({ preventScroll: true });
 }
 
 /* ---------- Reisepass (Vollbild, wie die Einstellungen) ---------- */
@@ -391,6 +421,7 @@ export function openPass(fromHash = false) {
 	if (ui.placesOpen) closePlaces(true);
 	if (ui.continentsOpen) closeContinents(true);
 	if (ui.capitalsOpen) closeCapitals(true);
+	if (ui.yearOpen) closeYear(true);
 	if (ui.fpOpen) closeFlightPass(true);
 	passReturnFocus = document.activeElement;
 	ui.passOpen = true;
@@ -415,6 +446,7 @@ export function openFlightPass(fromHash = false) {
 	if (ui.placesOpen) closePlaces(true);
 	if (ui.continentsOpen) closeContinents(true);
 	if (ui.capitalsOpen) closeCapitals(true);
+	if (ui.yearOpen) closeYear(true);
 	closeFlightsPage();
 	fpReturnFocus = document.activeElement;
 	ui.fpOpen = true;
@@ -441,7 +473,7 @@ export function openFlightsPage(p: FlightsPage) {
 export function closeFlightsPage() {
 	if (!ui.flightsPage) return;
 	ui.flightsPage = '';
-	if (!ui.settingsOpen && !ui.passOpen && !ui.fpOpen && !ui.placesOpen && !ui.continentsOpen && !ui.capitalsOpen) document.body.classList.remove('noscroll');
+	if (!ui.settingsOpen && !ui.passOpen && !ui.fpOpen && !ui.placesOpen && !ui.continentsOpen && !ui.capitalsOpen && !ui.yearOpen) document.body.classList.remove('noscroll');
 	if (flightsReturnFocus instanceof HTMLElement) flightsReturnFocus.focus({ preventScroll: true });
 }
 
@@ -467,6 +499,7 @@ export function goTab(tab: string, push = true, dir?: number) {
 	if (ui.placesOpen) closePlaces(true);
 	if (ui.continentsOpen) closeContinents(true);
 	if (ui.capitalsOpen) closeCapitals(true);
+	if (ui.yearOpen) closeYear(true);
 	if (ui.settingsOpen) closeSettings(true);
 	if (ui.passOpen) closePass(true);
 	if (ui.fpOpen) closeFlightPass(true);
@@ -496,6 +529,9 @@ export function initFromHash() {
 	} else if (h === 'hauptstaedte') {
 		showTab('home', 0);
 		openCapitals(true);
+	} else if (h === 'reisejahr') {
+		showTab('home', 0);
+		openYear(true);
 	} else if (isSettingsHash(h)) {
 		showTab('home', 0);
 		openSettings(true);
@@ -515,6 +551,7 @@ export function onHashChange() {
 		if (ui.placesOpen) closePlaces(true);
 		if (ui.continentsOpen) closeContinents(true);
 		if (ui.capitalsOpen) closeCapitals(true);
+		if (ui.yearOpen) closeYear(true);
 		if (ui.settingsOpen) closeSettings(true);
 		if (ui.tab !== 'home') showTab('home', 0);
 		setFull(true, true);
@@ -545,11 +582,17 @@ export function onHashChange() {
 		if (ui.full) setFull(false, true);
 		if (ui.tab !== 'home') showTab('home', 0);
 		openCapitals(true);
+	} else if (h === 'reisejahr') {
+		if (ui.settingsOpen) closeSettings(true);
+		if (ui.full) setFull(false, true);
+		if (ui.tab !== 'home') showTab('home', 0);
+		openYear(true);
 	} else {
 		if (ui.full) setFull(false, true);
 		if (ui.placesOpen) closePlaces(true);
 		if (ui.continentsOpen) closeContinents(true);
 		if (ui.capitalsOpen) closeCapitals(true);
+		if (ui.yearOpen) closeYear(true);
 		if (ui.settingsOpen) closeSettings(true);
 		if (ui.passOpen) closePass(true);
 		if (ui.fpOpen) closeFlightPass(true);
