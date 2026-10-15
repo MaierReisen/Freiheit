@@ -1118,6 +1118,35 @@ button.pp-tile:active{transform:scale(.98)}
 .fa-no input{text-transform:uppercase}
 .fa-no input::placeholder{text-transform:none}
 .fa-plus{flex:none;padding:2px 8px;border-radius:999px;background:var(--surface);font-size:12px;font-weight:700;color:var(--primary)}
+/* Flug-Seite (FlightSheet): Art der Seite über dem Titel (auch Strecken-Seite), Bordkarte, Angaben direkt änderbar */
+.sh-kind{display:block;margin-bottom:1px;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--primary)}
+.fs-pass{position:relative;margin-top:6px;border-radius:20px;background:linear-gradient(160deg,color-mix(in srgb,var(--primary) 26%,var(--chip)),var(--chip) 70%);border:1.5px solid color-mix(in srgb,var(--primary) 40%,transparent);color:var(--ink)}
+.fs-pass.plan{border-style:dashed}
+.fs-top{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:13px 16px 0;font-size:13px;font-weight:600;color:var(--muted)}
+.fs-top span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fs-top b{flex:none;font:800 14px var(--display);letter-spacing:.04em;color:var(--primary)}
+.fs-mid{display:flex;align-items:center;gap:6px;padding:8px 12px 14px}
+.fs-ap{flex:1;min-width:0;display:flex;flex-direction:column;align-items:flex-start;padding:4px;border:0;background:none;color:inherit;text-align:left;font:inherit;cursor:pointer;border-radius:12px}
+.fs-ap.r{align-items:flex-end;text-align:right}
+.fs-ap:active{background:color-mix(in srgb,var(--primary) 12%,transparent)}
+.fs-ap small{font-size:11.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.fs-ap b{font:800 34px/1.05 var(--display);letter-spacing:.02em}
+.fs-ap span{max-width:100%;font-size:13.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fs-ap em{margin-top:4px;font:700 18px var(--text);font-style:normal;font-variant-numeric:tabular-nums}
+.fs-line{flex:none;display:flex;flex-direction:column;align-items:center;gap:4px;width:84px;color:var(--primary)}
+.fs-line svg{width:30px;height:30px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.fs-line span{font-size:12px;font-weight:600;color:var(--muted);white-space:nowrap}
+.fs-cut{position:relative;height:0;margin:0 14px;border-top:2px dashed color-mix(in srgb,var(--muted) 45%,transparent)}
+.fs-cut::before,.fs-cut::after{content:'';position:absolute;top:-12px;width:22px;height:22px;border-radius:50%;background:var(--surface);border:1.5px solid color-mix(in srgb,var(--primary) 40%,transparent)}
+.fs-cut::before{left:-27px;clip-path:inset(0 0 0 50%)}
+.fs-cut::after{right:-27px;clip-path:inset(0 50% 0 0)}
+.fs-bot{display:grid;grid-template-columns:1.5fr 1fr 1.2fr 1.1fr;gap:8px;padding:13px 16px 15px}
+.fs-bot div{min-width:0;display:flex;flex-direction:column;gap:2px}
+.fs-bot small{font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.fs-bot b{font-size:14px;line-height:1.25;overflow-wrap:anywhere}
+.fs-saved{color:var(--primary)!important}
+.fs-ro{justify-content:flex-end;font-weight:600;color:var(--muted)}
+.fs-links{margin-top:18px}
 .fs-del{display:flex;justify-content:center;margin:22px 0 0}
 .fa-ask{flex:none;margin:16px 2px 8px;font:800 20px/1.25 var(--display);color:var(--ink)}
 .fa-step{display:block;margin-bottom:3px;font:700 12.5px var(--text);letter-spacing:.04em;text-transform:uppercase;color:var(--primary)}

@@ -81,6 +81,7 @@
 			onclick={() => ui.sheetDetent === 'peek' && setSheetDetent('full')}
 			onkeydown={(e) => e.key === 'Enter' && ui.sheetDetent === 'peek' && setSheetDetent('full')}
 		>
+			<span class="sh-kind">Strecke · alle Flüge</span>
 			<h3 id="sheetTitle" class="rs-title" class:long={city(a).length + city(b).length > 16} class:xlong={city(a).length + city(b).length > 24}>{city(a)} – {city(b)}</h3>
 			<div class="cs-sub">{a} ⇄ {b}{km ? ` · ${fmtInt(km)} km` : ''}</div>
 		</div>
@@ -160,7 +161,7 @@
 				</SwipeRow>
 			{/each}
 		</ul>
-		<p class="note rs-hint">Flug antippen für Details und Bearbeiten{legs.length > 1 ? ', nach links wischen zum Entfernen' : ''}.</p>
+		<p class="note rs-hint">Flug antippen, um ihn anzusehen oder zu ändern{legs.length > 1 ? ' · nach links wischen zum Entfernen' : ''}.</p>
 	{:else}
 		<p class="cs-note">Auf dieser Strecke ist kein Flug mehr eingetragen.</p>
 	{/if}
