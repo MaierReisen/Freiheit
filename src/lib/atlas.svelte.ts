@@ -54,9 +54,13 @@ export interface Settings {
 	countryScope: CountryScope;
 	/** gesammelte Weltwunder (ids aus wonders.ts), Spalte „wonders“ (Migration 007) */
 	wonders: string[];
+	/** besuchte Hauptstädte (Ländercodes, Hauptstadt aus facts.json), Spalte „capitals“ (Migration 009) */
+	capitals: string[];
 }
-export const defaultSettings = (): Settings => ({ homeContinent: 'EU', countryScope: DEFAULT_SCOPE, wonders: [] });
+export const defaultSettings = (): Settings => ({ homeContinent: 'EU', countryScope: DEFAULT_SCOPE, wonders: [], capitals: [] });
 const wonderList = (v: unknown): string[] | null => (Array.isArray(v) ? [...new Set(v.filter(isWonder))] : null);
+const capitalList = (v: unknown): string[] | null =>
+	Array.isArray(v) ? [...new Set(v.filter((c): c is string => typeof c === 'string' && /^[A-Z]{2}$/.test(c)))] : null;
 const isContinent = (c: unknown): c is ContinentCode => typeof c === 'string' && c in CONT_VIEW;
 
 type Op =
@@ -180,6 +184,11 @@ export const isCounted = (code: string) => inScope(code, atlas.settings.countryS
 /** Bereiste Länder, die in der gewählten Liste zählen (in Reihenfolge = "Land Nr. X") */
 export const countedCountries = () => atlas.data.countries.filter((c) => isCounted(c.code));
 /** Bereiste Stempel, die für Kontinente und Abzeichen zählen (Länder der Liste plus Antarktis) */
+/** besuchte Hauptstädte, die zählen: nur von bereisten Ländern der gewählten Länderliste */
+export const countedCapitals = () => {
+	const have = new Set(countedCountries().map((c) => c.code));
+	return atlas.settings.capitals.filter((c) => have.has(c));
+};
 export const continentCountries = () => atlas.data.countries.filter((c) => countsForContinent(c.code, atlas.settings.countryScope));
 export const isEntered = (v: unknown): v is string => typeof v === 'string' && /^\d{4}(-(0[1-9]|1[0-2]))?$/.test(v);
 export const wishSet = () => new Set(atlas.data.wishlist.map((c) => c.code));
@@ -225,8 +234,9 @@ async function runOp(op: Op, user: string) {
 			return;
 		case 'settings': {
 			const row = { user_id: user, home_continent: op.s.homeContinent, country_scope: op.s.countryScope, updated_at: new Date().toISOString() };
-			let r = await supabase.from('user_settings').upsert({ ...row, wonders: op.s.wonders ?? [] });
-			// Spalte „wonders“ fehlt (Migration 007): übrige Einstellungen trotzdem speichern, Weltwunder bleiben auf dem Gerät
+			let r = await supabase.from('user_settings').upsert({ ...row, wonders: op.s.wonders ?? [], capitals: op.s.capitals ?? [] });
+			// Spalte „capitals“ (Migration 009) bzw. „wonders“ (007) fehlt: übrige Einstellungen trotzdem speichern, Rest bleibt auf dem Gerät
+			if (r.error && noColumn(r.error)) r = await supabase.from('user_settings').upsert({ ...row, wonders: op.s.wonders ?? [] });
 			if (r.error && noColumn(r.error)) r = await supabase.from('user_settings').upsert(row);
 			// Tabelle noch nicht angelegt (Migration fehlt): Einstellung bleibt lokal, Warteschlange nicht blockieren
 			// bzw. Spalte fehlt (PGRST204): Einstellung bleibt lokal, Warteschlange nicht blockieren
@@ -323,15 +333,17 @@ async function pull() {
 	]);
 	if (uid === user) syncFlights(user, fl as unknown as { data: FlightRow[] | null; error: { code?: string } | null });
 	if (!st.error && st.data && uid === user && !queue.some((o) => o.t === 'settings')) {
-		const remote = wonderList(st.data.wonders);
+		const remote = wonderList(st.data.wonders),
+			remoteCaps = capitalList(st.data.capitals);
 		const next = {
 			...atlas.settings,
 			homeContinent: isContinent(st.data.home_continent) ? st.data.home_continent : 'EU',
 			countryScope: isScope(st.data.country_scope) ? st.data.country_scope : atlas.settings.countryScope,
 			// ohne Spalte bzw. im Konto noch leer: auf dem Gerät gesammelte Weltwunder behalten (und hochladen)
-			wonders: remote?.length ? remote : atlas.settings.wonders
+			wonders: remote?.length ? remote : atlas.settings.wonders,
+			capitals: remoteCaps?.length ? remoteCaps : atlas.settings.capitals
 		};
-		if (remote && !remote.length && next.wonders.length) enqueue({ t: 'settings', s: { ...next } });
+		if ((remote && !remote.length && next.wonders.length) || (remoteCaps && !remoteCaps.length && next.capitals.length)) enqueue({ t: 'settings', s: { ...next } });
 		// nur bei echten Änderungen setzen (sonst wird alles neu aufgebaut und gezeichnet → Ruckler)
 		if (JSON.stringify(next) !== JSON.stringify(atlas.settings)) atlas.settings = next;
 		writeJson(settingsKey(user), atlas.settings);
@@ -437,7 +449,8 @@ export function loadCache(userId: string) {
 		...defaultSettings(),
 		...(st && isContinent(st.homeContinent) ? { homeContinent: st.homeContinent } : {}),
 		...(st && isScope(st.countryScope) ? { countryScope: st.countryScope } : {}),
-		wonders: wonderList(st?.wonders) ?? []
+		wonders: wonderList(st?.wonders) ?? [],
+		capitals: capitalList(st?.capitals) ?? []
 	};
 	const fl = readJson(flightsKey(userId));
 	atlas.flights = Array.isArray(fl) ? (fl as Flight[]) : [];
@@ -602,12 +615,21 @@ export function setWonder(id: string, on: boolean) {
 	enqueue({ t: 'settings', s: { ...atlas.settings } });
 }
 
+/** Hauptstadt eines Landes als besucht eintragen bzw. wieder entfernen */
+export function setCapital(code: string, on: boolean) {
+	const has = atlas.settings.capitals.includes(code);
+	if (has === on) return;
+	atlas.settings = { ...atlas.settings, capitals: on ? [...atlas.settings.capitals, code] : atlas.settings.capitals.filter((c) => c !== code) };
+	if (uid) writeJson(settingsKey(uid), atlas.settings);
+	enqueue({ t: 'settings', s: { ...atlas.settings } });
+}
+
 /** Alle Daten des Kontos zurücksetzen (Länder, Wunschliste, Meilensteine, Stempel-Lose, Weltwunder); Konto, Startregion und Länderliste bleiben.
     Nur für Tests. Stempel-Lose und „Pass gesehen“ löschen die Aufrufer (eigene Module). */
 export function resetAccountData() {
 	const d = emptyAtlas();
 	atlas.data = d;
-	atlas.settings = { ...atlas.settings, wonders: [] };
+	atlas.settings = { ...atlas.settings, wonders: [], capitals: [] };
 	atlas.lastAddedAt = 0;
 	atlas.lastAddedCodes = [];
 	const flightIds = atlas.flights.map((f) => f.id);

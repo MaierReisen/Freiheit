@@ -19,6 +19,7 @@ const CASES = [
   ['/passtest?n=75', '75 Länder', 10],
   ['/laendertest?offen', 'Meine Länder', 3],
   ['/laendertest?kontinente', 'Meine Kontinente', 3],
+  ['/laendertest?hauptstaedte', 'Wien', 3],
   ['/stempeltest?c=FR,IT', 'FRANKREICH', 5],
 ];
 
