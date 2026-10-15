@@ -211,6 +211,8 @@
 		// mehrere Länder auf einmal: ruhiger, weiterer Flug zum zuletzt gewählten (das leuchtet auf), statt Hin-und-her-Springen
 		const all = [...atlas.lastAddedCodes];
 		stopTour();
+		// im Tab „Flüge“ (Land kam mit einem Flug): Globus bleibt bei der Strecke
+		if (untrack(() => ui.tab) === 'flights') return;
 		if (all.length < 2) {
 			map.flyToCountry(code, { ms: 1300, zoom: 0.3 });
 			map.highlight(code, reduceMotion() ? 0 : 950); // leuchtet auf, wenn der Globus ankommt

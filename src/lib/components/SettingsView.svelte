@@ -67,15 +67,15 @@
 			const list = parseFlighty(await f.text());
 			if (!list.length) throw new Error('leer');
 			const r = putFlights(list);
-			toast(
-				r.fresh
-					? `${r.fresh} ${r.fresh === 1 ? 'Flug' : 'Flüge'} neu eingelesen`
-					: r.changed
-						? `${r.changed} ${r.changed === 1 ? 'Flug' : 'Flüge'} aktualisiert`
-						: 'Alle Flüge waren schon da'
-			);
+			const msg = r.fresh
+				? `${r.fresh} ${r.fresh === 1 ? 'Flug' : 'Flüge'} neu eingelesen`
+				: r.changed
+					? `${r.changed} ${r.changed === 1 ? 'Flug' : 'Flüge'} aktualisiert`
+					: 'Alle Flüge waren schon da';
+			toast(msg);
 			fd.load();
 			if (r.fresh) ui.flightsFit++;
+			fd.syncCountries(msg); // Länder neuer Flüge als bereist eintragen
 		} catch {
 			toast('Datei nicht lesbar. Erwartet wird der Export aus Flighty.');
 		}

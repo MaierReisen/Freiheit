@@ -1,5 +1,7 @@
-import { atlas } from './atlas.svelte';
-import { flightStats, loadAirlines, loadAirports, routeKey, type Airlines, type Airports } from './flights';
+import { toast } from './app.svelte';
+import { addFromFlights, atlas, flightsMarked, setFlightsMarked, synced, userId } from './atlas.svelte';
+import { nameOf } from './countries';
+import { flightCountries, flightStats, legOf, loadAirlines, loadAirports, routeKey, type Airlines, type Airports } from './flights';
 import { buildRoutes } from './map/routes';
 
 /* Gemeinsamer Stand für den Tab „Flüge“ (Kopf, Inhalt, Globus): Flughafen-/Airline-Liste (nachgeladen),
@@ -39,19 +41,43 @@ class FlightData {
 	tick() {
 		const t = Date.now();
 		if (!this.st || this.st.legs.some((l) => !l.done && !l.f.d.cx && l.doneAt <= t)) this.now = t;
+		this.syncCountries(); // geplanter Flug hat inzwischen stattgefunden: Land eintragen
 	}
-	private loading = false;
-	load() {
-		if (this.ap || this.loading) return;
-		this.loading = true;
-		Promise.all([loadAirports(), loadAirlines()])
+	/** Länder geflogener Flüge als bereist eintragen (samt Einreisedatum) – je Flug nur einmal, auch für Flüge,
+	    die stattgefunden haben, während die App zu war. Erst nach dem Abgleich mit dem Konto. `msg`: Meldung des Aufrufers,
+	    wird um die neuen Länder ergänzt. */
+	async syncCountries(msg = '') {
+		const user = userId();
+		if (!user || !atlas.flights.length) return;
+		await synced();
+		const ap = this.ap ?? (await this.load());
+		if (!ap || userId() !== user) return;
+		const seen = flightsMarked() ?? new Set<string>(),
+			t = Date.now();
+		const todo = atlas.flights.filter((f) => !seen.has(f.id) && legOf(f, ap, t).done).map((f) => f.id);
+		if (!todo.length) return;
+		const fresh = addFromFlights(flightCountries(atlas.flights, ap, new Set(todo), t));
+		// nur noch vorhandene Flüge merken, damit die Liste nicht wächst
+		const ids = new Set(atlas.flights.map((f) => f.id));
+		setFlightsMarked(new Set([...seen, ...todo].filter((id) => ids.has(id))));
+		if (!fresh.length) return;
+		const land = fresh.length === 1 ? `${nameOf(fresh[0])} als bereist eingetragen` : `${fresh.length} Länder als bereist eingetragen`;
+		toast(msg ? `${msg} · ${land}` : land);
+	}
+	private loading: Promise<Airports | null> | null = null;
+	load(): Promise<Airports | null> {
+		if (this.ap) return Promise.resolve(this.ap);
+		if (this.loading) return this.loading;
+		return (this.loading = Promise.all([loadAirports(), loadAirlines()])
 			.then(([a, b]) => {
 				this.ap = a;
 				this.al = b;
+				return a;
 			})
 			.catch(() => {
-				this.loading = false; // z. B. offline: beim nächsten Öffnen des Tabs erneut versuchen
-			});
+				this.loading = null; // z. B. offline: beim nächsten Öffnen des Tabs erneut versuchen
+				return null;
+			}));
 	}
 }
 

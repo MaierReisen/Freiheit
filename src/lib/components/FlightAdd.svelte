@@ -217,7 +217,9 @@
 		);
 		atlas.lastFlightAddedAt = Date.now();
 		putFlights(list);
-		toast(list.length > 1 ? `Hin- und Rückflug ${from} ⇄ ${to} hinzugefügt` : `Flug ${from} → ${to} hinzugefügt`);
+		const msg = list.length > 1 ? `Hin- und Rückflug ${from} ⇄ ${to} hinzugefügt` : `Flug ${from} → ${to} hinzugefügt`;
+		toast(msg);
+		fd.syncCountries(msg); // neues Land: als bereist eintragen
 		closeSheet();
 		closeFlightsPage(); // aus „Meine Flüge“ heraus: Liste schließen, damit der Globus zu sehen ist
 		// wie beim neuen Land: Globus fliegt zur neuen Strecke, die wächst; keine Seite öffnet sich

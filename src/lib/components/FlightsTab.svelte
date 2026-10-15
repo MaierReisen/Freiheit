@@ -23,9 +23,15 @@
 	});
 	onMount(() => {
 		// im Leerlauf vorbereiten, damit der Tab sofort fertig ist
-		const t = setTimeout(() => (window.requestIdleCallback ?? ((f: () => void) => setTimeout(f, 1)))(() => fd.load()), 4000);
+		// danach: Länder von Flügen eintragen, die inzwischen stattgefunden haben (auch während die App zu war)
+		const t = setTimeout(() => (window.requestIdleCallback ?? ((f: () => void) => setTimeout(f, 1)))(() => {
+				fd.load();
+				fd.syncCountries();
+			}), 4000);
 		const onVis = () => {
-			if (!document.hidden && ui.tab === 'flights') fd.tick();
+			if (document.hidden) return;
+			if (ui.tab === 'flights') fd.tick();
+			else if (fd.ap) fd.syncCountries();
 		};
 		document.addEventListener('visibilitychange', onVis);
 		return () => {

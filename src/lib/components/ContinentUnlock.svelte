@@ -16,9 +16,20 @@
 	let pieces = $state<{ x: number; y: number; r: number; c: string; d: number; w: number }[]>([]);
 	let tShow: ReturnType<typeof setTimeout> | undefined, tHide: ReturnType<typeof setTimeout> | undefined, tGone: ReturnType<typeof setTimeout> | undefined;
 
+	// Karten, die kommen, während eine zu sehen ist (z. B. Land und Flug-Abzeichen zugleich), warten und folgen danach
+	let waiting: (typeof ui.unlock)[] = [],
+		busy = false;
 	$effect(() => {
 		const u = ui.unlock;
 		if (!u.key) return;
+		if (busy) {
+			waiting.push({ ...u });
+			return;
+		}
+		show(u);
+	});
+	function show(u: typeof ui.unlock) {
+		busy = true;
 		clearTimeout(tShow);
 		clearTimeout(tHide);
 		clearTimeout(tGone);
@@ -35,13 +46,14 @@
 			shown = { ...u };
 			tHide = setTimeout(dismiss, 3400);
 		}, 420);
-	});
+	}
 
 	function onTap() {
 		const id = shown?.badgeId,
 			rank = !!shown?.rank,
 			cont = !!shown?.cont && !shown?.added && !shown?.badge;
 		const area = !!shown?.area;
+		waiting = [];
 		dismiss();
 		if (area) openPass(); // neues Gebiet: im Pass wartet der Stempel
 		else if (id && FLIGHT_BADGE_IDS.has(id)) {
@@ -56,7 +68,12 @@
 	function dismiss() {
 		clearTimeout(tHide);
 		leaving = true;
-		tGone = setTimeout(() => (shown = null), 320);
+		tGone = setTimeout(() => {
+			shown = null;
+			busy = false;
+			const next = waiting.shift();
+			if (next) show(next);
+		}, 320);
 	}
 </script>
 

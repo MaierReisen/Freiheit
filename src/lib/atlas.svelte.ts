@@ -1,4 +1,4 @@
-import { CONT_VIEW, nameOf, type ContinentCode } from './countries';
+import { CONT, CONT_VIEW, nameOf, type ContinentCode } from './countries';
 import { toast } from './app.svelte';
 import { DEFAULT_SCOPE, countsForContinent, inScope, isScope, type CountryScope } from './scope';
 import { supabase } from './supabase';
@@ -64,7 +64,7 @@ const capitalList = (v: unknown): string[] | null =>
 const isContinent = (c: unknown): c is ContinentCode => typeof c === 'string' && c in CONT_VIEW;
 
 type Op =
-	| { t: 'addCountry'; code: string; name: string; position: number }
+	| { t: 'addCountry'; code: string; name: string; position: number; entered?: string }
 	| { t: 'removeCountry'; code: string }
 	| { t: 'reorder'; rows: { code: string; name: string; position: number }[] }
 	| { t: 'setEntered'; code: string; entered: string | null }
@@ -204,9 +204,15 @@ async function runOp(op: Op, user: string) {
 		if (r.error) throw r.error;
 	};
 	switch (op.t) {
-		case 'addCountry':
-			ok(await supabase.from('visited_countries').upsert({ user_id: user, code: op.code, name: op.name, position: op.position }));
+		case 'addCountry': {
+			const row = { user_id: user, code: op.code, name: op.name, position: op.position };
+			const vc = () => supabase.from('visited_countries');
+			let r = await (op.entered ? vc().upsert({ ...row, entered: op.entered }) : vc().upsert(row));
+			// Spalte „entered“ fehlt (Migration 004): ohne Datum speichern, es bleibt auf diesem Gerät
+			if (r.error && op.entered && noColumn(r.error)) r = await vc().upsert(row);
+			ok(r);
 			return;
+		}
 		case 'setEntered': {
 			const r = await supabase.from('visited_countries').update({ entered: op.entered }).eq('user_id', user).eq('code', op.code);
 			// Spalte noch nicht angelegt (Migration 004 fehlt): Datum bleibt lokal, Warteschlange nicht blockieren
@@ -320,7 +326,13 @@ export async function flush(): Promise<boolean> {
 }
 
 /** Stand aus Supabase laden (nachdem offene Änderungen gesendet wurden) */
-async function pull() {
+/** Laufender Abgleich mit Supabase (danach ist atlas.data der Stand des Kontos) */
+let pullP: Promise<void> | null = null;
+export const synced = () => pullP ?? Promise.resolve();
+function pull() {
+	return (pullP = pullNow());
+}
+async function pullNow() {
 	const user = uid;
 	if (!user || !(await flush())) return;
 	const countriesQuery = (cols: string) => supabase.from('visited_countries').select(cols).order('position').order('created_at');
@@ -501,14 +513,14 @@ export function addCountry(code: string) {
 	addCountries([code]);
 }
 /** Ein oder mehrere Länder auf einmal hinzufügen (Reihenfolge = Reihenfolge der Liste, daraus folgt „Land Nr. X“).
-    Hero, Globus und Pass bekommen die Aktion als eine Einheit mit (siehe lastAddedCodes). */
-export function addCountries(codes: string[]) {
+    Hero, Globus und Pass bekommen die Aktion als eine Einheit mit (siehe lastAddedCodes). `entered`: erste Einreise je Land (optional). */
+export function addCountries(codes: string[], entered: Record<string, string> = {}) {
 	const s = atlas.data;
 	const have = new Set(s.countries.map((c) => c.code));
 	const fresh = [...new Set(codes)].filter((c) => !have.has(c));
 	if (!fresh.length) return;
 	const start = Math.max(-1, ...s.countries.map((c, i) => c.position ?? i)) + 1;
-	const rows = fresh.map((code, i) => ({ code, name: nameOf(code), position: start + i }));
+	const rows = fresh.map((code, i) => ({ code, name: nameOf(code), position: start + i, ...(isEntered(entered[code]) ? { entered: entered[code] } : {}) }));
 	const wished = new Set(s.wishlist.map((w) => w.code));
 	atlas.lastAddedCodes = fresh;
 	atlas.lastAddedCode = fresh[fresh.length - 1];
@@ -689,6 +701,32 @@ export function putFlights(list: Flight[]): { fresh: number; changed: number } {
 	enqueue(...(gone.length ? [{ t: 'removeFlights', ids: gone } as Op] : []), { t: 'putFlights', flights: changed });
 	return { fresh, changed: changed.length };
 }
+/** Überseegebiete, die in der App zum Mutterland gehören (Flughäfen haben dort eigene Ländercodes) */
+const PART_OF: Record<string, string> = { GP: 'FR', GF: 'FR', MQ: 'FR', RE: 'FR', YT: 'FR', BQ: 'NL' };
+/** Länder aus Flügen (Code → erster Monat „JJJJ-MM“): neue als bereist eintragen (älteste zuerst, wie von Hand mit Globus,
+    Feier-Karten und Stempel), fehlendes Einreisedatum ergänzen. Gibt die neu eingetragenen Länder zurück. */
+export function addFromFlights(found: Map<string, string>): string[] {
+	const first = new Map<string, string>();
+	for (const [c0, m] of found) {
+		const c = CONT[c0] ? c0 : PART_OF[c0];
+		if (c && (!first.has(c) || m < first.get(c)!)) first.set(c, m);
+	}
+	const have = new Map(atlas.data.countries.map((c) => [c.code, c]));
+	const fresh = [...first]
+		.filter(([c]) => !have.has(c))
+		.sort((a, b) => a[1].localeCompare(b[1]))
+		.map(([c]) => c);
+	if (fresh.length) addCountries(fresh, Object.fromEntries(first));
+	for (const [c, m] of first) if (have.has(c) && !have.get(c)!.entered) setEntered(c, m);
+	return fresh;
+}
+/** Flüge, deren Länder schon eingetragen wurden (je Konto auf dem Gerät; null = noch nie) – so kommt ein bewusst
+    gelöschtes Land nicht bei jedem Import wieder */
+export const flightsMarked = (): Set<string> | null => {
+	const v = uid ? readJson(`freiheit-flight-countries:${uid}`) : null;
+	return Array.isArray(v) ? new Set(v as string[]) : null;
+};
+export const setFlightsMarked = (ids: Set<string>) => uid && writeJson(`freiheit-flight-countries:${uid}`, [...ids]);
 export function removeFlights(ids: string[]) {
 	const del = new Set(ids);
 	if (!atlas.flights.some((f) => del.has(f.id))) return;

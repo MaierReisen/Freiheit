@@ -389,6 +389,30 @@ export function flightStats(flights: Flight[], ap: Airports, now = Date.now()): 
 	};
 }
 
+/** Länder, in denen man laut den Flügen `ids` war, mit frühestem Monat („JJJJ-MM“): Abflug- und Zielland geflogener Flüge,
+    ohne kurzes Umsteigen (< 8 h am selben Flughafen, nicht zurück zum Ausgangspunkt – gleiche Regel wie in flightStats).
+    Nachbarflüge kommen aus allen Flügen, damit auch ein Umsteigen auf einen älteren Flug erkannt wird. */
+export function flightCountries(flights: Flight[], ap: Airports, ids: Set<string>, now = Date.now()): Map<string, string> {
+	const done = flights
+		.map((f) => legOf(f, ap, now))
+		.filter((l) => l.done)
+		.sort((a, b) => a.dep - b.dep);
+	const transfer = (a: Leg | undefined, b: Leg | undefined) =>
+		!!a && !!b && a.to === b.f.from && b.to !== a.f.from && b.dep - a.arr < CONNECT_MS && b.dep - a.arr >= 0;
+	const out = new Map<string, string>();
+	const see = (code: string, day: string) => {
+		const c = ap[code]?.[2],
+			m = day.slice(0, 7);
+		if (c && (!out.has(c) || m < out.get(c)!)) out.set(c, m);
+	};
+	done.forEach((l, i) => {
+		if (!ids.has(l.f.id)) return;
+		if (!transfer(done[i - 1], l)) see(l.f.from, l.f.date);
+		if (!transfer(l, done[i + 1])) see(l.to, l.f.d.gaa || l.f.d.gas || l.f.d.ona || l.f.date);
+	});
+	return out;
+}
+
 /* ---------- Anzeige ---------- */
 
 export const fmtInt = (n: number) => Math.round(n).toLocaleString('de-DE');
