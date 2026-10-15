@@ -435,13 +435,7 @@ button.cont{border:0;font:inherit;font-size:14px;color:inherit}
 .cp-tog svg{width:28px;height:28px;padding:5px;border-radius:50%;fill:none;stroke:transparent;stroke-width:3;stroke-linecap:round;stroke-linejoin:round;box-shadow:inset 0 0 0 1.6px var(--muted);transition:background .15s,box-shadow .15s}
 .cp-tog[aria-pressed="true"] svg{background:#C9A24D;stroke:#fff;box-shadow:none}
 .cp-tog:active svg{transform:scale(.9)}
-/* Hauptstadt: Kachel auf der Länderseite (antippbar wie .rs-ap) und eigene Seite */
-.cs-quick > .cs-captile{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:11px 11px 10px;border:1.5px solid color-mix(in srgb,var(--primary) 45%,transparent);border-radius:16px;background:color-mix(in srgb,var(--primary) 12%,var(--chip));color:var(--ink);text-align:left;font:inherit;cursor:pointer;min-width:0;transition:transform .12s,filter .12s}
-.cs-captile:active{transform:scale(.97);filter:brightness(.94)}
-.cs-captile .lbl{color:var(--primary)}
-.cs-captile b{max-width:calc(100% - 20px)}
-.cs-captile .rs-go{position:absolute;right:7px;top:9px;display:grid;place-items:center;width:20px;height:20px;border-radius:50%;background:var(--primary);color:var(--on-primary)}
-.cs-quick .cs-captile .rs-go svg{width:13px;height:13px;margin:0;stroke:currentColor;stroke-width:2.6}
+/* Hauptstadt: Kachel auf der Länderseite (wie .rs-ap der Flugseite, mit Besucht-Stand), Frage „Warst du auch in …?“ und eigene Seite */
 button.cp-been{border:0;font:inherit;font-size:13px;font-weight:700;cursor:pointer}
 button.cp-been:not(.been){background:color-mix(in srgb,#C9A24D 18%,var(--chip));color:var(--ink)}
 .cp-hint{margin:8px 0 0;font-size:13px}
@@ -1079,6 +1073,18 @@ button.pp-tile:active{transform:scale(.98)}
 .rs-ap .rs-go{position:absolute;right:8px;top:calc(50% + 6px);display:grid;place-items:center;width:22px;height:22px;margin-top:-11px;border-radius:50%;background:var(--primary);color:var(--on-primary)}
 .cs-quick .rs-ap .rs-go svg{width:14px;height:14px;margin:0;stroke:currentColor;stroke-width:2.6}
 .rs-land{align-self:flex-start;margin-top:6px;padding:6px 11px;font-size:13px}
+.cs-quick .rs-ap.cs-capap b{max-width:none;font-size:17px;hyphens:none;-webkit-hyphens:none;overflow-wrap:break-word;word-break:normal}
+.cs-quick .rs-ap.cs-capap .rs-go{top:auto;bottom:9px;margin-top:0}
+.cs-capap .cap-st{display:inline-flex;align-items:center;gap:3px;margin:3px 0 2px;padding:2px 8px 2px 7px;border-radius:999px;font-size:11.5px;font-weight:700;background:var(--chip);color:var(--muted);box-shadow:inset 0 0 0 1px var(--line)}
+.cs-capap .cap-st.on{background:#C9A24D;color:#2B1D05;box-shadow:none}
+.cs-quick .rs-ap.cs-capap .cap-st svg{width:12px;height:12px;margin:0;stroke:currentColor;stroke-width:3.2}
+.cap-ask{display:flex;align-items:center;gap:8px;margin-top:10px;padding:10px 10px 10px 14px;border-radius:16px;background:color-mix(in srgb,#C9A24D 16%,var(--chip));font-size:14.5px}
+.cap-ask > span{flex:1;min-width:0}
+.cap-ask button{flex:none;display:inline-flex;align-items:center;gap:4px;height:34px;padding:0 14px;border:0;border-radius:999px;font:inherit;font-size:14px;font-weight:700;cursor:pointer}
+.cap-ask button:active{transform:scale(.96)}
+.cap-yes{background:#C9A24D;color:#2B1D05}
+.cap-yes svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.cap-no{background:none;color:var(--muted)}
 
 /* Flug hinzufügen: Karte mit Zeilen (Bezeichnung links, Wert rechts), wie Einstellungen in iOS */
 .fa-body{flex:1;min-height:0;display:flex;flex-direction:column;overflow-y:auto;margin:14px -22px 0;padding:0 22px 4px}

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { addCountry, atlas, countedCountries, isCounted, removeCountry, setEntered, visitedSet } from '$lib/atlas.svelte';
+	import { addCountry, atlas, countedCountries, isCounted, removeCountry, setCapital, setEntered, visitedSet } from '$lib/atlas.svelte';
 	import { longDate } from '$lib/passport';
 	import { SCOPES, isTerritory, listTag, placeLabel } from '$lib/scope';
 	import { compareNames, flag, nameOf } from '$lib/countries';
@@ -82,6 +82,26 @@
 	let busy = $state(false);
 	const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 	/** Sheet gleitet weg, die Seite rollt nach oben – dann laufen Länderzahl, Flugkurve und Globus-Leuchten sichtbar */
+	// Hauptstadt: besucht? Bei bereisten Ländern fragt die Seite direkt nach (bis „Ja“ oder „Nein“; „Nein“ merkt sich das Gerät)
+	const NO_KEY = 'freiheit-capital-no';
+	const capDone = $derived(atlas.settings.capitals.includes(code));
+	let capNo = $state(false);
+	$effect(() => {
+		try {
+			capNo = (JSON.parse(localStorage.getItem(NO_KEY) || '[]') as string[]).includes(code);
+		} catch {
+			capNo = false;
+		}
+	});
+	function capAnswer(yes: boolean) {
+		if (yes) return setCapital(code, true);
+		capNo = true;
+		try {
+			const l = JSON.parse(localStorage.getItem(NO_KEY) || '[]') as string[];
+			localStorage.setItem(NO_KEY, JSON.stringify([...new Set([...l, code])]));
+		} catch {}
+	}
+
 	async function markVisited() {
 		if (busy) return;
 		busy = true;
@@ -174,16 +194,20 @@
 	{#if facts && (facts.cap?.length || facts.pop || facts.area)}
 		<div class="cs-quick">
 			{#if facts.cap?.length}
-				<!-- antippbar wie die Flughafen-Kacheln der Flugseite: öffnet die Seite der Hauptstadt -->
-				<button type="button" class="cs-captile" aria-label="Hauptstadt {facts.cap[0]} öffnen" onclick={() => openCapital(code)}>
-					<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21h18M5 21V10l7-5 7 5v11M9 21v-6h6v6" /></svg>
-					<span class="lbl">Hauptstadt</span>
-					<b>{facts.cap[0]}</b>
-					{#if lt}<span class="sub">{lt.time}{#if lt.diff}<em>{lt.diff}</em>{:else if code !== 'DE'}<em class="same">wie DE</em>{/if}</span>{/if}
-					{#if facts.capPop}<span class="sub">{fmtPop(facts.capPop[0])} Einw.{facts.capPop[1] ? ` (${facts.capPop[1]})` : ''}</span>{/if}
-					{#if facts.cap.length > 1}<span class="sub">auch {facts.cap.slice(1).join(', ')}</span>{/if}
-					<span class="rs-go" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6" /></svg></span>
-				</button>
+				<!-- gleiche Kachel wie Abflug-/Zielflughafen auf der Flugseite: öffnet die Seite der Hauptstadt, zeigt ob besucht -->
+				<div class="rs-aps">
+					<button type="button" class="rs-ap cs-capap" class:done={capDone} onclick={() => openCapital(code)} aria-label="Hauptstadt {facts.cap[0]} öffnen{been ? (capDone ? ', besucht' : ', noch nicht besucht') : ''}">
+						<span class="lbl">Hauptstadt</span>
+						<b>{facts.cap[0]}</b>
+						{#if been}
+							<span class="cap-st" class:on={capDone}
+								>{#if capDone}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>Besucht{:else}Noch offen{/if}</span
+							>
+						{/if}
+						{#if lt}<span class="sub">{lt.time} Uhr</span>{/if}
+						<span class="rs-go" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6" /></svg></span>
+					</button>
+				</div>
 			{/if}
 			{#if facts.pop}
 				<div>
@@ -204,6 +228,15 @@
 					{#if compareArea(code, facts.area)}<span class="sub">{compareArea(code, facts.area)}</span>{/if}
 				</div>
 			{/if}
+		</div>
+	{/if}
+	{#if been && facts?.cap?.length && !capDone && !capNo}
+		<div class="cap-ask">
+			<span>Warst du auch in <b>{facts.cap[0]}</b>?</span>
+			<button type="button" class="cap-yes" onclick={() => capAnswer(true)}
+				><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>Ja</button
+			>
+			<button type="button" class="cap-no" onclick={() => capAnswer(false)}>Nein</button>
 		</div>
 	{/if}
 </div>
