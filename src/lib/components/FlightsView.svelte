@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { removeFlights } from '$lib/atlas.svelte';
-	import { closeFlightsPage, openFlightsPage, openRoute, toast, ui, type FlightsPage } from '$lib/app.svelte';
+	import { closeFlightsPage, openAirport, openFlightsPage, openRoute, toast, ui, type FlightsPage } from '$lib/app.svelte';
 	import { flag, nameOf } from '$lib/countries';
 	import { flightNo, fmtDuration, fmtInt, routeKey, type Airlines, type Airports, type FlightStats, type Leg } from '$lib/flights';
 	import { swipeClose } from '$lib/swipeClose';
@@ -87,7 +87,7 @@
 					{#each st.airports as a, i (a.code)}
 						{@const x = ap[a.code]}
 						<li>
-							<button type="button" tabindex="-1">
+							<button type="button" class="fl-tap" onclick={() => openAirport(a.code)}>
 								<span class="nr">{i + 1}</span>
 								<span class="flag">{x ? flag(x[2]) : ''}</span>
 								<span class="fl-route"><b>{city(a.code)} <small>{a.code}</small></b><span>{x ? `${x[1] || x[0]} · ${nameOf(x[2])}` : 'unbekannter Flughafen'}</span></span>

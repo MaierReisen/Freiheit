@@ -13,11 +13,12 @@ export const TAB_LABEL: Record<Tab, string> = { home: 'Welt', flights: 'Flüge' 
 export type FlightsPage = 'flights' | 'airports' | 'airlines';
 // Wunschliste vorerst ausgeblendet (Daten bleiben erhalten)
 export type PickerMode = 'visited' | 'fly';
-/** Sheet: Länderseite, Länderauswahl, Seite zu einer Flugstrecke (key „FRA-JFK“, id = angetippter Flug) und „Flug hinzufügen“ (from/to vorbelegt) */
+/** Sheet: Länderseite, Länderauswahl, Seite zu einer Flugstrecke (key „FRA-JFK“, id = angetippter Flug), Seite zu einem Flughafen und „Flug hinzufügen“ (from/to vorbelegt) */
 export type SheetView =
 	| { kind: 'country'; code: string }
 	| { kind: 'picker'; mode: PickerMode }
 	| { kind: 'route'; key: string; id?: string }
+	| { kind: 'airport'; code: string }
 	| { kind: 'addFlight'; from?: string; to?: string };
 
 /* ---------- Darstellung: Design und Animationen (gelten nur auf diesem Gerät) ---------- */
@@ -217,6 +218,12 @@ export function openRoute(key: string, opts: { peek?: boolean; id?: string } = {
 	ui.sheetDetent = already ? ui.sheetDetent : opts.peek ? 'peek' : 'full';
 	ui.selected = null;
 	openSheet({ kind: 'route', key, id: opts.id });
+}
+/** Seite zu einem Flughafen (immer volle Seite) */
+export function openAirport(code: string) {
+	ui.sheetDetent = 'full';
+	ui.selected = null;
+	openSheet({ kind: 'airport', code });
 }
 export function openAddFlight(from?: string, to?: string) {
 	openSheet({ kind: 'addFlight', from, to });

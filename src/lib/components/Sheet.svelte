@@ -3,6 +3,7 @@
 	import CountryPicker from './CountryPicker.svelte';
 	import CountrySheet from './CountrySheet.svelte';
 	import RouteSheet from './RouteSheet.svelte';
+	import AirportSheet from './AirportSheet.svelte';
 	import FlightAdd from './FlightAdd.svelte';
 
 	/* Nach unten ziehen schließt das Sheet (wie in iOS): am Griff/Titel jederzeit, in der Liste nur,
@@ -10,8 +11,8 @@
 	   Länderseite mit zwei Stufen: kompakte Karte („peek“, Globus bleibt sichtbar und antippbar) und volle Seite.
 	   Kompakt: hochziehen → voll, runterziehen → schließen. Voll: runterziehen → schließen. */
 
-	// Länderseite und Seite zu einer Flugstrecke: gleicher Aufbau (kompakte Karte + volle Seite)
-	const isCountry = $derived(ui.sheetView?.kind === 'country' || ui.sheetView?.kind === 'route');
+	// Länderseite und Seiten zu Flugstrecke/Flughafen: gleicher Aufbau (kompakte Karte + volle Seite; Flughafen nur voll)
+	const isCountry = $derived(ui.sheetView?.kind === 'country' || ui.sheetView?.kind === 'route' || ui.sheetView?.kind === 'airport');
 	const peek = $derived(isCountry && ui.sheetDetent === 'peek');
 
 	let sheet: HTMLDivElement;
@@ -174,6 +175,8 @@
 				<CountrySheet code={ui.sheetView.code} />
 			{:else if ui.sheetView.kind === 'route'}
 				<RouteSheet key={ui.sheetView.key} id={ui.sheetView.id} />
+			{:else if ui.sheetView.kind === 'airport'}
+				<AirportSheet code={ui.sheetView.code} />
 			{:else if ui.sheetView.kind === 'addFlight'}
 				<FlightAdd from={ui.sheetView.from} to={ui.sheetView.to} />
 			{:else}

@@ -1068,6 +1068,17 @@ button.pp-tile:active{transform:scale(.98)}
 .fa-no input::placeholder{text-transform:none}
 .fa-plus{flex:none;padding:2px 8px;border-radius:999px;background:var(--surface);font-size:12px;font-weight:700;color:var(--primary)}
 .fa-preview{display:flex;align-items:center;gap:8px;margin:12px 2px 0;font-size:14px;font-weight:600;color:var(--muted)}
+.fa-head{min-height:44px;justify-content:space-between}
+.fa-head .fa-k{width:auto;font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:var(--primary)}
+.fa-x{border:0;background:none;padding:6px 0;color:var(--muted);font-size:14px;font-weight:600}
+.fa-back{color:var(--primary);font-weight:600}
+.fa-back svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.fa-col small.bad,.fa-err{color:#C2410C}
+.fa-err{flex:none;margin:12px 2px 0;padding:0 0 0 18px;font-size:14px;font-weight:600;line-height:1.4}
+.fa-err li + li{margin-top:4px}
+.fa-res small em{font-style:normal;color:#C2410C}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) :is(.fa-col small.bad,.fa-err,.fa-res small em){color:#FDBA74}}
+:root[data-theme="dark"] :is(.fa-col small.bad,.fa-err,.fa-res small em){color:#FDBA74}
 .fa-preview svg{width:20px;height:20px;fill:none;stroke:var(--primary);stroke-width:1.9;stroke-linecap:round}
 .fa-note{margin:12px 2px 0}
 .fa-search{display:flex;align-items:center;gap:10px;margin-top:12px}

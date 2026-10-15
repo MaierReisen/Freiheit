@@ -52,11 +52,13 @@ export interface Flight {
 	d: FlightDetail;
 }
 
-/** [Stadt, Name ('' = wie die Stadt), Land (ISO), Breite, Länge, Zeitzone] */
-export type Airport = [string, string, string, number, number, string];
+/** [Stadt, Name ('' = wie die Stadt), Land (ISO), Breite, Länge, Zeitzone, geschlossen am ('' = offen), eröffnet am (ab 1990)] – nur Flughäfen mit Linienverkehr */
+export type Airport = [string, string, string, number, number, string, string?, string?];
 export type Airports = Record<string, Airport>;
-/** [Name, IATA-Kürzel] */
-export type Airlines = Record<string, [string, string]>;
+/** [Name, IATA-Kürzel, Gründungsjahr (0 = unbekannt), letztes Jahr (0 = fliegt noch)] */
+export type Airlines = Record<string, [string, string, number?, number?]>;
+/** Fakten für die Flughafen-Seite: [Größe L/M/S, Höhe m, Landebahnen, längste m, ICAO, Passagiere, Jahr, Wikipedia-Artikel („en:“ = englisch)] */
+export type AirportInfo = ['L' | 'M' | 'S', number | null, number, number, string, number, number, string];
 
 let apP: Promise<Airports> | null = null;
 let alP: Promise<Airlines> | null = null;
@@ -66,6 +68,46 @@ export const loadAirports = () =>
 	(apP ??= import('./data/airports.json').then((m) => m.default as unknown as Airports).catch((e) => ((apP = null), Promise.reject(e))));
 export const loadAirlines = () =>
 	(alP ??= import('./data/airlines.json').then((m) => m.default as unknown as Airlines).catch((e) => ((alP = null), Promise.reject(e))));
+let aiP: Promise<Record<string, AirportInfo>> | null = null;
+/** Fakten zu den Flughäfen (erst beim Öffnen einer Flughafen-Seite geladen) */
+export const loadAirportInfo = () =>
+	(aiP ??= import('./data/airportinfo.json').then((m) => m.default as unknown as Record<string, AirportInfo>).catch((e) => ((aiP = null), Promise.reject(e))));
+
+/* ---------- Prüfen, ob es einen Flug so geben kann (von Hand eingetragene Flüge) ---------- */
+
+/** Längster Nonstop-Linienflug (Singapur–New York, 15.349 km) mit etwas Luft */
+export const MAX_KM = 15600;
+/** Airline zur Flugnummer: „LH“ (IATA) oder „DLH“ (ICAO). IATA-Kürzel werden neu vergeben: die Airline, die am Datum flog;
+    dann schon geflogene, dann ohne Zusatz in Klammern. null = Kürzel unbekannt, '' = keine Airline flog damals unter dem Kürzel */
+export function airlineFor(code: string, date: string, al: Airlines, used: Set<string>): string | null {
+	const y = +date.slice(0, 4);
+	const flies = (c: string) => {
+		const [, , from = 0, to = 0] = al[c];
+		return !(from && y < from) && !(to && y > to);
+	};
+	if (code.length === 3 && al[code]) return flies(code) ? code : '';
+	const cand = Object.keys(al).filter((c) => al[c][1] === code);
+	if (!cand.length) return null;
+	const ok = cand.filter(flies);
+	ok.sort((p, k) => Number(used.has(k)) - Number(used.has(p)) || Number(al[p][0].includes('(')) - Number(al[k][0].includes('(')));
+	return ok[0] ?? '';
+}
+/** Flughafen am Datum in Betrieb? Text des Grundes, sonst '' */
+export function airportProblem(c: string, date: string, ap: Airports): string {
+	const a = ap[c];
+	if (!a) return `${c} ist kein Flughafen mit Linienflügen`;
+	const fmt = (d: string) => new Date(d + 'T12:00:00Z').toLocaleDateString('de-DE', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+	if (a[6] && date >= a[6]) return `${a[1] || a[0]} ist seit ${fmt(a[6])} geschlossen`;
+	if (a[7] && date < a[7]) return `${a[1] || a[0]} wurde erst am ${fmt(a[7])} eröffnet`;
+	return '';
+}
+/** Flugzeit (Gate bis Gate, Minuten) passt zur Strecke? Text des Grundes, sonst '' */
+export function durationProblem(km: number, min: number): string {
+	if (min < 15) return 'So kurz kann ein Flug nicht sein – stimmen die Uhrzeiten?';
+	if (km / (min / 60) > 1000) return 'So schnell fliegt kein Linienflugzeug – stimmen die Uhrzeiten (Ortszeit)?';
+	if (min > estFlightMin(km) * 1.6 + 90) return 'Für diese Strecke ist die Flugzeit viel zu lang – stimmen die Uhrzeiten (Ortszeit)?';
+	return '';
+}
 
 /** Vergleichbare Textform eines Flugs (Felder sortiert): Postgres (jsonb) liefert die Felder in anderer Reihenfolge zurück */
 export function flightSig(f: Flight): string {

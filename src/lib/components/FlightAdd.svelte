@@ -5,11 +5,28 @@
 	import { flightBadges } from '$lib/flightBadges';
 	import { flag, nameOf } from '$lib/countries';
 	import { fd } from '$lib/flightData.svelte';
-	import { estFlightMin, flightStats, fmtDuration, fmtInt, gcKm, localToUtc, routeKey, type Flight, type FlightDetail } from '$lib/flights';
+	import {
+		airlineFor,
+		airportProblem,
+		durationProblem,
+		estFlightMin,
+		flightStats,
+		fmtDuration,
+		fmtInt,
+		gcKm,
+		localToUtc,
+		MAX_KM,
+		routeKey,
+		type Airport,
+		type Flight,
+		type FlightDetail
+	} from '$lib/flights';
 
 	/* „Flug hinzufügen“ (Knopf „+ Flug“ im Tab „Flüge“ bzw. auf der Seite einer Strecke): Datum, Von, Nach,
-	   optional Flugnummer (z. B. „LH 400“, Airline wird daraus erkannt) und Ortszeiten. Flughäfen per Suche
-	   (Kürzel, Stadt, Name oder Land; schon besuchte zuerst). Danach fliegt der Globus zur neuen Strecke. */
+	   optional Flugnummer (z. B. „LH 400“, Airline wird daraus erkannt) und Ortszeiten; auf Wunsch gleich der Rückflug
+	   (eigenes Datum, Flugnummer, Zeiten). Flughäfen per Suche (Kürzel, Stadt, Name oder Land; schon besuchte zuerst).
+	   Nur Flüge, die es so geben kann: Flughäfen am Datum in Betrieb, Airline flog damals, Flugzeit passt zur Strecke,
+	   nicht weiter als der längste Nonstop-Flug, höchstens ein Jahr im Voraus. Danach fliegt der Globus zur neuen Strecke. */
 
 	let { from: from0, to: to0 }: { from?: string; to?: string } = $props();
 
@@ -25,6 +42,17 @@
 	let no = $state('');
 	let dep = $state('');
 	let arr = $state('');
+	// Rückflug (optional)
+	let back = $state(false);
+	let rdate = $state('');
+	let rno = $state('');
+	let rdep = $state('');
+	let rarr = $state('');
+	function addBack() {
+		back = true;
+		// eine Woche später vorschlagen
+		if (!rdate && /^\d{4}-\d{2}-\d{2}$/.test(date)) rdate = new Date(Date.parse(date + 'T12:00:00Z') + 7 * 864e5).toISOString().slice(0, 10);
+	}
 	// svelte-ignore state_referenced_locally
 	let active = $state<'from' | 'to' | null>(from0 ? null : 'from');
 	let q = $state('');
@@ -54,7 +82,7 @@
 			if (r >= 0) hits.push({ c: x.c, r });
 		}
 		return hits
-			.sort((p, k) => p.r - k.r || (visits.get(k.c) ?? 0) - (visits.get(p.c) ?? 0) || p.c.localeCompare(k.c))
+			.sort((p, k) => p.r - k.r || Number(!!ap?.[p.c][6]) - Number(!!ap?.[k.c][6]) || (visits.get(k.c) ?? 0) - (visits.get(p.c) ?? 0) || p.c.localeCompare(k.c))
 			.slice(0, 40)
 			.map((h) => h.c);
 	});
@@ -85,70 +113,111 @@
 	}
 
 	/* ---------- Flugnummer: „LH 400“ / „LH400“ / „DLH 400“ → Airline (ICAO) + Nummer ---------- */
-	const flightNoParts = $derived.by(() => {
-		const m = no.trim().toUpperCase().replace(/\s+/g, ' ').match(/^([A-Z0-9]{2}|[A-Z]{3}) ?(\d{1,4}[A-Z]?)$/);
-		if (!m || !al) return null;
+	const used = $derived(new Set(fd.st?.airlines.map((a) => a.code) ?? []));
+	type NoParts = { airline: string; no: string; err: string } | null;
+	function parseNo(text: string, day: string): NoParts {
+		const t = text.trim().toUpperCase().replace(/\s+/g, ' ');
+		if (!t || !al) return null;
+		const m = t.match(/^([A-Z0-9]{2}|[A-Z]{3}) ?(\d{1,4}[A-Z]?)$/);
+		if (!m) return { airline: '', no: t, err: 'Flugnummer bitte wie auf der Bordkarte, z. B. „LH 400“' };
 		const [, code, nr] = m;
-		if (code.length === 3 && al[code]) return { airline: code, no: nr };
-		// IATA-Kürzel ist nicht eindeutig (auch eingestellte Airlines): zuerst schon geflogene, dann ohne Zusatz in Klammern
-		const used = new Set(fd.st?.airlines.map((a) => a.code) ?? []);
-		const cand = Object.entries(al).filter(([, x]) => x[1] === code);
-		cand.sort((p, k) => Number(used.has(k[0])) - Number(used.has(p[0])) || Number(p[1][0].includes('(')) - Number(k[1][0].includes('(')));
-		return cand[0] ? { airline: cand[0][0], no: nr } : { airline: '', no: `${code} ${nr}` };
-	});
+		const c = airlineFor(code, day, al, used);
+		if (c === null) return { airline: '', no: nr, err: `Eine Airline mit dem Kürzel ${code} gibt es nicht` };
+		if (!c) return { airline: '', no: nr, err: `Unter dem Kürzel ${code} flog ${day.slice(0, 4)} keine Airline` };
+		return { airline: c, no: nr, err: '' };
+	}
 
-	// Vorschau: Strecke und Flugzeit, sobald Von und Nach gewählt sind
-	const km = $derived(ap && from && to && from !== to && ap[from] && ap[to] ? gcKm(ap[from], ap[to]) : 0);
-	/** Ankunftstag (Ortszeit am Ziel): selber Tag oder – falls das vor dem Abflug läge – einer der nächsten Tage */
-	const arrDay = $derived.by(() => {
-		if (!arr || !ap?.[from] || !ap?.[to] || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return { day: date, plus: 0 };
-		const depMs = dep ? localToUtc(`${date}T${dep}`, ap[from][5]) : 0;
-		let day = date,
+	const isDay = (d: string) => /^\d{4}-\d{2}-\d{2}$/.test(d);
+	const nextDay = (d: string) => new Date(Date.parse(d + 'T12:00:00Z') + 864e5).toISOString().slice(0, 10);
+	/** Alles zu einem Flug A → B: Ankunftstag (Ortszeit am Ziel; liegt die Uhrzeit vor dem Abflug, einer der nächsten Tage),
+	    Flugzeit aus den Uhrzeiten (über Zeitzonen hinweg, sonst geschätzt), Airline und Gründe, warum es den Flug so nicht geben kann */
+	function legInfo(day: string, noText: string, d: string, a: string, A: Airport | undefined, B: Airport | undefined, km: number) {
+		const p = parseNo(noText, day);
+		let arrDay = day,
 			plus = 0;
-		while (dep && plus < 2 && localToUtc(`${day}T${arr}`, ap[to][5]) <= depMs) {
-			day = new Date(Date.parse(day + 'T12:00:00Z') + 864e5).toISOString().slice(0, 10);
-			plus++;
+		if (a && d && A && B && isDay(day)) {
+			const depMs = localToUtc(`${day}T${d}`, A[5]);
+			while (plus < 2 && localToUtc(`${arrDay}T${a}`, B[5]) <= depMs) {
+				arrDay = nextDay(arrDay);
+				plus++;
+			}
 		}
-		return { day, plus };
-	});
-	/** Flugzeit aus den Uhrzeiten (über Zeitzonen hinweg), sonst geschätzt */
-	const minutes = $derived.by(() => {
-		if (dep && arr && ap?.[from] && ap?.[to]) {
-			const m = Math.round((localToUtc(`${arrDay.day}T${arr}`, ap[to][5]) - localToUtc(`${date}T${dep}`, ap[from][5])) / 60000);
-			if (m > 0) return { m, est: false };
+		let min = 0,
+			est = true;
+		if (d && a && A && B && isDay(day)) {
+			const m = Math.round((localToUtc(`${arrDay}T${a}`, B[5]) - localToUtc(`${day}T${d}`, A[5])) / 60000);
+			if (m > 0) (min = m), (est = false);
 		}
-		return { m: km ? estFlightMin(km) : 0, est: true };
+		if (est) min = km ? estFlightMin(km) : 0;
+		const errs: string[] = [];
+		if (isDay(day)) {
+			if (day < '1950-01-01') errs.push('Das Datum liegt zu weit zurück');
+			if (day > new Date(Date.now() + 365 * 864e5).toLocaleDateString('sv-SE')) errs.push('Flüge lassen sich höchstens ein Jahr im Voraus buchen');
+		}
+		if (p?.err) errs.push(p.err);
+		if (!est && km) {
+			const e = durationProblem(km, min);
+			if (e) errs.push(e);
+		}
+		return { p, arrDay, plus, min, est, errs };
+	}
+
+	const A = $derived(ap?.[from]),
+		B = $derived(ap?.[to]);
+	// Vorschau: Strecke und Flugzeit, sobald Von und Nach gewählt sind
+	const km = $derived(A && B && from !== to ? gcKm(A, B) : 0);
+	const out = $derived(legInfo(date, no, dep, arr, A, B, km));
+	const ret = $derived(back ? legInfo(rdate, rno, rdep, rarr, B, A, km) : null);
+	/** Gründe, warum es die Flüge so nicht geben kann (Knopf bleibt dann aus) */
+	const problems = $derived.by(() => {
+		if (!ap || !from || !to) return [];
+		const e: string[] = [];
+		if (from === to) e.push('Abflug und Ziel sind derselbe Flughafen');
+		if (km > MAX_KM) e.push(`Nonstop-Flüge über ${fmtInt(MAX_KM)} km gibt es nicht – bitte mit Umsteigen eintragen`);
+		const ap1 = isDay(date) ? [airportProblem(from, date, ap), airportProblem(to, date, ap)] : [];
+		e.push(...ap1.filter(Boolean), ...out.errs);
+		if (ret) {
+			if (isDay(rdate) && isDay(date) && rdate < date) e.push('Der Rückflug liegt vor dem Hinflug');
+			const ap2 = isDay(rdate) ? [airportProblem(to, rdate, ap), airportProblem(from, rdate, ap)].filter((x) => x && !ap1.includes(x)) : [];
+			e.push(...ap2, ...ret.errs.filter((x) => !out.errs.includes(x)).map((x) => `Rückflug: ${x}`));
+		}
+		return e;
 	});
-	const ready = $derived(!!ap && /^\d{4}-\d{2}-\d{2}$/.test(date) && !!from && !!to && from !== to);
+	const ready = $derived(!!ap && isDay(date) && !!from && !!to && from !== to && (!back || isDay(rdate)) && !problems.length);
 	const label = (c: string) => (ap?.[c] ? `${ap[c][0]}` : c);
+
+	/** Flug aus den Angaben bauen (Kennung wie bei Flighty-Zeilen ohne ID: Datum + Strecke) */
+	function build(day: string, a: string, b: string, noText: string, d: string, ar: string, info: ReturnType<typeof legInfo>): Flight {
+		const det: FlightDetail = {};
+		if (d) det.gds = `${day}T${d}`;
+		if (ar) det.gas = `${info.arrDay}T${ar}`;
+		const airline = info.p?.airline || '';
+		const nr = info.p ? info.p.no : noText.trim();
+		const id = `${day}${det.gds ? det.gds.slice(10) : ''}-${a}-${b}-${airline}${nr}`;
+		return { id, date: day, from: a, to: b, ...(airline ? { airline } : {}), ...(nr ? { no: nr } : {}), d: det };
+	}
 
 	function add() {
 		if (!ready || !ap) return;
-		const d: FlightDetail = {};
-		if (dep) d.gds = `${date}T${dep}`;
-		if (arr) d.gas = `${arrDay.day}T${arr}`;
-		const p = flightNoParts;
-		const airline = p?.airline || '';
-		const nr = p ? p.no : no.trim();
-		const id = `${date}${d.gds ? d.gds.slice(10) : ''}-${from}-${to}-${airline}${nr}`;
+		const list = [build(date, from, to, no, dep, arr, out), ...(ret ? [build(rdate, to, from, rno, rdep, rarr, ret)] : [])];
 		// gleicher Tag und gleiche Strecke (auch aus Flighty eingelesen, dort mit eigener Kennung) = schon da
-		if (atlas.flights.some((f) => f.id === id || (f.date === date && f.from === from && f.to === to))) {
-			toast('Diesen Flug gibt es schon');
+		const dup = list.find((g) => atlas.flights.some((f) => f.id === g.id || (f.date === g.date && f.from === g.from && f.to === g.to)));
+		if (dup) {
+			toast(list.length > 1 && dup !== list[0] ? 'Diesen Rückflug gibt es schon' : 'Diesen Flug gibt es schon');
 			return;
 		}
-		const f: Flight = { id, date, from, to, ...(airline ? { airline } : {}), ...(nr ? { no: nr } : {}), d };
 		// neue Stufe bei einem Flug-Abzeichen: vorher/nachher vergleichen, Feier-Karte nach dem Flug zur Strecke (je eine, höchstens 3)
 		const t = Date.now(),
 			was = flightBadges({ st: flightStats(atlas.flights, ap, t), ap, al: fd.al }),
-			up = flightBadges({ st: flightStats([...atlas.flights, f], ap, t), ap, al: fd.al }).filter((b, i) => b.level > was[i].level);
+			up = flightBadges({ st: flightStats([...atlas.flights, ...list], ap, t), ap, al: fd.al }).filter((b, i) => b.level > was[i].level);
 		up.slice(0, 3).forEach((b, k) =>
 			setTimeout(() => {
 				ui.unlock = { key: ui.unlock.key + 1, cont: '', n: 0, rank: '', badge: b.name, badgeId: b.id, icon: b.icon, sub: `${tierName(b, b.level)} · ${b.fmt(b.v)} ${b.what}`, added: '', area: '' };
 			}, 1800 + k * 3900)
 		);
 		atlas.lastFlightAddedAt = Date.now();
-		putFlights([f]);
-		toast(`Flug ${from} → ${to} hinzugefügt`);
+		putFlights(list);
+		toast(list.length > 1 ? `Hin- und Rückflug ${from} ⇄ ${to} hinzugefügt` : `Flug ${from} → ${to} hinzugefügt`);
 		closeSheet();
 		closeFlightsPage(); // aus „Meine Flüge“ heraus: Liste schließen, damit der Globus zu sehen ist
 		// wie beim neuen Land: Globus fliegt zur neuen Strecke, die wächst; keine Seite öffnet sich
@@ -202,7 +271,10 @@
 					{@const x = ap[c]}
 					<li>
 						<button type="button" onclick={() => choose(c)}
-							><span class="fa-flag">{flag(x[2])}</span><span class="fa-res"><b>{x[0]}</b><small>{x[1] || nameOf(x[2])}</small></span><span class="fa-code">{c}</span></button
+							><span class="fa-flag">{flag(x[2])}</span><span class="fa-res"><b>{x[0]}</b><small
+									>{x[1] || nameOf(x[2])}{#if x[6]}<em>{` · geschlossen ${x[6].slice(0, 4)}`}</em>{/if}</small
+								></span
+							><span class="fa-code">{c}</span></button
 						>
 					</li>
 				{/each}
@@ -212,29 +284,74 @@
 	{:else}
 		{#if km}
 			<p class="fa-preview">
-				<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 18c3-8 13-8 16 0" /><circle cx="4" cy="18" r="1.6" /><circle cx="20" cy="18" r="1.6" /></svg>{fmtInt(km)} km · {fmtDuration(minutes.m)}
+				<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 18c3-8 13-8 16 0" /><circle cx="4" cy="18" r="1.6" /><circle cx="20" cy="18" r="1.6" /></svg>{fmtInt(km)} km · {fmtDuration(out.min)}
 			</p>
 		{/if}
-		<div class="fa-card">
-			<label class="fa-row"><span class="fa-k">Datum</span><input class="fa-in" type="date" bind:value={date} required /></label>
-			<label class="fa-row fa-no"
-				><span class="fa-k">Flug-Nr.</span><span class="fa-v fa-col"
-					><input class="fa-in" type="text" placeholder="z. B. LH 400" autocomplete="off" autocapitalize="characters" spellcheck="false" bind:value={no} />{#if no.trim()}<small
-							class:ok={!!flightNoParts?.airline}>{flightNoParts?.airline && al ? al[flightNoParts.airline][0] : 'Airline nicht erkannt'}</small
-						>{/if}</span
-				></label
-			>
-			<label class="fa-row"><span class="fa-k">Abflug</span><input class="fa-in" type="time" bind:value={dep} /></label>
-			<label class="fa-row"
-				><span class="fa-k">Ankunft</span>{#if arrDay.plus}<span class="fa-plus">+{arrDay.plus} Tag</span>{/if}<input class="fa-in" type="time" bind:value={arr} /></label
-			>
-		</div>
+		{#snippet legCard(title: string, info: ReturnType<typeof legInfo>, f: { get: () => [string, string, string, string]; set: (i: number, v: string) => void }, remove?: () => void)}
+			{@const [d, n, t1, t2] = f.get()}
+			<div class="fa-card">
+				{#if title}
+					<div class="fa-row fa-head"><span class="fa-k">{title}</span>{#if remove}<button type="button" class="fa-x" onclick={remove}>Entfernen</button>{/if}</div>
+				{/if}
+				<label class="fa-row"><span class="fa-k">Datum</span><input class="fa-in" type="date" value={d} oninput={(e) => f.set(0, e.currentTarget.value)} required /></label>
+				<label class="fa-row fa-no"
+					><span class="fa-k">Flug-Nr.</span><span class="fa-v fa-col"
+						><input
+							class="fa-in"
+							type="text"
+							placeholder="z. B. LH 400"
+							autocomplete="off"
+							autocapitalize="characters"
+							spellcheck="false"
+							value={n}
+							oninput={(e) => f.set(1, e.currentTarget.value)}
+						/>{#if n.trim()}<small class:ok={!!info.p?.airline} class:bad={!!info.p?.err}
+								>{info.p?.airline && al ? al[info.p.airline][0] : info.p?.err ? 'Airline nicht gefunden' : ''}</small
+							>{/if}</span
+					></label
+				>
+				<label class="fa-row"><span class="fa-k">Abflug</span><input class="fa-in" type="time" value={t1} oninput={(e) => f.set(2, e.currentTarget.value)} /></label>
+				<label class="fa-row"
+					><span class="fa-k">Ankunft</span>{#if info.plus}<span class="fa-plus">+{info.plus} Tag</span>{/if}<input
+						class="fa-in"
+						type="time"
+						value={t2}
+						oninput={(e) => f.set(3, e.currentTarget.value)}
+					/></label
+				>
+			</div>
+		{/snippet}
+		{@render legCard(back ? `Hinflug ${from || ''} → ${to || ''}` : '', out, {
+			get: () => [date, no, dep, arr],
+			set: (i, v) => (i === 0 ? (date = v) : i === 1 ? (no = v) : i === 2 ? (dep = v) : (arr = v))
+		})}
+		{#if ret}
+			{@render legCard(
+				`Rückflug ${to || ''} → ${from || ''}`,
+				ret,
+				{ get: () => [rdate, rno, rdep, rarr], set: (i, v) => (i === 0 ? (rdate = v) : i === 1 ? (rno = v) : i === 2 ? (rdep = v) : (rarr = v)) },
+				() => (back = false)
+			)}
+		{:else}
+			<div class="fa-card">
+				<button type="button" class="fa-row fa-back" onclick={addBack}
+					><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h11l-3.5-3.5M17 17H6l3.5 3.5" /></svg>Rückflug hinzufügen</button
+				>
+			</div>
+		{/if}
+		{#if problems.length}
+			<ul class="fa-err" role="alert">
+				{#each problems as e (e)}<li>{e}</li>{/each}
+			</ul>
+		{/if}
 		<p class="note fa-note">Flugnummer und Uhrzeiten sind freiwillig. Uhrzeiten in Ortszeit, wie auf der Bordkarte. Flüge in der Zukunft gelten als geplant.</p>
 	{/if}
 </div>
 {#if !active}
 	<div class="pick-bar">
 		<button type="button" class="btn" onclick={closeSheet}>Abbrechen</button>
-		<button type="button" class="btn primary fa-go" disabled={!ready} onclick={add}>{from && to ? `${from} → ${to} hinzufügen` : 'Hinzufügen'}</button>
+		<button type="button" class="btn primary fa-go" disabled={!ready} onclick={add}
+			>{from && to ? `${from} ${back ? '⇄' : '→'} ${to} hinzufügen` : 'Hinzufügen'}</button
+		>
 	</div>
 {/if}

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { tick } from 'svelte';
 	import { removeFlights } from '$lib/atlas.svelte';
-	import { closeSheet, openAddFlight, openCountry, setSheetDetent, toast, ui } from '$lib/app.svelte';
+	import { closeSheet, openAddFlight, openAirport, openCountry, setSheetDetent, toast, ui } from '$lib/app.svelte';
 	import { flag, nameOf } from '$lib/countries';
 	import { fd } from '$lib/flightData.svelte';
 	import SwipeRow from './SwipeRow.svelte';
@@ -9,7 +9,8 @@
 
 	/* Seite zu einer Flugstrecke (Bogen auf dem Globus angetippt oder Flug in der Liste): Aufbau wie die Länderseite.
 	   Oben die kompakte Karte (Städte, Anzahl, „+ Flug“, drei Schnellwerte) – auch die „peek“-Stufe über dem Globus.
-	   Darunter alle Flüge dieser Strecke (beide Richtungen, neueste zuerst; Wischen nach links = Entfernen, wie in „Meine Länder“; bei nur einem Flug zusätzlich „Entfernen“ oben wie auf der Länderseite) und die beiden Flughäfen. */
+	   Darunter alle Flüge dieser Strecke (beide Richtungen, neueste zuerst; Wischen nach links = Entfernen, wie in „Meine Länder“; bei nur einem Flug zusätzlich „Entfernen“ oben wie auf der Länderseite),
+	   „Rückflug eintragen“ (Formular mit vertauschten Flughäfen) und die beiden Flughäfen (Tipp = Seite des Flughafens). */
 
 	let { key, id }: { key: string; id?: string } = $props();
 
@@ -100,6 +101,9 @@
 			<button type="button" class="cs-badge rs-add" onclick={() => openAddFlight(a, b)}
 				><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>Flug hinzufügen</button
 			>
+			<button type="button" class="cs-badge rs-add" onclick={() => openAddFlight(b, a)}
+				><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h11l-3.5-3.5M17 17H6l3.5 3.5" /></svg>Rückflug</button
+			>
 			{#if legs.length === 1}
 				<button type="button" class="cs-badge cs-del" onclick={() => remove(legs[0])}
 					><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17" /></svg>Entfernen</button
@@ -163,6 +167,7 @@
 					<b>{city(c)}</b>
 					{#if x}
 						{#if x[1]}<span class="sub">{x[1]}</span>{/if}
+						<button type="button" class="cs-chip rs-land" onclick={() => openAirport(c)}>Flughafen</button>
 						<button type="button" class="cs-chip rs-land" onclick={() => openCountry(x[2])}><span aria-hidden="true">{flag(x[2])}</span>{nameOf(x[2])}</button>
 					{:else}
 						<span class="sub">unbekannter Flughafen</span>
