@@ -1118,6 +1118,10 @@ button.pp-tile:active{transform:scale(.98)}
 .fa-no input{text-transform:uppercase}
 .fa-no input::placeholder{text-transform:none}
 .fa-plus{flex:none;padding:2px 8px;border-radius:999px;background:var(--surface);font-size:12px;font-weight:700;color:var(--primary)}
+.fs-del{display:flex;justify-content:center;margin:22px 0 0}
+.fa-ask{flex:none;margin:16px 2px 8px;font:800 20px/1.25 var(--display);color:var(--ink)}
+.fa-step{display:block;margin-bottom:3px;font:700 12.5px var(--text);letter-spacing:.04em;text-transform:uppercase;color:var(--primary)}
+select.fa-in{text-align-last:right;cursor:pointer}
 .fa-preview{display:flex;align-items:center;gap:8px;margin:12px 2px 0;font-size:14px;font-weight:600;color:var(--muted)}
 .fa-head{min-height:44px;justify-content:space-between}
 .fa-mark{gap:12px}
@@ -1142,6 +1146,7 @@ button.pp-tile:active{transform:scale(.98)}
 .fa-preview svg{width:20px;height:20px;fill:none;stroke:var(--primary);stroke-width:1.9;stroke-linecap:round}
 .fa-note{margin:12px 2px 0}
 .fa-search{display:flex;align-items:center;gap:10px;margin-top:12px}
+.fa-ask + .fa-search{margin-top:0}
 .fa-search .search{flex:1;min-width:0}
 .fa-cancel{flex:none;border:0;background:none;color:var(--primary);font-weight:700;font-size:16px;padding:8px 2px}
 .fa-list{min-height:160px;margin-top:6px}

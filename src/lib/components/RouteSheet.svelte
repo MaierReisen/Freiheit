@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { tick } from 'svelte';
 	import { removeFlights } from '$lib/atlas.svelte';
-	import { closeSheet, openAddFlight, openAirport, setSheetDetent, toast, ui } from '$lib/app.svelte';
+	import { closeSheet, openAddFlight, openAirport, openFlight, setSheetDetent, toast, ui } from '$lib/app.svelte';
 	import { fd } from '$lib/flightData.svelte';
 	import SwipeRow from './SwipeRow.svelte';
 	import { EARTH_KM, flightNo, fmtDuration, fmtInt, routeKey, type Leg } from '$lib/flights';
 
-	/* Seite zu einer Flugstrecke (Bogen auf dem Globus angetippt oder Flug in der Liste): Aufbau wie die Länderseite.
+	/* Seite zu einer Flugstrecke (Bogen auf dem Globus angetippt; Tipp auf einen Flug der Liste = Flug-Seite): Aufbau wie die Länderseite.
 	   Oben die kompakte Karte (Städte, Anzahl, „+ Flug“, drei Schnellwerte) – auch die „peek“-Stufe über dem Globus.
 	   Darunter alle Flüge dieser Strecke (beide Richtungen, neueste zuerst; Wischen nach links = Entfernen, wie in „Meine Länder“; bei nur einem Flug zusätzlich „Entfernen“ oben wie auf der Länderseite),
 	   „Rückflug eintragen“ (Formular mit vertauschten Flughäfen).
@@ -144,7 +144,7 @@
 		<ul class="list fl-list rs-list">
 			{#each legs as l (l.f.id)}
 				<SwipeRow ondelete={() => remove(l)} label="Entfernen">
-					<button type="button" tabindex="-1" class:on={l.f.id === id} class:off={!l.done} data-flight={l.f.id}>
+					<button type="button" class:on={l.f.id === id} class:off={!l.done} data-flight={l.f.id} onclick={() => openFlight(l.f.id, key)}>
 						<span class="fl-day">{day(l.f.date)}<small>{l.f.date.slice(0, 4)}</small></span>
 						<span class="fl-route">
 							<b>{l.f.from} → {l.to}{#if flightNo(l.f, al)}<small>{flightNo(l.f, al)}</small>{/if}</b>
@@ -160,7 +160,7 @@
 				</SwipeRow>
 			{/each}
 		</ul>
-		{#if legs.length > 1}<p class="note rs-hint">Zum Entfernen einen Flug nach links wischen.</p>{/if}
+		<p class="note rs-hint">Flug antippen für Details und Bearbeiten{legs.length > 1 ? ', nach links wischen zum Entfernen' : ''}.</p>
 	{:else}
 		<p class="cs-note">Auf dieser Strecke ist kein Flug mehr eingetragen.</p>
 	{/if}

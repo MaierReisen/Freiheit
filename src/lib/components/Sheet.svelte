@@ -2,9 +2,11 @@
 	import { closeSheet, setSheetDetent, sheetBack, ui } from '$lib/app.svelte';
 	import { nameOf } from '$lib/countries';
 	import { fd } from '$lib/flightData.svelte';
+	import { atlas } from '$lib/atlas.svelte';
 	import CountryPicker from './CountryPicker.svelte';
 	import CountrySheet from './CountrySheet.svelte';
 	import RouteSheet from './RouteSheet.svelte';
+	import FlightSheet from './FlightSheet.svelte';
 	import AirportSheet from './AirportSheet.svelte';
 	import CapitalSheet from './CapitalSheet.svelte';
 	import { factsNow } from '$lib/facts';
@@ -16,7 +18,7 @@
 	   Kompakt: hochziehen → voll, runterziehen → schließen. Voll: runterziehen → schließen. */
 
 	// Länderseite und Seiten zu Flugstrecke/Flughafen: gleicher Aufbau (kompakte Karte + volle Seite; Flughafen nur voll)
-	const isCountry = $derived(ui.sheetView?.kind === 'country' || ui.sheetView?.kind === 'route' || ui.sheetView?.kind === 'airport' || ui.sheetView?.kind === 'capital');
+	const isCountry = $derived(ui.sheetView?.kind === 'country' || ui.sheetView?.kind === 'route' || ui.sheetView?.kind === 'airport' || ui.sheetView?.kind === 'capital' || ui.sheetView?.kind === 'flight');
 	const peek = $derived(isCountry && ui.sheetDetent === 'peek');
 	// „Zurück“: Name der vorherigen Seite
 	const back = $derived.by(() => {
@@ -26,6 +28,10 @@
 		if (v.kind === 'route') return v.key.split('-').map(city).join(' – ');
 		if (v.kind === 'airport') return `${city(v.code)} (${v.code})`;
 		if (v.kind === 'country') return nameOf(v.code);
+		if (v.kind === 'flight') {
+			const f = atlas.flights.find((x) => x.id === v.id);
+			return f ? `Flug ${f.from} → ${f.to}` : 'Flug';
+		}
 		if (v.kind === 'capital') return factsNow(v.code)?.cap?.[0] ?? 'Hauptstadt';
 		return 'Zurück';
 	});
@@ -199,8 +205,10 @@
 				<AirportSheet code={ui.sheetView.code} />
 			{:else if ui.sheetView.kind === 'capital'}
 				<CapitalSheet code={ui.sheetView.code} />
+			{:else if ui.sheetView.kind === 'flight'}
+				<FlightSheet id={ui.sheetView.id} />
 			{:else if ui.sheetView.kind === 'addFlight'}
-				<FlightAdd from={ui.sheetView.from} to={ui.sheetView.to} />
+				<FlightAdd from={ui.sheetView.from} to={ui.sheetView.to} edit={ui.sheetView.edit} />
 			{:else}
 				<CountryPicker mode={ui.sheetView.mode} />
 			{/if}

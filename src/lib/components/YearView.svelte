@@ -7,7 +7,7 @@
 	import { fade, fly } from 'svelte/transition';
 	import { specialLevel } from '$lib/special.svelte';
 	import { defaultYear, entryYear, flightsIn, newContinents, travelYears } from '$lib/travelYear';
-	import { closeYear, openCountry, openRoute, reduceMotion, ui } from '$lib/app.svelte';
+	import { closeYear, openCountry, openFlight, reduceMotion, ui } from '$lib/app.svelte';
 	import { swipeClose } from '$lib/swipeClose';
 
 	/* Seite „Mein Reisejahr“ (öffnet über den Block auf der Startseite): was in einem Jahr neu dazukam –
@@ -225,7 +225,7 @@
 						{@const l = st.longest}
 						<ul class="list yr-long">
 							<li>
-								<button type="button" onclick={() => openRoute(routeKey(l.f.from, l.to), { id: l.f.id })}>
+								<button type="button" onclick={() => openFlight(l.f.id, routeKey(l.f.from, l.to))}>
 									<span class="flag">📏</span>
 									<span class="cp-txt"><span class="nm">{city(l.f.from)} → {city(l.to)}</span><span class="ct">Längster Flug · {fmtInt(l.km)} km · {fmtDuration(l.min)}</span></span>
 								</button>

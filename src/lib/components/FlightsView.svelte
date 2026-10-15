@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { removeFlights } from '$lib/atlas.svelte';
-	import { closeFlightsPage, openAirport, openRoute, toast, ui, type FlightsPage } from '$lib/app.svelte';
+	import { closeFlightsPage, openAirport, openFlight, toast, ui, type FlightsPage } from '$lib/app.svelte';
 	import { compareNames, flag, nameOf } from '$lib/countries';
 	import { flightNo, fmtDuration, fmtInt, routeKey, type Airlines, type Airports, type FlightStats, type Leg } from '$lib/flights';
 	import { swipeClose } from '$lib/swipeClose';
@@ -165,7 +165,7 @@
 		</li>
 	{:else}
 		<SwipeRow ondelete={() => del(l)}>
-			<button type="button" class="fl-tap" class:off={!l.done} onclick={() => openRoute(routeKey(l.f.from, l.to), { id: l.f.id })}>
+			<button type="button" class="fl-tap" class:off={!l.done} onclick={() => openFlight(l.f.id, routeKey(l.f.from, l.to))}>
 				<span class="fl-day">{withYear ? dayY(l.f.date) : day(l.f.date)}</span>
 				<span class="fl-route">
 					<b>{l.f.from} → {l.to}</b>

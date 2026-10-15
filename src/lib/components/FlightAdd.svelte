@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { addFromFlights, atlas, putFlights, visitedSet } from '$lib/atlas.svelte';
-	import { closeFlightsPage, closeSheet, flashRoute, hooks, toast, ui } from '$lib/app.svelte';
+	import { closeFlightsPage, closeSheet, flashRoute, hooks, sheetBack, toast, ui } from '$lib/app.svelte';
 	import { tierName } from '$lib/badges';
 	import { flightBadges } from '$lib/flightBadges';
 	import { appCountry, flag, nameOf } from '$lib/countries';
@@ -11,6 +11,7 @@
 		durationProblem,
 		estFlightMin,
 		flightStats,
+		flightNo,
 		fmtDuration,
 		fmtInt,
 		gcKm,
@@ -26,22 +27,38 @@
 	   optional Flugnummer (z. B. „LH 400“, Airline wird daraus erkannt) und Ortszeiten; auf Wunsch gleich der Rückflug
 	   (eigenes Datum, Flugnummer, Zeiten). Flughäfen per Suche (Kürzel, Stadt, Name oder Land; schon besuchte zuerst).
 	   Nur Flüge, die es so geben kann: Flughäfen am Datum in Betrieb, Airline flog damals, Flugzeit passt zur Strecke,
-	   nicht weiter als der längste Nonstop-Flug, höchstens ein Jahr im Voraus. Danach fliegt der Globus zur neuen Strecke. */
+	   nicht weiter als der längste Nonstop-Flug, höchstens ein Jahr im Voraus. Danach fliegt der Globus zur neuen Strecke.
+	   Mit `edit` (Kennung eines Flugs, aus der Flug-Seite): dasselbe Formular zum Bearbeiten, dazu Platz, Klasse und Notiz;
+	   ohne Rückflug und ohne Länder-Schalter; Speichern ersetzt den Flug (Kennung bleibt) und führt zurück zur Flug-Seite. */
 
-	let { from: from0, to: to0 }: { from?: string; to?: string } = $props();
+	let { from: from0, to: to0, edit: editId }: { from?: string; to?: string; edit?: string } = $props();
 
 	fd.load();
 	const ap = $derived(fd.ap);
 	const al = $derived(fd.al);
 
 	// svelte-ignore state_referenced_locally
-	let from = $state(from0 ?? '');
+	const old = editId ? atlas.flights.find((f) => f.id === editId) : undefined;
+	const hm = (t?: string) => (t && !t.endsWith('T00:00') ? t.slice(11, 16) : '');
+	const old0 = old && {
+		date: old.date,
+		no: flightNo(old, fd.al),
+		dep: hm(old.d.gda || old.d.gds || old.d.ofa || old.d.ofs),
+		arr: hm(old.d.gaa || old.d.gas || old.d.ona || old.d.ons)
+	};
+
 	// svelte-ignore state_referenced_locally
-	let to = $state(to0 ?? '');
-	let date = $state(new Date().toLocaleDateString('sv-SE')); // heute, „JJJJ-MM-TT“
-	let no = $state('');
-	let dep = $state('');
-	let arr = $state('');
+	let from = $state(old?.from ?? from0 ?? '');
+	// svelte-ignore state_referenced_locally
+	let to = $state(old?.to ?? to0 ?? '');
+	let date = $state(old0?.date ?? new Date().toLocaleDateString('sv-SE')); // heute, „JJJJ-MM-TT“
+	let no = $state(old0?.no ?? '');
+	let dep = $state(old0?.dep ?? '');
+	let arr = $state(old0?.arr ?? '');
+	// nur beim Bearbeiten: Platz, Klasse, Notiz
+	let seat = $state(old?.d.seat ?? '');
+	let cab = $state(old?.d.cab ?? '');
+	let note = $state(old?.d.note ?? '');
 	// Rückflug (optional)
 	let back = $state(false);
 	let rdate = $state('');
@@ -54,7 +71,7 @@
 		if (!rdate && /^\d{4}-\d{2}-\d{2}$/.test(date)) rdate = new Date(Date.parse(date + 'T12:00:00Z') + 7 * 864e5).toISOString().slice(0, 10);
 	}
 	// svelte-ignore state_referenced_locally
-	let active = $state<'from' | 'to' | null>(from0 ? null : 'from');
+	let active = $state<'from' | 'to' | null>(from0 || old ? null : 'from');
 	let q = $state('');
 	let qEl = $state<HTMLInputElement>();
 	// Suche gleich bereit (am Rechner; iOS öffnet die Tastatur erst beim Antippen)
@@ -168,7 +185,7 @@
 		B = $derived(ap?.[to]);
 	// Vorschau: Strecke und Flugzeit, sobald Von und Nach gewählt sind
 	const km = $derived(A && B && from !== to ? gcKm(A, B) : 0);
-	const out = $derived(legInfo(date, no, dep, arr, A, B, km));
+	const out = $derived(legInfo(date, old0 && no === old0.no ? '' : no, dep, arr, A, B, km));
 	const ret = $derived(back ? legInfo(rdate, rno, rdep, rarr, B, A, km) : null);
 	/** Gründe, warum es die Flüge so nicht geben kann (Knopf bleibt dann aus) */
 	const problems = $derived.by(() => {
@@ -189,7 +206,7 @@
 	// Vermerk am Flug, das Land kommt nach dem Abflug dazu (fd.syncCountries)
 	const today = new Date().toLocaleDateString('sv-SE');
 	const land = $derived(B ? appCountry(B[2]) : '');
-	const askLand = $derived(!!land && from !== to && !visitedSet().has(land));
+	const askLand = $derived(!old && !!land && from !== to && !visitedSet().has(land));
 	const later = $derived(isDay(date) && date > today);
 	let mark = $state(true);
 	const ready = $derived(!!ap && isDay(date) && !!from && !!to && from !== to && (!back || isDay(rdate)) && !problems.length);
@@ -204,6 +221,39 @@
 		const nr = info.p ? info.p.no : noText.trim();
 		const id = `${day}${det.gds ? det.gds.slice(10) : ''}-${a}-${b}-${airline}${nr}`;
 		return { id, date: day, from: a, to: b, ...(airline ? { airline } : {}), ...(nr ? { no: nr } : {}), d: det };
+	}
+
+	/** Bearbeiteten Flug speichern: Kennung bleibt; geänderte Zeiten ersetzen alle bisherigen (auch die aus Flighty) */
+	function save() {
+		if (!ready || !ap || !old || !old0) return;
+		if (atlas.flights.some((f) => f.id !== old.id && f.date === date && f.from === from && f.to === to)) {
+			toast('Diesen Flug gibt es schon');
+			return;
+		}
+		const d: FlightDetail = { ...old.d };
+		if (date !== old0.date || dep !== old0.dep || arr !== old0.arr || from !== old.from || to !== old.to) {
+			for (const k of ['gds', 'gda', 'ofs', 'ofa', 'ons', 'ona', 'gas', 'gaa'] as const) delete d[k];
+			if (dep) d.gds = `${date}T${dep}`;
+			if (arr) d.gas = `${out.arrDay}T${arr}`;
+		}
+		if (from !== old.from || to !== old.to) delete d.div;
+		for (const [k, v] of [['seat', seat], ['cab', cab], ['note', note]] as const) {
+			if (v.trim()) d[k] = v.trim();
+			else delete d[k];
+		}
+		const f: Flight = { id: old.id, date, from, to, d };
+		if (no === old0.no) {
+			if (old.airline) f.airline = old.airline;
+			if (old.no) f.no = old.no;
+		} else {
+			if (out.p?.airline) f.airline = out.p.airline;
+			const nr = out.p ? out.p.no : no.trim();
+			if (nr) f.no = nr;
+		}
+		putFlights([f]);
+		fd.tick();
+		toast('Flug gespeichert');
+		sheetBack();
 	}
 
 	function add() {
@@ -249,7 +299,7 @@
 	}
 </script>
 
-<h3 id="sheetTitle">Flug hinzufügen</h3>
+<h3 id="sheetTitle">{old ? 'Flug bearbeiten' : 'Flug hinzufügen'}</h3>
 <div class="fa-body">
 	<div class="fa-card fa-route">
 		{#each ['from', 'to'] as const as w (w)}
@@ -259,7 +309,7 @@
 				{#if c}
 					<span class="fa-v"><b>{c}</b><span class="fa-city">{ap?.[c] ? `${flag(ap[c][2])} ${label(c)}` : ''}</span></span>
 				{:else}
-					<span class="fa-v fa-ph">Flughafen wählen</span>
+					<span class="fa-v fa-ph">{w === 'from' ? 'Abflughafen wählen' : 'Zielflughafen wählen'}</span>
 				{/if}
 			</button>
 		{/each}
@@ -269,11 +319,15 @@
 	</div>
 
 	{#if active}
+		<p class="fa-ask">
+			{#if !old && !to}<span class="fa-step">Schritt {active === 'from' ? 1 : 2} von 2</span>{/if}
+			{active === 'from' ? 'Wo bist du abgeflogen?' : 'Wohin bist du geflogen?'}
+		</p>
 		<div class="fa-search">
 			<input
 				class="search"
 				type="search"
-				placeholder="Kürzel, Stadt oder Flughafen"
+				placeholder={active === 'from' ? 'Abflughafen: Stadt oder Kürzel' : 'Zielflughafen: Stadt oder Kürzel'}
 				autocomplete="off"
 				enterkeyhint="done"
 				bind:value={q}
@@ -363,6 +417,18 @@
 				{ get: () => [rdate, rno, rdep, rarr], set: (i, v) => (i === 0 ? (rdate = v) : i === 1 ? (rno = v) : i === 2 ? (rdep = v) : (rarr = v)) },
 				() => (back = false)
 			)}
+		{:else if old}
+			<div class="fa-card">
+				<label class="fa-row"><span class="fa-k">Platz</span><input class="fa-in" type="text" placeholder="z. B. 23A" maxlength="5" autocomplete="off" bind:value={seat} /></label>
+				<label class="fa-row"
+					><span class="fa-k">Klasse</span><select class="fa-in" bind:value={cab}
+						>{#each ['', 'Economy', 'Premium Economy', 'Business', 'First'].concat(cab && !['Economy', 'Premium Economy', 'Business', 'First'].includes(cab) ? [cab] : []) as c (c)}<option value={c}
+								>{c || '–'}</option
+							>{/each}</select
+					></label
+				>
+				<label class="fa-row"><span class="fa-k">Notiz</span><input class="fa-in" type="text" placeholder="z. B. Hochzeitsreise" maxlength="120" autocomplete="off" bind:value={note} /></label>
+			</div>
 		{:else}
 			<div class="fa-card">
 				<button type="button" class="fa-row fa-back" onclick={addBack}
@@ -380,9 +446,13 @@
 </div>
 {#if !active}
 	<div class="pick-bar">
-		<button type="button" class="btn" onclick={closeSheet}>Abbrechen</button>
-		<button type="button" class="btn primary fa-go" disabled={!ready} onclick={add}
-			>{from && to ? `${from} ${back ? '⇄' : '→'} ${to} hinzufügen` : 'Hinzufügen'}</button
-		>
+		<button type="button" class="btn" onclick={() => (old ? sheetBack() : closeSheet())}>Abbrechen</button>
+		{#if old}
+			<button type="button" class="btn primary fa-go" disabled={!ready} onclick={save}>Speichern</button>
+		{:else}
+			<button type="button" class="btn primary fa-go" disabled={!ready} onclick={add}
+				>{from && to ? `${from} ${back ? '⇄' : '→'} ${to} hinzufügen` : 'Hinzufügen'}</button
+			>
+		{/if}
 	</div>
 {/if}

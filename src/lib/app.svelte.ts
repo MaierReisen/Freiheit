@@ -20,7 +20,8 @@ export type SheetView =
 	| { kind: 'route'; key: string; id?: string }
 	| { kind: 'airport'; code: string }
 	| { kind: 'capital'; code: string }
-	| { kind: 'addFlight'; from?: string; to?: string };
+	| { kind: 'flight'; id: string; key: string }
+	| { kind: 'addFlight'; from?: string; to?: string; edit?: string };
 
 /* ---------- Darstellung: Design und Animationen (gelten nur auf diesem Gerät) ---------- */
 export type ThemePref = 'system' | 'light' | 'dark';
@@ -203,7 +204,7 @@ export function toast(m: string) {
 /** push: aus einer Strecken- oder Flughafen-Seite weitergetippt → die bisherige Seite merken (für „Zurück“) */
 function openSheet(view: SheetView, push = false) {
 	const cur = ui.sheetView;
-	if (push && ui.sheetOpen && cur && (cur.kind === 'route' || cur.kind === 'airport' || cur.kind === 'capital')) ui.sheetBack = [...ui.sheetBack, cur];
+	if (push && ui.sheetOpen && cur && (cur.kind === 'route' || cur.kind === 'airport' || cur.kind === 'capital' || cur.kind === 'flight')) ui.sheetBack = [...ui.sheetBack, cur];
 	else if (!push || !ui.sheetOpen) ui.sheetBack = [];
 	ui.sheetView = view;
 	ui.sheetKey++;
@@ -259,8 +260,18 @@ export function sheetBack() {
 export function openAddFlight(from?: string, to?: string) {
 	openSheet({ kind: 'addFlight', from, to });
 }
+/** Seite zu einem einzelnen Flug (key = Strecke, für die Hervorhebung auf dem Globus) */
+export function openFlight(id: string, key: string) {
+	ui.sheetDetent = 'full';
+	ui.selected = null;
+	openSheet({ kind: 'flight', id, key }, true);
+}
+/** Flug bearbeiten (Formular wie „Flug hinzufügen“, aus der Flug-Seite; „Zurück“ führt wieder dorthin) */
+export function openEditFlight(id: string) {
+	openSheet({ kind: 'addFlight', edit: id }, true);
+}
 /** ausgewählte Strecke auf dem Globus (Seite zur Strecke offen) */
-export const selectedRoute = () => (ui.sheetOpen && ui.sheetView?.kind === 'route' ? ui.sheetView.key : ui.flashRoute || null);
+export const selectedRoute = () => (ui.sheetOpen && (ui.sheetView?.kind === 'route' || ui.sheetView?.kind === 'flight') ? ui.sheetView.key : ui.flashRoute || null);
 let flashT: ReturnType<typeof setTimeout> | undefined;
 /** Strecke nach dem Eintragen hervorheben, sobald der Bogen gewachsen ist; nach einigen Sekunden wieder normal */
 export function flashRoute(key: string) {
