@@ -69,11 +69,13 @@
 			.normalize('NFD')
 			.replace(/[̀-ͯ]/g, '');
 	// Suchtext je Flughafen einmal aufbereitet
-	const index = $derived(ap ? Object.entries(ap).map(([c, x]) => ({ c, city: norm(x[0]), name: norm(x[1]), land: norm(nameOf(x[2])) })) : []);
+	// Nicht mehr angeflogene (geschlossene) Flughäfen nur für Tage vor der Schließung
+	const open = (x: string[]) => !x[6] || !/^\d{4}-\d{2}-\d{2}$/.test(date) || date < x[6];
+	const index = $derived(ap ? Object.entries(ap).filter(([, x]) => open(x as string[])).map(([c, x]) => ({ c, city: norm(x[0]), name: norm(x[1]), land: norm(nameOf(x[2])) })) : []);
 	const visits = $derived(new Map((fd.st?.airports ?? []).map((a) => [a.code, a.n])));
 	const results = $derived.by(() => {
 		const s = norm(q.trim());
-		if (!s) return [...visits.keys()].filter((c) => ap?.[c]).slice(0, 12); // ohne Suche: bisherige Flughäfen
+		if (!s) return [...visits.keys()].filter((c) => ap?.[c] && open(ap[c] as string[])).slice(0, 12); // ohne Suche: bisherige Flughäfen
 		const up = s.toUpperCase();
 		const hits: { c: string; r: number }[] = [];
 		for (const x of index) {

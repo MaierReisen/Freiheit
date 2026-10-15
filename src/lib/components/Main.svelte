@@ -268,6 +268,8 @@
 				<PlacesTile />
 				<ContinentsTile />
 				<CapitalsTile />
+			</div>
+			<div class="cats cats-year">
 				<YearTile />
 			</div>
 		</div>

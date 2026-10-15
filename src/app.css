@@ -351,6 +351,7 @@ button.cont{border:0;font:inherit;font-size:14px;color:inherit}
 .blocks-h{display:flex;align-items:center;gap:12px;margin:14px 2px 10px;font:700 12.5px var(--text);letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
 .blocks-h::after{content:"";flex:1;height:1px;background:var(--line)}
 .cats{border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface);overflow:hidden}
+.cats-year{margin-top:16px;border-color:rgba(201,162,77,.45);background:linear-gradient(155deg,rgba(201,162,77,.14),transparent 70%),var(--surface);box-shadow:0 8px 22px -14px rgba(201,162,77,.55)}
 .cat-row{width:100%;display:flex;align-items:center;gap:14px;padding:14px 16px;border:0;background:none;color:var(--ink);text-align:left;-webkit-tap-highlight-color:transparent;transition:background .15s}
 .cat-row + .cat-row{border-top:1px solid var(--line)}
 .cat-row:active{background:var(--chip)}
