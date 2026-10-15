@@ -270,18 +270,22 @@ html.swiping{overflow-x:hidden}
 .map-box.full #fullBtn .i-expand{display:none}
 .map-box.full #fullBtn .i-close{display:block}
 .map-zoom{position:absolute;right:12px;bottom:12px;display:flex;flex-direction:column;gap:8px}
-.map-zoom .mbtn{position:static;width:42px;height:42px}
+.map-zoom .mbtn{position:static;width:42px;height:42px;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 .map-hint{position:absolute;left:14px;bottom:14px;font-size:12px;color:rgba(255,255,255,.62);pointer-events:none}
 .map-box.full .map-hint{display:none}
 .map-box.full .mseg,.map-box.full #fullBtn{top:calc(12px + env(safe-area-inset-top,0px))}
-.map-box.full .map-zoom{bottom:calc(14px + env(safe-area-inset-bottom,0px))}
+/* Vollbild: Zoom-Knöpfe stehen über dem Panel, das Panel nutzt die ganze Breite (--panel-h aus WorldMap.svelte) */
+.map-box.full .map-zoom{bottom:calc(26px + var(--panel-h,0px) + env(safe-area-inset-bottom,0px))}
 .map-panel{display:none}
-.map-box.full .map-panel{display:flex;flex-direction:column;gap:12px;position:absolute;left:12px;right:68px;bottom:calc(14px + env(safe-area-inset-bottom,0px));padding:12px 14px;border-radius:22px;background:rgba(7,20,31,.66);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
+.map-box.full .map-panel{display:flex;flex-direction:column;gap:12px;position:absolute;left:12px;right:12px;bottom:calc(14px + env(safe-area-inset-bottom,0px));padding:12px 14px;border-radius:22px;background:rgba(7,20,31,.66);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
 .map-panel .legend{margin:0;color:rgba(255,255,255,.82);font-size:13px;gap:14px;flex-wrap:wrap}
 .panel-row{display:flex;gap:8px;flex-wrap:wrap}
 .mchip{border:1px solid rgba(255,255,255,.26);border-radius:999px;padding:8px 14px;background:rgba(255,255,255,.1);color:#fff;font-weight:600;font-size:13px}
 .mchip[aria-pressed="true"]{background:#fff;color:#0A2030;border-color:#fff}
 .map-panel .continents{padding:0}
+/* Kontinent-Leiste läuft bis an den Rand des Panels und blendet dort weich aus, statt hart abgeschnitten zu werden */
+.map-box.full .map-panel .continents{margin:0 -14px;padding:0 14px;scroll-padding:0 14px;-webkit-mask-image:linear-gradient(90deg,transparent,#000 14px,#000 calc(100% - 30px),transparent);mask-image:linear-gradient(90deg,transparent,#000 14px,#000 calc(100% - 30px),transparent)}
+.map-box.full .map-panel .continents::after{content:'';flex:none;width:6px}
 .map-panel .cont{background:rgba(255,255,255,.14);color:#fff}
 button.cont{border:0;font:inherit;font-size:14px;color:inherit}
 #continents .cont{cursor:pointer}

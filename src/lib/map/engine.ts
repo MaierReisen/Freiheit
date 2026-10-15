@@ -226,6 +226,8 @@ export function createWorldMap(o: MapOptions) {
 		drawQueued = false,
 		introDone = false,
 		destroyed = false;
+	/** Zoom-Knopf gedrückt gehalten (siehe zoomHold) */
+	let holdZ: { dir: number; t: number; raf: number } = { dir: 0, t: 0, raf: 0 };
 	let fly: {
 		from: { lon: number; lat: number; k: number };
 		to: { lon: number; lat: number; k: number };
@@ -1729,6 +1731,30 @@ export function createWorldMap(o: MapOptions) {
 			cancelMotion();
 			flyTo({ k: view.k * m }, 350);
 			scheduleSettle(500); // Zoomen per Knopf: danach zeigt der Kontinent-Knopf, wo man ist
+		},
+		/** Knopf gedrückt halten: gleichmäßig weiterzoomen (dir 1 = hinein, -1 = heraus), 0 = loslassen */
+		zoomHold(dir: 1 | -1 | 0) {
+			cancelAnimationFrame(holdZ.raf);
+			if (!dir) {
+				if (!holdZ.dir) return;
+				holdZ.dir = 0;
+				interacting = false;
+				scheduleRefine();
+				scheduleSettle(300);
+				return;
+			}
+			cancelMotion();
+			holdZ = { dir, t: performance.now(), raf: 0 };
+			interacting = true;
+			const tick = (now: number) => {
+				if (!holdZ.dir || destroyed) return;
+				const dt = Math.min(50, now - holdZ.t);
+				holdZ.t = now;
+				setK(view.k * Math.exp(holdZ.dir * dt * 0.0013)); // etwa 3,7-fach je Sekunde
+				markDirty(true);
+				holdZ.raf = requestAnimationFrame(tick);
+			};
+			holdZ.raf = requestAnimationFrame(tick);
 		},
 		setMode(m: MapMode) {
 			if (m === view.mode) return;

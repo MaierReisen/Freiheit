@@ -290,6 +290,39 @@
 			else map?.markDirty(false);
 		});
 	});
+	// Zoom-Knöpfe: kurz tippen = eine Stufe, gedrückt halten = gleichmäßig weiterzoomen bis zum Loslassen
+	let holdT: ReturnType<typeof setTimeout> | undefined;
+	let holding = false;
+	let panelH = $state(0);
+	function zoomBtn(dir: 1 | -1) {
+		const end = (step: boolean) => {
+			const pending = holdT !== undefined;
+			clearTimeout(holdT);
+			holdT = undefined;
+			if (holding) map?.zoomHold(0);
+			else if (pending && step) map?.zoomBy(dir > 0 ? 2 : 1 / 2);
+			holding = false;
+		};
+		return {
+			onpointerdown: (e: PointerEvent) => {
+				if (e.button) return;
+				(e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
+				end(false);
+				holdT = setTimeout(() => {
+					holdT = undefined;
+					holding = true;
+					map?.zoomHold(dir);
+				}, 260);
+			},
+			onpointerup: () => end(true),
+			onpointercancel: () => end(false),
+			onlostpointercapture: () => end(false),
+			// Tastatur (Enter/Leertaste) löst nur click aus
+			onclick: (e: MouseEvent) => {
+				if (e.detail === 0) map?.zoomBy(dir > 0 ? 2 : 1 / 2);
+			}
+		};
+	}
 	// Vollbild an/aus: Größe neu bestimmen
 	$effect(() => {
 		void ui.full;
@@ -297,7 +330,7 @@
 	});
 </script>
 
-<div class="map-box" class:full={ui.full} class:active={ui.mapActive && !ui.full} id="mapBox" bind:this={box} oncontextmenu={(e) => e.preventDefault()} role="presentation">
+<div class="map-box" style:--panel-h={ui.full ? `${panelH}px` : null} class:full={ui.full} class:active={ui.mapActive && !ui.full} id="mapBox" bind:this={box} oncontextmenu={(e) => e.preventDefault()} role="presentation">
 	<canvas id="mapCv" aria-hidden="true" bind:this={cvB}></canvas>
 	<!-- svelte-ignore a11y_no_interactive_element_to_noninteractive_role -->
 	<canvas id="mapTop" role="img" aria-label="Interaktive Weltkarte mit deinen bereisten Ländern" bind:this={cvT}></canvas>
@@ -310,8 +343,8 @@
 		<svg class="i-close" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
 	</button>
 	<div class="map-zoom">
-		<button type="button" class="mbtn" id="zoomIn" aria-label="Hineinzoomen" onclick={() => map?.zoomBy(2)}>+</button>
-		<button type="button" class="mbtn" id="zoomOut" aria-label="Herauszoomen" onclick={() => map?.zoomBy(1 / 2)}>−</button>
+		<button type="button" class="mbtn" id="zoomIn" aria-label="Hineinzoomen" {...zoomBtn(1)}>+</button>
+		<button type="button" class="mbtn" id="zoomOut" aria-label="Herauszoomen" {...zoomBtn(-1)}>−</button>
 	</div>
 	{#if coach}
 		<div class="coach" aria-hidden="true" class:still={reduceMotion()}>
@@ -326,7 +359,7 @@
 		</div>
 	{/if}
 	<span class="map-hint" id="mapHint">{hint}</span>
-	<div class="map-panel" id="mapPanel">
+	<div class="map-panel" id="mapPanel" bind:offsetHeight={panelH}>
 		<div class="legend"><span><i class="sw v"></i>Bereist</span>{#if ui.tab === 'flights' && fd.routes}<span><i class="sw rt"></i>Flugstrecken</span>{/if}</div>
 		<div class="panel-row">
 			<button type="button" class="mchip" id="mSpin" aria-pressed={s.spin} hidden={s.mode !== 'globe'} onclick={() => map?.toggleSpin()}>Drehen</button>
