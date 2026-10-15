@@ -19,6 +19,7 @@ export type SheetView =
 	| { kind: 'picker'; mode: PickerMode }
 	| { kind: 'route'; key: string; id?: string }
 	| { kind: 'airport'; code: string }
+	| { kind: 'capital'; code: string }
 	| { kind: 'addFlight'; from?: string; to?: string };
 
 /* ---------- Darstellung: Design und Animationen (gelten nur auf diesem Gerät) ---------- */
@@ -200,7 +201,7 @@ export function toast(m: string) {
 /** push: aus einer Strecken- oder Flughafen-Seite weitergetippt → die bisherige Seite merken (für „Zurück“) */
 function openSheet(view: SheetView, push = false) {
 	const cur = ui.sheetView;
-	if (push && ui.sheetOpen && cur && (cur.kind === 'route' || cur.kind === 'airport')) ui.sheetBack = [...ui.sheetBack, cur];
+	if (push && ui.sheetOpen && cur && (cur.kind === 'route' || cur.kind === 'airport' || cur.kind === 'capital')) ui.sheetBack = [...ui.sheetBack, cur];
 	else if (!push || !ui.sheetOpen) ui.sheetBack = [];
 	ui.sheetView = view;
 	ui.sheetKey++;
@@ -234,13 +235,22 @@ export function openAirport(code: string) {
 	ui.selected = null;
 	openSheet({ kind: 'airport', code }, true);
 }
+/** Seite zu einer Hauptstadt (Ländercode; immer volle Seite). Aus der Länderseite geöffnet: „Zurück“ führt zum Land. */
+export function openCapital(code: string) {
+	const cur = ui.sheetView;
+	const back = ui.sheetOpen && cur?.kind === 'country' ? [...ui.sheetBack, cur] : null;
+	ui.sheetDetent = 'full';
+	ui.selected = code;
+	openSheet({ kind: 'capital', code }, true);
+	if (back) ui.sheetBack = back;
+}
 /** zurück zur vorherigen Seite im Sheet */
 export function sheetBack() {
 	const prev = ui.sheetBack.at(-1);
 	if (!prev) return;
 	ui.sheetBack = ui.sheetBack.slice(0, -1);
 	ui.sheetDetent = 'full';
-	ui.selected = prev.kind === 'country' ? prev.code : null;
+	ui.selected = prev.kind === 'country' || prev.kind === 'capital' ? prev.code : null;
 	ui.sheetView = prev;
 	ui.sheetKey++;
 }

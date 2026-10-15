@@ -3,11 +3,11 @@
 	import { CONT, CONT_NAMES, compareNames, flag, nameOf, type ContinentCode } from '$lib/countries';
 	import { SCOPES, scopeTotal } from '$lib/scope';
 	import { fmtPop, loadFacts, type Facts } from '$lib/facts';
-	import { closeCapitals, openCountry, ui } from '$lib/app.svelte';
+	import { closeCapitals, openCapital, ui } from '$lib/app.svelte';
 	import { swipeClose } from '$lib/swipeClose';
 
 	/* Seite „Meine Hauptstädte“ (öffnet über den Block auf der Startseite): die Hauptstädte aller bereisten Länder, nach Kontinent.
-	   Haken rechts = in der Hauptstadt gewesen (gespeichert in den Einstellungen, Spalte „capitals“), Antippen der Zeile öffnet das Land.
+	   Haken rechts = in der Hauptstadt gewesen (gespeichert in den Einstellungen, Spalte „capitals“), Antippen der Zeile öffnet die Seite der Hauptstadt.
 	   Gezählt wird nur, wenn das Land bereist ist und zur gewählten Länderliste gehört. */
 
 	const KEYS = Object.keys(CONT_NAMES) as ContinentCode[];
@@ -65,7 +65,7 @@
 					{#each g.rows as r (r.code)}
 						{@const on = done.has(r.code)}
 						<li class:on>
-							<button type="button" class="cp-main" onclick={() => openCountry(r.code)}>
+							<button type="button" class="cp-main" onclick={() => openCapital(r.code)}>
 								<span class="flag">{flag(r.code)}</span>
 								<span class="cp-txt">
 									<span class="nm">{r.cap}</span>

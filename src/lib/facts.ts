@@ -355,3 +355,25 @@ export function loadHighlights() {
 	hlLoading ??= import('./data/highlights.json').then((m) => (hlCache = m.default as unknown as Record<string, Highlight[]>));
 	return hlLoading;
 }
+
+/** Zusatzfakten je Hauptstadt (capitals.json, von scripts/build-capitals.py): Wikipedia-Titel, Höhe m, Fläche km²,
+    Gründungsjahr (negativ = v. Chr.), Name in Landessprache, Kurzbeschreibung (Wikipedia, CC BY-SA) */
+export interface CapitalInfo {
+	w?: string;
+	e?: number;
+	a?: number;
+	f?: number;
+	n?: string;
+	x?: string;
+	/** Lage [Länge, Breite] und Einwohner, nur wenn facts.json sie nicht hat */
+	ll?: [number, number];
+	p?: number;
+}
+let capCache: Record<string, CapitalInfo> | null = null;
+let capLoading: Promise<Record<string, CapitalInfo>> | null = null;
+export const capitalNow = (code: string) => (capCache ? (capCache[code] ?? null) : undefined);
+export function loadCapitals() {
+	if (capCache) return Promise.resolve(capCache);
+	capLoading ??= import('./data/capitals.json').then((m) => (capCache = m.default as unknown as Record<string, CapitalInfo>));
+	return capLoading;
+}

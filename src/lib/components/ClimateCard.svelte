@@ -5,20 +5,22 @@
 	   (Linie); darunter Regenzeit/Monsun und Wirbelsturmsaison als Balken, beste Monate markiert. Große Länder mit
 	   mehreren Klimazonen: Orte zum Umschalten. Quellen TerraClimate und NOAA OISST, Mittel 1991–2020. */
 
-	let { code, spot = $bindable(null) }: { code: string; spot?: [number, number] | null } = $props();
+	/** only: nur dieser Ort (Hauptstadt-Seite), dann ohne Ortswahl und ohne Highlights des Landes */
+	let { code, only = '', spot = $bindable(null) }: { code: string; only?: string; spot?: [number, number] | null } = $props();
 
+	const pick = (ps: ClimatePlace[] | null | undefined) => (ps && only ? ps.filter((x) => x[0] === only) : (ps ?? null));
 	// svelte-ignore state_referenced_locally
-	let places = $state<ClimatePlace[] | null>(climateNow(code) ?? null);
+	let places = $state<ClimatePlace[] | null>(pick(climateNow(code)));
 	let pi = $state(0);
 	let sel = $state(new Date().getMonth());
 	$effect(() => {
-		if (!places) loadClimate().then((d) => (places = d[code] ?? null));
+		if (!places) loadClimate().then((d) => (places = pick(d[code])));
 	});
 
 	// svelte-ignore state_referenced_locally
-	let hls = $state<Highlight[]>(highlightsNow(code) ?? []);
+	let hls = $state<Highlight[]>(only ? [] : (highlightsNow(code) ?? []));
 	$effect(() => {
-		if (highlightsNow(code) === undefined) loadHighlights().then((d) => (hls = d[code] ?? []));
+		if (!only && highlightsNow(code) === undefined) loadHighlights().then((d) => (hls = d[code] ?? []));
 	});
 	// ganzjährige Highlights werden beim Antippen eines Monats nie ausgegraut
 	const when = (h: Highlight) => (h.y ? 'ganzjährig' : (h.d ?? monthRanges(h.m)));

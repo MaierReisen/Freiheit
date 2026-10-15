@@ -25,7 +25,7 @@
 		<svg viewBox="0 0 24 24"><path d="M3 6.5 9 4l6 2.5L21 4v13.5L15 20l-6-2.5L3 20zM9 4v13.5M15 6.5V20" /></svg>
 	</span>
 	<span class="cat-txt">
-		<span class="cat-name">Meine Kontinente</span>
+		<span class="cat-name">Kontinente</span>
 		<span class="cat-sub">{n} von {KEYS.length} Kontinenten<span class="cat-dots" aria-hidden="true">{#each have as k (k)}<i style="--cc:var(--ct-{k})" title={CONT_NAMES[k]}></i>{/each}{#each { length: KEYS.length - n } as _, i (i)}<i class="off"></i>{/each}</span></span>
 		<span class="cat-bar"><i style="width:{(n / KEYS.length) * 100}%"></i></span>
 	</span>

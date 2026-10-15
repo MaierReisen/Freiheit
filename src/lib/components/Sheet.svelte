@@ -6,6 +6,8 @@
 	import CountrySheet from './CountrySheet.svelte';
 	import RouteSheet from './RouteSheet.svelte';
 	import AirportSheet from './AirportSheet.svelte';
+	import CapitalSheet from './CapitalSheet.svelte';
+	import { factsNow } from '$lib/facts';
 	import FlightAdd from './FlightAdd.svelte';
 
 	/* Nach unten ziehen schließt das Sheet (wie in iOS): am Griff/Titel jederzeit, in der Liste nur,
@@ -14,7 +16,7 @@
 	   Kompakt: hochziehen → voll, runterziehen → schließen. Voll: runterziehen → schließen. */
 
 	// Länderseite und Seiten zu Flugstrecke/Flughafen: gleicher Aufbau (kompakte Karte + volle Seite; Flughafen nur voll)
-	const isCountry = $derived(ui.sheetView?.kind === 'country' || ui.sheetView?.kind === 'route' || ui.sheetView?.kind === 'airport');
+	const isCountry = $derived(ui.sheetView?.kind === 'country' || ui.sheetView?.kind === 'route' || ui.sheetView?.kind === 'airport' || ui.sheetView?.kind === 'capital');
 	const peek = $derived(isCountry && ui.sheetDetent === 'peek');
 	// „Zurück“: Name der vorherigen Seite
 	const back = $derived.by(() => {
@@ -24,6 +26,7 @@
 		if (v.kind === 'route') return v.key.split('-').map(city).join(' – ');
 		if (v.kind === 'airport') return `${city(v.code)} (${v.code})`;
 		if (v.kind === 'country') return nameOf(v.code);
+		if (v.kind === 'capital') return factsNow(v.code)?.cap?.[0] ?? 'Hauptstadt';
 		return 'Zurück';
 	});
 
@@ -194,6 +197,8 @@
 				<RouteSheet key={ui.sheetView.key} id={ui.sheetView.id} />
 			{:else if ui.sheetView.kind === 'airport'}
 				<AirportSheet code={ui.sheetView.code} />
+			{:else if ui.sheetView.kind === 'capital'}
+				<CapitalSheet code={ui.sheetView.code} />
 			{:else if ui.sheetView.kind === 'addFlight'}
 				<FlightAdd from={ui.sheetView.from} to={ui.sheetView.to} />
 			{:else}

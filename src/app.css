@@ -435,6 +435,20 @@ button.cont{border:0;font:inherit;font-size:14px;color:inherit}
 .cp-tog svg{width:28px;height:28px;padding:5px;border-radius:50%;fill:none;stroke:transparent;stroke-width:3;stroke-linecap:round;stroke-linejoin:round;box-shadow:inset 0 0 0 1.6px var(--muted);transition:background .15s,box-shadow .15s}
 .cp-tog[aria-pressed="true"] svg{background:#C9A24D;stroke:#fff;box-shadow:none}
 .cp-tog:active svg{transform:scale(.9)}
+/* Hauptstadt: Kachel auf der Länderseite (antippbar wie .rs-ap) und eigene Seite */
+.cs-quick > .cs-captile{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:11px 11px 10px;border:1.5px solid color-mix(in srgb,var(--primary) 45%,transparent);border-radius:16px;background:color-mix(in srgb,var(--primary) 12%,var(--chip));color:var(--ink);text-align:left;font:inherit;cursor:pointer;min-width:0;transition:transform .12s,filter .12s}
+.cs-captile:active{transform:scale(.97);filter:brightness(.94)}
+.cs-captile .lbl{color:var(--primary)}
+.cs-captile b{max-width:calc(100% - 20px)}
+.cs-captile .rs-go{position:absolute;right:7px;top:9px;display:grid;place-items:center;width:20px;height:20px;border-radius:50%;background:var(--primary);color:var(--on-primary)}
+.cs-quick .cs-captile .rs-go svg{width:13px;height:13px;margin:0;stroke:currentColor;stroke-width:2.6}
+button.cp-been{border:0;font:inherit;font-size:13px;font-weight:700;cursor:pointer}
+button.cp-been:not(.been){background:color-mix(in srgb,#C9A24D 18%,var(--chip));color:var(--ink)}
+.cp-hint{margin:8px 0 0;font-size:13px}
+.cp-desc{margin:18px 0 0;font-size:15.5px;line-height:1.5}
+.cp-src{display:inline-block;margin-top:6px;font-size:13px;font-weight:600;color:var(--primary)}
+.cp-clim{margin-top:18px}
+.cp-iata{font-size:12px!important;font-weight:800;letter-spacing:.04em;color:var(--muted)}
 
 /* Seite „Meine Länder“ */
 .lv-head .set-title{font-size:22px;white-space:nowrap}

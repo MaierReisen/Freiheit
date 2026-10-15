@@ -23,7 +23,7 @@
 		<svg viewBox="0 0 24 24"><path d="M6 21V3.5M6 4.5c3-1.6 5.5 1.6 8.5 0 1.8-.9 3.3-.9 4.5-.3v8c-1.2-.6-2.7-.6-4.5.3-3 1.6-5.5-1.6-8.5 0" /></svg>
 	</span>
 	<span class="cat-txt">
-		<span class="cat-name">Meine Länder</span>
+		<span class="cat-name">Länder</span>
 		<span class="cat-sub">{pctT} % der Welt entdeckt</span>
 		<span class="cat-bar"><i style="width:{pct}%"></i></span>
 	</span>

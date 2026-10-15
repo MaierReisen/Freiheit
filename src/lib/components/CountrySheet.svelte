@@ -3,7 +3,7 @@
 	import { longDate } from '$lib/passport';
 	import { SCOPES, isTerritory, listTag, placeLabel } from '$lib/scope';
 	import { compareNames, flag, nameOf } from '$lib/countries';
-	import { closeSheet, hooks, openCountry, reduceMotion, setSheetDetent, ui } from '$lib/app.svelte';
+	import { closeSheet, hooks, openCapital, openCountry, reduceMotion, setSheetDetent, ui } from '$lib/app.svelte';
 	import { compareArea, currencies, factsNow, loadClimate, loadEntry, loadHighlights, fmtArea, fmtAreaShort, fmtDensity, fmtPop, languages, loadFacts, localTime, type Facts } from '$lib/facts';
 	import { fmtMoney, fmtRateDate, getRates, type Rates } from '$lib/rates';
 	import CountryShape from './CountryShape.svelte';
@@ -174,14 +174,16 @@
 	{#if facts && (facts.cap?.length || facts.pop || facts.area)}
 		<div class="cs-quick">
 			{#if facts.cap?.length}
-				<div>
+				<!-- antippbar wie die Flughafen-Kacheln der Flugseite: öffnet die Seite der Hauptstadt -->
+				<button type="button" class="cs-captile" aria-label="Hauptstadt {facts.cap[0]} öffnen" onclick={() => openCapital(code)}>
 					<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21h18M5 21V10l7-5 7 5v11M9 21v-6h6v6" /></svg>
 					<span class="lbl">Hauptstadt</span>
 					<b>{facts.cap[0]}</b>
 					{#if lt}<span class="sub">{lt.time}{#if lt.diff}<em>{lt.diff}</em>{:else if code !== 'DE'}<em class="same">wie DE</em>{/if}</span>{/if}
 					{#if facts.capPop}<span class="sub">{fmtPop(facts.capPop[0])} Einw.{facts.capPop[1] ? ` (${facts.capPop[1]})` : ''}</span>{/if}
 					{#if facts.cap.length > 1}<span class="sub">auch {facts.cap.slice(1).join(', ')}</span>{/if}
-				</div>
+					<span class="rs-go" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6" /></svg></span>
+				</button>
 			{/if}
 			{#if facts.pop}
 				<div>

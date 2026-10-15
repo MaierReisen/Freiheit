@@ -11,3 +11,4 @@ vite.config.*.timestamp-*
 .climate-cache/
 FlightyExport*.csv
 .airport-cache/
+.capital-cache/
