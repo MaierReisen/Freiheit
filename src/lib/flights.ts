@@ -268,6 +268,8 @@ export interface Leg {
 	/** Abflug und Ankunft (planmäßig, ms UTC) für die Umsteige-Regel */
 	dep: number;
 	arr: number;
+	/** ab wann der Flug als geflogen zählt (ms UTC): Abflug; von Hand eingetragene schon ab Beginn des Abflugtags */
+	doneAt: number;
 	done: boolean;
 }
 
@@ -293,7 +295,9 @@ export function legOf(f: Flight, ap: Airports, now = Date.now()): Leg {
 	const dep = localToUtc(depLocal, ta);
 	const arrLocal = d.gas || d.ons;
 	const arr = arrLocal ? localToUtc(arrLocal, tb) : dep + min * 60000;
-	return { f, to, km, min, est, dep, arr, done: !d.cx && dep <= now };
+	// von Hand eingetragen: am Abflugtag schon geflogen (man trägt ihn meist nach der Landung ein), nur spätere Tage sind geplant
+	const doneAt = hasFlightyId(f) ? dep : localToUtc(f.date + 'T00:00', ta);
+	return { f, to, km, min, est, dep, arr, doneAt, done: !d.cx && doneAt <= now };
 }
 
 /* ---------- Statistik ---------- */

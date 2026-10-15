@@ -136,6 +136,9 @@ h2{font-family:var(--display);font-size:19px;font-weight:700;margin:40px 0 14px;
 .sheet.kb{bottom:var(--kb,0px);max-height:calc(var(--vvh,82vh) - 12px);padding-bottom:12px}
 .sheet:not(.open){transition-duration:.17s;transition-timing-function:cubic-bezier(.4,0,1,1)}
 .grab{width:40px;height:5px;border-radius:3px;background:var(--line);margin:0 auto 16px}
+.sh-back{display:flex;align-items:center;gap:4px;max-width:100%;margin:-6px 0 10px -6px;padding:6px 10px 6px 4px;border:0;border-radius:999px;background:none;color:var(--primary);font-size:15px;font-weight:600}
+.sh-back svg{flex:none;width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.sh-back span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sheet h3{margin:0;font-family:var(--display);font-size:26px;line-height:1.15;font-weight:800;display:flex;align-items:center;gap:10px;letter-spacing:-.01em}
 .sheet .meta{color:var(--muted);margin:6px 0 18px}
 .stamp{align-self:flex-start;display:inline-flex;align-items:center;gap:6px;background:var(--sun);color:#0D2B3A;border-radius:999px;padding:4px 12px;font-weight:700;font-size:13px;margin-bottom:12px}

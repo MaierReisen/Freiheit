@@ -80,6 +80,8 @@ export const ui = $state({
 	selected: null as string | null,
 	sheetOpen: false,
 	sheetView: null as SheetView | null,
+	/** vorherige Seiten (Strecke → Flughafen → Land …): „Zurück“ oben im Sheet */
+	sheetBack: [] as SheetView[],
 	/** zählt jedes Öffnen hoch, damit das Sheet frisch aufgebaut wird (wie vorher per innerHTML) */
 	sheetKey: 0,
 	/** Länderseite: 'peek' = kompakte Karte unten (Globus bleibt sichtbar), 'full' = volle Detailseite */
@@ -193,13 +195,18 @@ export function toast(m: string) {
 }
 
 /* ---------- Sheet ---------- */
-function openSheet(view: SheetView) {
+/** push: aus einer Strecken- oder Flughafen-Seite weitergetippt → die bisherige Seite merken (für „Zurück“) */
+function openSheet(view: SheetView, push = false) {
+	const cur = ui.sheetView;
+	if (push && ui.sheetOpen && cur && (cur.kind === 'route' || cur.kind === 'airport')) ui.sheetBack = [...ui.sheetBack, cur];
+	else if (!push || !ui.sheetOpen) ui.sheetBack = [];
 	ui.sheetView = view;
 	ui.sheetKey++;
 	ui.sheetOpen = true;
 }
 export function closeSheet() {
 	ui.sheetOpen = false;
+	ui.sheetBack = [];
 	ui.selected = null;
 }
 /** peek: aus Globus/Karte geöffnet – erst als kompakte Karte, damit man den Flug zum Land sieht.
@@ -210,20 +217,30 @@ export function openCountry(code: string, opts: { peek?: boolean } = {}) {
 	ui.selected = code;
 	// vom Globus aus (Tippen, Suche, Nachbarland): Kontinent-Knopf folgt dem Land
 	if (opts.peek && CONT[code] && CONT_VIEW[CONT[code]]) ui.focusContinent = CONT[code];
-	openSheet({ kind: 'country', code });
+	openSheet({ kind: 'country', code }, !opts.peek);
 }
 /** Seite zu einer Flugstrecke; peek: vom Globus aus (kompakt, Globus bleibt sichtbar) */
 export function openRoute(key: string, opts: { peek?: boolean; id?: string } = {}) {
 	const already = ui.sheetOpen && ui.sheetView?.kind === 'route';
 	ui.sheetDetent = already ? ui.sheetDetent : opts.peek ? 'peek' : 'full';
 	ui.selected = null;
-	openSheet({ kind: 'route', key, id: opts.id });
+	openSheet({ kind: 'route', key, id: opts.id }, !opts.peek);
 }
 /** Seite zu einem Flughafen (immer volle Seite) */
 export function openAirport(code: string) {
 	ui.sheetDetent = 'full';
 	ui.selected = null;
-	openSheet({ kind: 'airport', code });
+	openSheet({ kind: 'airport', code }, true);
+}
+/** zurück zur vorherigen Seite im Sheet */
+export function sheetBack() {
+	const prev = ui.sheetBack.at(-1);
+	if (!prev) return;
+	ui.sheetBack = ui.sheetBack.slice(0, -1);
+	ui.sheetDetent = 'full';
+	ui.selected = prev.kind === 'country' ? prev.code : null;
+	ui.sheetView = prev;
+	ui.sheetKey++;
 }
 export function openAddFlight(from?: string, to?: string) {
 	openSheet({ kind: 'addFlight', from, to });

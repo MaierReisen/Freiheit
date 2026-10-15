@@ -38,7 +38,7 @@ class FlightData {
 	    Strecken bei jedem Tabwechsel ohne Änderung neu berechnet */
 	tick() {
 		const t = Date.now();
-		if (!this.st || this.st.legs.some((l) => !l.done && !l.f.d.cx && l.dep <= t)) this.now = t;
+		if (!this.st || this.st.legs.some((l) => !l.done && !l.f.d.cx && l.doneAt <= t)) this.now = t;
 	}
 	private loading = false;
 	load() {

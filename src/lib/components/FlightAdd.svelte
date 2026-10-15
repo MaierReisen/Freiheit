@@ -344,7 +344,7 @@
 				{#each problems as e (e)}<li>{e}</li>{/each}
 			</ul>
 		{/if}
-		<p class="note fa-note">Flugnummer und Uhrzeiten sind freiwillig. Uhrzeiten in Ortszeit, wie auf der Bordkarte. Flüge in der Zukunft gelten als geplant.</p>
+		<p class="note fa-note">Flugnummer und Uhrzeiten sind freiwillig. Uhrzeiten in Ortszeit, wie auf der Bordkarte. Flüge ab morgen gelten als geplant.</p>
 	{/if}
 </div>
 {#if !active}

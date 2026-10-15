@@ -1,5 +1,7 @@
 <script lang="ts">
-	import { closeSheet, setSheetDetent, ui } from '$lib/app.svelte';
+	import { closeSheet, setSheetDetent, sheetBack, ui } from '$lib/app.svelte';
+	import { nameOf } from '$lib/countries';
+	import { fd } from '$lib/flightData.svelte';
 	import CountryPicker from './CountryPicker.svelte';
 	import CountrySheet from './CountrySheet.svelte';
 	import RouteSheet from './RouteSheet.svelte';
@@ -14,6 +16,16 @@
 	// Länderseite und Seiten zu Flugstrecke/Flughafen: gleicher Aufbau (kompakte Karte + volle Seite; Flughafen nur voll)
 	const isCountry = $derived(ui.sheetView?.kind === 'country' || ui.sheetView?.kind === 'route' || ui.sheetView?.kind === 'airport');
 	const peek = $derived(isCountry && ui.sheetDetent === 'peek');
+	// „Zurück“: Name der vorherigen Seite
+	const back = $derived.by(() => {
+		const v = ui.sheetBack.at(-1);
+		const city = (c: string) => fd.ap?.[c]?.[0] || c;
+		if (!v) return '';
+		if (v.kind === 'route') return v.key.split('-').map(city).join(' – ');
+		if (v.kind === 'airport') return `${city(v.code)} (${v.code})`;
+		if (v.kind === 'country') return nameOf(v.code);
+		return 'Zurück';
+	});
 
 	let sheet: HTMLDivElement;
 	let scrim: HTMLDivElement;
@@ -171,6 +183,11 @@
 	{#if ui.sheetView}
 		{#key ui.sheetKey}
 			<div class="grab"></div>
+			{#if back}
+				<button type="button" class="sh-back" onclick={sheetBack}
+					><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" /></svg><span>{back}</span></button
+				>
+			{/if}
 			{#if ui.sheetView.kind === 'country'}
 				<CountrySheet code={ui.sheetView.code} />
 			{:else if ui.sheetView.kind === 'route'}
